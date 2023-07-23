@@ -4,46 +4,37 @@ function initMap() {
         center: { lat: 46.619261, lng: -33.134766 },
     });
 
-    const statueOfLibertyContent = '<div id="content">'+
-        '<h1 id="firstHeading" class="firstHeading">Statue of Liberty</h1>'+
-        '<div id="bodyContent">'+
-        '<p>Click <a href="https://www.nps.gov/stli/index.htm">here</a> for more info.</p>'+
-        '</div>'+
-        '</div>';
+    const pointsOfInterest = [
+        // Add your points of interest here
+        { title: 'Point 1', position: { lat: 40.1, lng: -74.1 }, url: 'https://example.com/point1', description: 'Description 1' },
+        { title: 'Point 2', position: { lat: 40.2, lng: -74.2 }, url: 'https://example.com/point2', description: 'Description 2' },
+        // ...
+        // Repeat for 10 points
+    ];
 
-    const eiffelTowerContent = '<div id="content">'+
-        '<h1 id="firstHeading" class="firstHeading">Eiffel Tower</h1>'+
-        '<div id="bodyContent">'+
-        '<p>Click <a href="https://www.toureiffel.paris/en">here</a> for more info.</p>'+
-        '</div>'+
-        '</div>';
+    pointsOfInterest.forEach(point => {
+        const infoWindowContent = `
+            <div id="content">
+                <h1 id="firstHeading" class="firstHeading">${point.title}</h1>
+                <div id="bodyContent">
+                    <p>${point.description}. Click <a href="${point.url}">here</a> for more info.</p>
+                </div>
+            </div>
+        `;
 
-    const statueOfLibertyInfoWindow = new google.maps.InfoWindow({
-        content: statueOfLibertyContent
-    });
+        const infoWindow = new google.maps.InfoWindow({
+            content: infoWindowContent
+        });
 
-    const eiffelTowerInfoWindow = new google.maps.InfoWindow({
-        content: eiffelTowerContent
-    });
+        const marker = new google.maps.Marker({
+            position: point.position,
+            map: map,
+            title: point.title
+        });
 
-    const statueOfLibertyMarker = new google.maps.Marker({
-        position: { lat: 40.6892, lng: -74.0445 },
-        map: map,
-        title: 'Statue of Liberty'
-    });
-
-    const eiffelTowerMarker = new google.maps.Marker({
-        position: { lat: 48.8584, lng: 2.2945 },
-        map: map,
-        title: 'Eiffel Tower'
-    });
-
-    statueOfLibertyMarker.addListener('click', function() {
-        statueOfLibertyInfoWindow.open(map, statueOfLibertyMarker);
-    });
-
-    eiffelTowerMarker.addListener('click', function() {
-        eiffelTowerInfoWindow.open(map, eiffelTowerMarker);
+        marker.addListener('click', function() {
+            infoWindow.open(map, marker);
+        });
     });
 }
 
