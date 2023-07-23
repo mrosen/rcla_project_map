@@ -15,7 +15,6 @@ function initMap() {
         { title: 'GG2125241', position: { lat: 14.72823, lng: -91.07540 }, url: 'https://example.com/point2', description: 'WASH El Potrero (Approved)' },
         { title: 'GG1873788', position: { lat: 14.63551, lng: -91.14264 }, url: 'https://example.com/point2', description: 'Stoves in San Lucas (Approved)' },
     ];
-    ];
 
     pointsOfInterest.forEach(point => {
         const infoWindowContent = `
