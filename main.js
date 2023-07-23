@@ -1,15 +1,20 @@
 function initMap() {
     const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 2,
-        center: { lat: 46.619261, lng: -33.134766 },
+        zoom: 10,
+        center: { lat: 14.703454, lng: -91.191623 },
     });
 
     const pointsOfInterest = [
         // Add your points of interest here
-        { title: 'Point 1', position: { lat: 40.1, lng: -74.1 }, url: 'https://example.com/point1', description: 'Description 1' },
-        { title: 'Point 2', position: { lat: 40.2, lng: -74.2 }, url: 'https://example.com/point2', description: 'Description 2' },
-        // ...
-        // Repeat for 10 points
+        { title: 'GG2344748', position: { lat: 14.765853, lng: -91.179493 }, url: 'https://example.com/point1', description: 'Vista Hermosa Water & Sanitation (Draft)' },
+        { title: 'GG2352598', position: { lat: 14.7652, lng: -91.13217 }, url: 'https://example.com/point2', description: '*Patantic* & Sanika-ya (Submitted)' },
+        { title: 'GG2352598', position: { lat: 14.63454, lng: -91.15257 }, url: 'https://example.com/point2', description: 'Patantic & *Sanika-ya* (Submitted)' },
+        { title: 'GG2346063', position: { lat: 14.74219, lng: -91.2044 }, url: 'https://example.com/point2', description: 'Amigos de Santa Cruz (Approved)' },
+        { title: 'GG2091778', position: { lat: 14.7708, lng: -91.26555 }, url: 'https://example.com/point2', description: 'Water & Sanitation in *Santa Lucia Utatlan* and San Andreas (Approved)' },
+        { title: 'GG2091778', position: { lat: 14.74625, lng: -91.13336 }, url: 'https://example.com/point2', description: 'Water & Sanitation in Santa Lucia Utatlan and *San Andreas* (Approved)' },
+        { title: 'GG2125241', position: { lat: 14.72823, lng: -91.07540 }, url: 'https://example.com/point2', description: 'WASH El Potrero (Approved)' },
+        { title: 'GG1873788', position: { lat: 14.63551, lng: -91.14264 }, url: 'https://example.com/point2', description: 'Stoves in San Lucas (Approved)' },
+    ];
     ];
 
     pointsOfInterest.forEach(point => {
