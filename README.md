@@ -13,6 +13,8 @@ Here's where I keep all this.
 It uses GitHub Pages to host the site:
   https://mrosen.github.io/rcla_project_map/index.html
 
+To reference from Windows assuming checkout via WSL:
+  \\wsl.localhost\Ubuntu\home\mrosen\rcla_project_map
 
 To test locally, 
   python3 -m http.server
