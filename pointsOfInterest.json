@@ -1,0 +1,144 @@
+[
+  {
+    "title": "GG1985748",
+    "position": {
+      "lat": 14.62098,
+      "lng": -91.23814
+    },
+    "url": "https://example.com/point2",
+    "description": "Simple School in Tzanchaj (Closed, 2020)",
+    "status": "closed"
+  },
+  {
+    "title": "GG1871794",
+    "position": {
+      "lat": 14.63707,
+      "lng": -91.14876
+    },
+    "url": "https://example.com/point2",
+    "description": "X-ray Fluoroscopy, Hosp Schafer, San Lucas (Closed, 2018)",
+    "status": "closed"
+  },
+  {
+    "title": "GG1870757",
+    "position": {
+      "lat": 14.7544,
+      "lng": -90.98983
+    },
+    "url": "https://example.com/point2",
+    "description": "Maternal Health, Tecpan Chimaltenango (Closed, 2015)",
+    "status": "closed"
+  },
+  {
+    "title": "GG2344748",
+    "position": {
+      "lat": 14.765853,
+      "lng": -91.179493
+    },
+    "url": "https://example.com/point1",
+    "description": "Vista Hermosa Water & Sanitation (Draft)",
+    "status": "draft"
+  },
+  {
+    "title": "GG2352598",
+    "position": {
+      "lat": 14.7652,
+      "lng": -91.13217
+    },
+    "url": "https://example.com/point2",
+    "description": "Patantic & Sanika-ya (Approved)",
+    "status": "approved"
+  },
+  {
+    "title": "GG2346063",
+    "position": {
+      "lat": 14.74219,
+      "lng": -91.2044
+    },
+    "url": "https://example.com/point2",
+    "description": {
+      "short": "Amigos de Santa Cruz Economic Development Project",
+      "grantAmount": "$40,600",
+      "details": "Childhood education and basic business skills have been all but unknown in this indigenous community. The Rotary Foundation’s Global Grant is now contributing to educating a generation for the first time. Both early education and adult vocational training – particularly for women – are providing individuals with knowledge and skills to continue their education, gain employment and sustain healthier homes and families. This grant is specifically working to prepare 50 indigenous women to establish, operate, build and ideally, to expand textile and culinary enterprises.",
+      "internationalClub": {
+        "name": "Walkerton, Ontario, Canada",
+        "district": "6330"
+      },
+      "hostClub": "RC Lake Atitlán, Guatemala"
+    },
+    "status": "approved"
+  },
+  {
+    "title": "GG2091778",
+    "position": {
+      "lat": 14.7708,
+      "lng": -91.26555
+    },
+    "url": "https://example.com/point1",
+    "description": "Water & Sanitation in Santa Lucia Utatlan* and San Andreas (Approved)",
+    "status": "approved"
+  },
+  {
+    "title": "GG2352598",
+    "position": {
+      "lat": 14.7652,
+      "lng": -91.13217
+    },
+    "url": "https://example.com/point2",
+    "description": "Patantic & Sanika-ya (Approved)",
+    "status": "approved"
+  },
+
+  {
+    "title": "GG2125241",
+    "position": {
+      "lat": 14.72823,
+      "lng": -91.07540
+    },
+    "url": "https://example.com/point2",
+    "description": {
+      "short": "STRENGTHEN AND SUPPORT SUSTAINABLE WATER, SANITATION AND HYGIENE, SOLUTIONS IN EL POTRERO GUATEMALA",
+      "grantAmount": "$50,342",
+      "details": "This project teaches a basic understanding of the benefits of clean water, hygiene and sanitation among the indigenous members of the El Potrero community. Rotary funding will assist in developing a new safe water source, entailing distribution lines and a catchment tank, accompanied by training in the operation and maintenance of the system. With system operation in the hands of knowledgeable personnel, its long-term sustainability is significantly improved. In addition, this grant underwrites the installation of family latrines, further promoting the goal of heightened community health.",
+      "internationalClub": {
+        "name": "RC Fort Collins, CO",
+        "district": "5440"
+      },
+      "hostClub": "RC Lake Atitlán, Guatemala"
+    },
+    "status": "approved"
+  },
+
+  {
+    "title": "GG1873788",
+    "position": {
+      "lat": 14.63551,
+      "lng": -91.14264
+    },
+    "url": "https://example.com/point2",
+    "description": "Stoves in San Lucas (Approved)",
+    "status": "approved"
+  },
+
+  {
+    "title": "GG1985748",
+    "position": {
+      "lat": 14.62098,
+      "lng": -91.23814
+    },
+    "url": "https://example.com/point2",
+    "description": "Simple School in Tzanchaj (Closed, 2020)",
+    "status": "closed"
+  },
+
+  {
+    "title": "GG1870757",
+    "position": {
+      "lat": 14.7544,
+      "lng": -90.98983
+    },
+    "url": "https://example.com/point2",
+    "description": "Maternal Health, Tecpan Chimaltenango (Closed, 2015)",
+    "status": "closed"
+  }
+]
