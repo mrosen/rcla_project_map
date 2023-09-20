@@ -8,8 +8,8 @@ function initMap() {
     const pointsOfInterest = [
         // Add your points of interest here
         { title: 'GG2344748', position: { lat: 14.765853, lng: -91.179493 }, url: 'https://example.com/point1', description: 'Vista Hermosa Water & Sanitation (Draft)' , status: 'draft'},
-        { title: 'GG2352598', position: { lat: 14.7652, lng: -91.13217 }, url: 'https://example.com/point2', description: '*Patantic* & Sanika-ya (Submitted)' , status: 'submitted'},
-        { title: 'GG2352598', position: { lat: 14.63454, lng: -91.15257 }, url: 'https://example.com/point2', description: 'Patantic & *Sanika-ya* (Submitted)', status: 'submitted' },
+        { title: 'GG2352598', position: { lat: 14.7652, lng: -91.13217 }, url: 'https://example.com/point2', description: '*Patantic* & Sanika-ya (Approved)' , status: 'approved'},
+        { title: 'GG2352598', position: { lat: 14.63454, lng: -91.15257 }, url: 'https://example.com/point2', description: 'Patantic & *Sanika-ya* (Approved)', status: 'approved' },
         { title: 'GG2346063', position: { lat: 14.74219, lng: -91.2044 }, url: 'https://example.com/point2', description: 'Amigos de Santa Cruz (Approved)', status: 'approved' },
         { title: 'GG2091778', position: { lat: 14.7708, lng: -91.26555 }, url: 'https://example.com/point2', description: 'Water & Sanitation in *Santa Lucia Utatlan* and San Andreas (Approved)', status: 'approved' },
         { title: 'GG2091778', position: { lat: 14.74625, lng: -91.13336 }, url: 'https://example.com/point2', description: 'Water & Sanitation in Santa Lucia Utatlan and *San Andreas* (Approved)', status: 'approved' },
