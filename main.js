@@ -51,7 +51,7 @@ function initMap() {
                             lat: point.position_lat,
                             lng: point.position_lng
                         };   
-                        marker = new google.maps.Marker({
+                        const marker = new google.maps.Marker({
                             position: position,
                             map: map,
                             title: point.title,
