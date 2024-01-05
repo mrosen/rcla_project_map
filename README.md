@@ -21,4 +21,7 @@ To test locally,
   python3 -m http.server
   http://localhost:8000/
   
-  *** Don't forget to modify index.html to reference the local copy of main.js! ***
+  **********************************
+  Don't forget to modify index.html to reference the local copy of main.js!
+
+  The data is managed in the Excel spreadsheet.  That we export to the CSV file (Unicode, UTF8)
