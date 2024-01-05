@@ -25,15 +25,20 @@ function initMap() {
                 let infoWindowContent;
                 // Handle detailed object descriptions
                 //console.log("Setting up infoWindow for ", point);
-
+                let urlHTML = '';
+                if (point.url) 
+                {
+                    urlHTML = `<p><a href="${point.url}" target="_blank">Learn More</a></p>`
+                }
+                let formattedGrantAmount = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(point.grantAmount);
                 infoWindowContent = `
                     <div id="content">
                         <h1 id="firstHeading" class="firstHeading">${point.title + ' (' + point.id + ', ' + point.status +': '+ point.period+')'}</h1>
                         <p>${point.description}</p>
-                        <p><strong>Grant Amount:</strong> ${point.grantAmount}</p>
+                        <p><strong>Grant Amount:</strong> ${formattedGrantAmount}</p>
                         <p><strong>International Club:</strong> ${point.internationalClub_name} (D ${point.internationalClub_district})</p>
                         <p><strong>Key Partner(s):</strong> ${point.partner}</p>
-                        <p><a href="${point.url}" target="_blank">Learn More</a></p>
+                        ${urlHTML}
                         </div>
                 `;
                         const infoWindow = new google.maps.InfoWindow({
