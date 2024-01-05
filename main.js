@@ -24,16 +24,15 @@ function initMap() {
             pointsOfInterest.forEach(point => {
                 let infoWindowContent;
                 // Handle detailed object descriptions
-                console.log("Setting up infoWindow for ", point);
+                //console.log("Setting up infoWindow for ", point);
 
                 infoWindowContent = `
                     <div id="content">
-                        <h1 id="firstHeading" class="firstHeading">${point.title}</h1>
-                        <h2>${point.description}</h2>
-                        <p>RI ${point.title} Grant Amount - ${point.description_grantAmount}</p>
-                        <p>${point.description_short}</p>
-                        <p><strong>International Club:</strong> ${point.internationalClub_name}, District ${point.internationalClub_district}</p>
-                        <p><strong>Host Club:</strong> ${point.description_hostClub}</p>
+                        <h1 id="firstHeading" class="firstHeading">${point.title + ' (' + point.id + ', ' + point.status +': '+ point.period+')'}</h1>
+                        <p>${point.description}</p>
+                        <p><strong>Grant Amount:</strong> ${point.grantAmount}</p>
+                        <p><strong>International Club:</strong> ${point.internationalClub_name} (D ${point.internationalClub_district})</p>
+                        <p><strong>Key Partner(s):</strong> ${point.partner}</p>
                         <p><a href="${point.url}" target="_blank">Learn More</a></p>
                         </div>
                 `;
@@ -54,7 +53,7 @@ function initMap() {
                         const marker = new google.maps.Marker({
                             position: position,
                             map: map,
-                            title: point.title,
+                            title: point.title + ' (' + point.id + ', ' + point.status +': '+ point.period+')',
                             icon: `http://maps.google.com/mapfiles/ms/icons/${markerColor}-dot.png`  // Use the chosen color for the marker
                         });
 
