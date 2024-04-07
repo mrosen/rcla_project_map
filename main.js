@@ -51,6 +51,7 @@ function createInfoWindowContent(point) {
         <div id="content">
             <h1 id="firstHeading" class="firstHeading">${point.title + ' (' + point.id + ', ' + point.status + ': ' + point.period + ')'}</h1>
             <p>${point.description}</p>
+            <p><strong>Local Shepard:</strong> ${point.shepard}</p>
             <p><strong>Grant Amount:</strong> ${formattedGrantAmount}</p>
             <p><strong>International Club:</strong> ${point.internationalClub_name} (D ${point.internationalClub_district})</p>
             <p><strong>Key Partner(s):</strong> ${point.partner}</p>
