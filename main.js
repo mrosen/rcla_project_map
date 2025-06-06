@@ -72,7 +72,7 @@ function createMarkerForPoint(point, position, map) {
 function getMarkerColor(status) {
     switch (status) {
         case 'draft': return 'purple';
-        case 'submitted': return 'blue';
+        case 'proposed': return 'blue';
         case 'approved': return 'green';
         case 'approved/delinquent': return 'yellow';
         case 'closed': return 'orange';
