@@ -80,4 +80,3 @@ function getMarkerColor(status) {
     }
 }
 
-window.onload = initMap;
