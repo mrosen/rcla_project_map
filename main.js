@@ -28,19 +28,36 @@ function parseCSVData(csvText) {
 }
 
 function createMapWithPoints(pointsOfInterest) {
-    const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 10,
-        center: { lat: 14.703454, lng: -91.191623 },
+  const map = new google.maps.Map(document.getElementById("map"), {
+    zoom: 10,
+    center: { lat: 14.703454, lng: -91.191623 },
+  });
+
+  pointsOfInterest.forEach(point => {
+    const lat = Number(point.position_lat);
+    const lng = Number(point.position_lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      console.warn("Skipping row with invalid lat/lng:", point);
+      return;
+    }
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: createInfoWindowContent(point),
     });
 
-    pointsOfInterest.forEach(point => {
-        const infoWindowContent = createInfoWindowContent(point);
-        const infoWindow = new google.maps.InfoWindow({ content: infoWindowContent });
-        const position = { lat: point.position_lat, lng: point.position_lng };
-        const marker = createMarkerForPoint(point, position, map);
-
-        marker.addListener('click', () => infoWindow.open(map, marker));
+    const marker = new google.maps.Marker({
+      position: { lat, lng },
+      map,
+      title: markerTitle(point),
+      icon: `https://maps.google.com/mapfiles/ms/icons/${getMarkerColor(point.status)}-dot.png`,
     });
+
+    marker.addListener("click", () => infoWindow.open({ map, anchor: marker }));
+  });
+}
+
+function markerTitle(point) {
+  return `${point.title || "Untitled"} (${point.id || "?"}, ${point.status || "?"}: ${point.period || "?"})`;
 }
 
 function createInfoWindowContent(point) {
@@ -65,7 +82,7 @@ function createMarkerForPoint(point, position, map) {
         position: position,
         map: map,
         title: point.title + ' (' + point.id + ', ' + point.status + ': ' + point.period + ')',
-        icon: `http://maps.google.com/mapfiles/ms/icons/${getMarkerColor(point.status)}-dot.png`
+        icon: `https://maps.google.com/mapfiles/ms/icons/${getMarkerColor(point.status)}-dot.png`
     });
 }
 
