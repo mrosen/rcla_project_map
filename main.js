@@ -539,7 +539,6 @@ function showOverview() {
         indigenous communities. In recent years the portfolio has broadened to include
         education, women's economic empowerment, and watershed protection.</p>
         <br>
-        <p><em>Edit this narrative in the overview section of main.js as the club's story evolves.</em></p>
       </div>
 
       <div style="
