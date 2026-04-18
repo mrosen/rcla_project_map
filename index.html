@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Rotary Club of Lake Atitlan Projects</title>
     <style>
         #map {
@@ -11,14 +12,15 @@
 </head>
 <body>
     <div id="map"></div>
+    <!-- Load our app first, synchronously -->
+    <!--
+    <script src="https://mrosen.github.io/rcla_project_map/main.js"></script>
+    -->
+    <script src="main.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCO2h4ZlPyPDPuZaK1ljB2Rq3ZR_-b9178&callback=initMap"
             async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
-    <!--
-        <script async defer src="main.js"></script>
-    -->
-    <script async defer src="https://mrosen.github.io/rcla_project_map/main.js"></script>
 </body>
 </html>
 
