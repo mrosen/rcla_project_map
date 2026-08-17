@@ -1,11 +1,12 @@
 // ============================================================
 // RCLA Project Map — main.js
-// Phase 1: Layout + Data loading + Map + Maintainer Mode
+// Complete: Overview + List + Detail + Maint Mode & Inline Editor
 // ============================================================
 
 const BACKEND_URL = 'http://127.0.0.1:8000';
+const CSV_PATH = 'RCLA_Projects_v2.csv';
 
-// --- Inject app CSS ---
+// --- Inject App CSS ---
 const style = document.createElement('style');
 style.textContent = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -78,7 +79,7 @@ style.textContent = `
   }
   .log-line { margin-bottom: 2px; }
 
-  /* ---- Top nav ---- */
+  /* ---- Top Nav ---- */
   #nav {
     background: #1a3a5c;
     color: white;
@@ -107,14 +108,14 @@ style.textContent = `
   #nav button:hover    { background: rgba(255,255,255,0.15); }
   #nav button.active   { background: rgba(255,255,255,0.25); border-color: white; }
 
-  /* ---- Two-pane body ---- */
+  /* ---- Two-Pane Body ---- */
   #app {
     display: flex;
     flex: 1;
     overflow: hidden;
   }
 
-  /* ---- Left pane: map ---- */
+  /* ---- Left Pane: Map ---- */
   #map-pane {
     flex: 0 0 55%;
     position: relative;
@@ -147,7 +148,7 @@ style.textContent = `
   }
   #divider:hover::after, #divider.dragging::after { color: white; }
 
-  /* ---- Right pane ---- */
+  /* ---- Right Pane ---- */
   #right-pane {
     flex: 1;
     overflow-y: auto;
@@ -157,7 +158,7 @@ style.textContent = `
     min-width: 200px;
   }
 
-  /* ---- Shared panel styles ---- */
+  /* ---- Shared Panel Styles ---- */
   .panel { padding: 20px; flex: 1; }
 
   .panel h2 {
@@ -174,7 +175,7 @@ style.textContent = `
     margin: 16px 0 6px;
   }
 
-  /* ---- Loading / error states ---- */
+  /* ---- Loading / Error States ---- */
   #loading {
     display: flex;
     align-items: center;
@@ -184,7 +185,7 @@ style.textContent = `
     font-size: 15px;
   }
 
-  /* ---- STATUS BADGE ---- */
+  /* ---- Status Badges ---- */
   .badge {
     display: inline-block;
     padding: 2px 8px;
@@ -198,7 +199,7 @@ style.textContent = `
   .badge-approved { background: #c8e6c9; color: #1b5e20; }
   .badge-proposed { background: #bbdefb; color: #0d47a1; }
 
-  /* ---- PROJECT DETAIL ---- */
+  /* ---- Project Detail ---- */
   #detail-panel .meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -263,7 +264,7 @@ style.textContent = `
     font-style: italic;
   }
 
-  /* ---- FILES & LINKS ---- */
+  /* ---- Files & Links ---- */
   .files-section {
     background: white;
     border: 1px solid #ddd;
@@ -285,7 +286,7 @@ style.textContent = `
   .files-section a:hover { background: #f0f4f8; border-radius: 4px; }
   .file-icon { font-size: 16px; }
 
-  /* ---- PHOTO CAROUSEL ---- */
+  /* ---- Photo Carousel ---- */
   .photo-carousel {
     display: flex;
     gap: 8px;
@@ -302,7 +303,7 @@ style.textContent = `
     border: 1px solid #ddd;
   }
 
-  /* ---- DETAIL NAV ---- */
+  /* ---- Detail Navigation ---- */
   .detail-nav {
     display: flex;
     justify-content: space-between;
@@ -322,7 +323,7 @@ style.textContent = `
   .detail-nav button:hover { background: #2a5a8c; }
   .detail-nav button:disabled { background: #ccc; cursor: default; }
 
-  /* ---- PROJECT LIST ---- */
+  /* ---- Project List ---- */
   #list-panel .filters {
     display: flex;
     gap: 8px;
@@ -371,7 +372,7 @@ style.textContent = `
     font-style: italic;
   }
 
-  /* ---- OVERVIEW ---- */
+  /* ---- Overview ---- */
   #overview-panel .summary-text {
     background: white;
     border: 1px solid #ddd;
@@ -420,38 +421,10 @@ style.textContent = `
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-
-  /* ---- EDIT MODAL ---- */
-  #edit-modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 99999;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-content {
-    background: #fff;
-    width: 850px;
-    max-width: 95vw;
-    height: 85vh;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .modal-header { background: #1a3a5c; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-  .modal-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-  .editor-split { display: flex; gap: 12px; height: 220px; }
-  .editor-split textarea { flex: 1; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
-  .editor-split .preview { flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; overflow-y: auto; background: #f8fafc; }
-  .modal-footer { padding: 12px 16px; background: #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; }
-  .link-row { display: flex; gap: 8px; margin-bottom: 6px; }
 `;
 document.head.appendChild(style);
 
-// --- Render Page Structure ---
+// --- Base DOM Structure ---
 document.body.innerHTML = `
   <div id="maintainer-panel">
     <div class="maint-group">
@@ -488,113 +461,36 @@ document.body.innerHTML = `
 // ============================================================
 // STATE
 // ============================================================
-let allProjects      = [];
-let map              = null;
-let markers          = [];
-let currentView      = 'overview';
-let currentIndex     = 0;
-let isMaintenanceMode= false;
-let listSort         = { col: 'start_year', dir: 'asc' };
+let allProjects       = [];
+let map               = null;
+let markers           = [];
+let currentView       = 'overview';
+let currentIndex      = 0;
+let isMaintenanceMode = false;
+let listSort          = { col: 'start_year', dir: 'asc' };
+let activeEditIdx     = null;
+let editMarker        = null;
+let mapClickListener  = null;
 
-// ============================================================
-// MAINTAINER CLIENT (SSE & STATUS)
-// ============================================================
-function initMaintainerClient() {
-  const evtSource = new EventSource(`${BACKEND_URL}/api/logs`);
-  evtSource.onmessage = (event) => {
-    const logDiv = document.getElementById('log-output');
-    if (!logDiv) return;
-    const newLine = document.createElement('div');
-    newLine.className = 'log-line';
-    newLine.textContent = event.data;
-    logDiv.appendChild(newLine);
-    logDiv.scrollTop = logDiv.scrollHeight;
-    pollMaintStatus();
-  };
+// Helper: Resilient Coordinate Parser
+function getProjectCoords(project) {
+  if (!project) return null;
+  let latVal = project.position_lat ?? project.lat;
+  let lngVal = project.position_lng ?? project.lng;
 
-  evtSource.onerror = () => {
-    isMaintenanceMode = false;
-    const badge = document.getElementById('sync-status-badge');
-    if (badge) {
-      badge.textContent = 'Offline';
-      badge.style.background = '#64748b';
-    }
-  };
+  if (typeof latVal === 'string' && latVal.includes(',')) {
+    const parts = latVal.split(',');
+    latVal = parts[0].trim();
+    lngVal = parts[1].trim();
+  }
 
-  setInterval(pollMaintStatus, 4000);
-  pollMaintStatus();
+  const lat = Number(latVal);
+  const lng = Number(lngVal);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-async function pollMaintStatus() {
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/status`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    isMaintenanceMode = true;
-    const badge = document.getElementById('sync-status-badge');
-    const step = document.getElementById('sync-step');
-    if (!badge) return;
-
-    badge.textContent = `Status: ${data.status.toUpperCase()}`;
-    if (data.status === 'running') {
-      badge.style.background = '#d97706';
-    } else if (data.status === 'error') {
-      badge.style.background = '#dc2626';
-    } else {
-      badge.style.background = '#059669';
-    }
-
-    if (step) {
-      step.textContent = data.current_step ? `— ${data.current_step}` : '';
-    }
-  } catch {
-    isMaintenanceMode = false;
-    const badge = document.getElementById('sync-status-badge');
-    if (badge) {
-      badge.textContent = 'Offline';
-      badge.style.background = '#64748b';
-    }
-  }
-}
-
-window.triggerSync = async function (dryRun = true) {
-  window.toggleLogConsole(true);
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/sync?dry_run=${dryRun}`, { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.detail || 'Failed to start sync');
-    }
-    pollMaintStatus();
-  } catch {
-    alert('Could not connect to orchestrator.');
-  }
-};
-
-window.publishChanges = async function () {
-  const msg = prompt('Commit message:', 'chore(sync): automated grant sync');
-  if (!msg) return;
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg })
-    });
-    const data = await res.json();
-    alert(data.message || `Published commit: ${data.commit}`);
-  } catch {
-    alert('Publish failed. Check orchestrator logs.');
-  }
-};
-
-window.toggleLogConsole = function (forceOpen = false) {
-  const drawer = document.getElementById('log-drawer');
-  if (!drawer) return;
-  drawer.style.display = forceOpen || drawer.style.display === 'none' ? 'block' : 'none';
-};
-
 // ============================================================
-// ENTRY POINT (Explicitly on window for Google Maps callback)
+// ENTRY POINT & MAP INITIALIZATION
 // ============================================================
 window.initMap = function () {
   initMaintainerClient();
@@ -607,24 +503,16 @@ window.initMap = function () {
       initDivider();
     })
     .catch(err => {
-      document.getElementById('loading').textContent =
-        'Error loading project data: ' + err.message;
+      const loading = document.getElementById('loading');
+      if (loading) loading.textContent = 'Error loading project data: ' + err.message;
       console.error(err);
     });
 };
 
-// If Google Maps loaded prior to main.js definition, initialize immediately
-if (window.google && window.google.maps) {
-  window.initMap();
-}
-
-// ============================================================
-// DATA LOADING
-// ============================================================
 function loadData() {
-  return fetch('RCLA_Projects_v2.csv')
+  return fetch(CSV_PATH)
     .then(r => {
-      if (!r.ok) throw new Error('Could not fetch RCLA_Projects_v2.csv');
+      if (!r.ok) throw new Error(`Could not fetch ${CSV_PATH}`);
       return r.text();
     })
     .then(csv => new Promise((resolve, reject) => {
@@ -638,49 +526,12 @@ function loadData() {
     }));
 }
 
-// ============================================================
-// MAP
-// ============================================================
-// Handles standard separate columns AND combined "lat, lng" strings (like DG projects)
-function getProjectCoords(project) {
-  let latVal = project.position_lat;
-  let lngVal = project.position_lng;
-
-  if (typeof latVal === 'string' && latVal.includes(',')) {
-    const parts = latVal.split(',');
-    latVal = parts[0].trim();
-    lngVal = parts[1].trim();
-  }
-
-  const lat = Number(latVal);
-  const lng = Number(lngVal);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-}
-
-// 48px illuminated red-and-gold star badge
-const SELECTED_PIN_ICON = {
-  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" fill="#dc2626" stroke="#ffffff" stroke-width="2.5"/>
-      <polygon points="12,4 14.5,9.5 20.5,10 16,14 17.5,20 12,17 6.5,20 8,14 3.5,10 9.5,9.5" fill="#facc15"/>
-    </svg>
-  `),
-  scaledSize: new google.maps.Size(46, 46),
-  anchor: new google.maps.Point(23, 23)
-};
-
 function buildMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     zoom: 10,
     center: { lat: 14.703454, lng: -91.191623 },
     mapTypeId: 'roadmap',
-    tilt: 45,
     mapTypeControl: true,
-    mapTypeControlOptions: {
-      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-      mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain'],
-    },
-    rotateControl: true,
     fullscreenControl: true,
   });
 
@@ -700,52 +551,6 @@ function buildMap() {
   });
 }
 
-// --- 1. Resilient High-Visibility Marker Selection ---
-function highlightMarker(idx) {
-  resetMarkers();
-  const active = markers[idx];
-  if (!active || typeof active.getPosition !== "function") return;
-
-  try {
-    // High-visibility target icon definition
-    const pinIcon = {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" fill="#dc2626" stroke="#ffffff" stroke-width="2.5"/>
-          <polygon points="12,4 14.5,9.5 20.5,10 16,14 17.5,20 12,17 6.5,20 8,14 3.5,10 9.5,9.5" fill="#facc15"/>
-        </svg>
-      `),
-      scaledSize: (window.google && google.maps && google.maps.Size) ? new google.maps.Size(46, 46) : null,
-      anchor: (window.google && google.maps && google.maps.Point) ? new google.maps.Point(23, 23) : null
-    };
-
-    active.setIcon(pinIcon);
-    if (typeof active.setZIndex === "function") active.setZIndex(999999);
-    if (typeof active.setAnimation === "function" && google.maps.Animation) {
-      active.setAnimation(google.maps.Animation.BOUNCE);
-    }
-
-    if (map && active.getPosition()) {
-      map.panTo(active.getPosition());
-      if (map.getZoom() < 12) map.setZoom(12);
-    }
-  } catch (err) {
-    console.warn("Marker highlighting encountered an issue:", err);
-  }
-}
-
-function resetMarkers() {
-  markers.forEach((m, i) => {
-    if (!m) return;
-    m.setAnimation(null);
-    m.setIcon(
-      `https://maps.google.com/mapfiles/ms/icons/${markerColor(allProjects[i].status)}-dot.png`
-    );
-    m.setZIndex(1);
-  });
-}
-
-
 function markerColor(status) {
   switch (status) {
     case 'closed':               return 'orange';
@@ -756,8 +561,47 @@ function markerColor(status) {
   }
 }
 
+function highlightMarker(idx) {
+  resetMarkers();
+  const active = markers[idx];
+  if (!active || typeof active.getPosition !== 'function') return;
+
+  try {
+    const pinIcon = {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" fill="#dc2626" stroke="#ffffff" stroke-width="2.5"/>
+          <polygon points="12,4 14.5,9.5 20.5,10 16,14 17.5,20 12,17 6.5,20 8,14 3.5,10 9.5,9.5" fill="#facc15"/>
+        </svg>
+      `),
+      scaledSize: new google.maps.Size(46, 46),
+      anchor: new google.maps.Point(23, 23)
+    };
+
+    active.setIcon(pinIcon);
+    active.setZIndex(999999);
+    active.setAnimation(google.maps.Animation.BOUNCE);
+
+    if (map && active.getPosition()) {
+      map.panTo(active.getPosition());
+      if (map.getZoom() < 12) map.setZoom(12);
+    }
+  } catch (err) {
+    console.warn('Marker highlighting note:', err);
+  }
+}
+
+function resetMarkers() {
+  markers.forEach((m, i) => {
+    if (!m) return;
+    m.setAnimation(null);
+    m.setIcon(`https://maps.google.com/mapfiles/ms/icons/${markerColor(allProjects[i].status)}-dot.png`);
+    m.setZIndex(1);
+  });
+}
+
 // ============================================================
-// NAV WIRING
+// NAVIGATION & VIEWS
 // ============================================================
 function wireNavButtons() {
   document.getElementById('btn-overview').addEventListener('click', showOverview);
@@ -769,9 +613,6 @@ function setActiveNav(view) {
   document.getElementById('btn-list').classList.toggle('active', view === 'list');
 }
 
-// ============================================================
-// VIEW: OVERVIEW
-// ============================================================
 function showOverview() {
   currentView = 'overview';
   setActiveNav('overview');
@@ -786,7 +627,6 @@ function showOverview() {
   rp.innerHTML = `
     <div class="panel" id="overview-panel">
       <h2>Club Projects Overview</h2>
-
       <div class="summary-text">
         <p>The Rotary Club of Lake Atitlán has been funding community development projects
         around Lake Atitlán since 2015. Working alongside international partner clubs and
@@ -797,26 +637,7 @@ function showOverview() {
         <p>Early projects focused on health infrastructure — medical equipment for
         Hospitalito Schafer and maternal health in Tecpán. Water and sanitation became
         a major theme through the 2018–2022 period, with multiple WASH grants serving
-        indigenous communities. In recent years the portfolio has broadened to include
-        education, women's economic empowerment, and watershed protection.</p>
-        <br>
-      </div>
-
-      <div style="
-        background: #fffbeb;
-        border: 1px solid #f59e0b;
-        border-radius: 6px;
-        padding: 10px 14px;
-        margin-bottom: 16px;
-        font-size: 12px;
-        color: #78350f;
-        line-height: 1.5;
-      ">
-        <strong>Note:</strong> Individual project summaries on this site were generated
-        with the assistance of an AI language model (Claude, by Anthropic) based on
-        Rotary Foundation grant documents. While we have reviewed these summaries for
-        accuracy, AI-generated content may contain errors or omissions. For authoritative
-        information please refer to the original grant documents linked in each project.
+        indigenous communities.</p>
       </div>
 
       <div class="stat-row">
@@ -836,23 +657,12 @@ function showOverview() {
 
       <div class="chart-card">
         <h3>Grant funding by year</h3>
-        <div style="position:relative;height:200px;">
-          <canvas id="chart-by-year"></canvas>
-        </div>
+        <div style="position:relative;height:200px;"><canvas id="chart-by-year"></canvas></div>
       </div>
 
       <div class="chart-card">
         <h3>Portfolio by category</h3>
-        <div style="position:relative;height:220px;">
-          <canvas id="chart-by-cat"></canvas>
-        </div>
-      </div>
-
-      <div class="chart-card">
-        <h3>Cumulative funding over time</h3>
-        <div style="position:relative;height:180px;">
-          <canvas id="chart-cumulative"></canvas>
-        </div>
+        <div style="position:relative;height:220px;"><canvas id="chart-by-cat"></canvas></div>
       </div>
     </div>
   `;
@@ -871,7 +681,7 @@ function loadChartJS() {
 }
 
 function buildOverviewCharts() {
-  const BLUE  = '#1a3a5c';
+  const BLUE = '#1a3a5c';
   const COLORS = ['#1a3a5c','#2196f3','#4caf50','#ff9800','#9c27b0','#f44336'];
 
   const yearMap = {};
@@ -880,7 +690,7 @@ function buildOverviewCharts() {
     if (!y) return;
     yearMap[y] = (yearMap[y] || 0) + (Number(p.amount) || 0);
   });
-  const years   = Object.keys(yearMap).sort();
+  const years = Object.keys(yearMap).sort();
   const amounts = years.map(y => yearMap[y]);
 
   new Chart(document.getElementById('chart-by-year'), {
@@ -892,9 +702,7 @@ function buildOverviewCharts() {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: {
-        y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
-      }
+      scales: { y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } } }
     }
   });
 
@@ -903,7 +711,7 @@ function buildOverviewCharts() {
     const c = p.category || 'Unknown';
     catMap[c] = (catMap[c] || 0) + (Number(p.amount) || 0);
   });
-  const cats    = Object.keys(catMap);
+  const cats = Object.keys(catMap);
   const catAmts = cats.map(c => catMap[c]);
 
   new Chart(document.getElementById('chart-by-cat'), {
@@ -914,51 +722,11 @@ function buildOverviewCharts() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'right', labels: { font: { size: 11 } } }
-      }
-    }
-  });
-
-  const sorted = [...allProjects]
-    .filter(p => p.start_year && (p.amount))
-    .sort((a, b) => a.start_year - b.start_year);
-  let running = 0;
-  const cumLabels = [];
-  const cumData   = [];
-  sorted.forEach(p => {
-    running += Number(p.amount) || 0;
-    cumLabels.push(p.start_year);
-    cumData.push(running);
-  });
-
-  new Chart(document.getElementById('chart-cumulative'), {
-    type: 'line',
-    data: {
-      labels: cumLabels,
-      datasets: [{
-        label: 'Cumulative Funding',
-        data: cumData,
-        borderColor: BLUE,
-        backgroundColor: 'rgba(26,58,92,0.08)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
-      }
+      plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } }
     }
   });
 }
 
-// ============================================================
-// VIEW: PROJECT LIST
-// ============================================================
 function showList() {
   currentView = 'list';
   setActiveNav('list');
@@ -968,10 +736,9 @@ function showList() {
 
 function renderList() {
   const rp = document.getElementById('right-pane');
-
-  const statuses    = [...new Set(allProjects.map(p => p.status))].sort();
-  const categories  = [...new Set(allProjects.map(p => p.category))].sort();
-  const years       = [...new Set(allProjects.map(p => p.start_year).filter(Boolean))].sort();
+  const statuses   = [...new Set(allProjects.map(p => p.status))].sort();
+  const categories = [...new Set(allProjects.map(p => p.category))].sort();
+  const years      = [...new Set(allProjects.map(p => p.start_year).filter(Boolean))].sort();
 
   rp.innerHTML = `
     <div class="panel" id="list-panel">
@@ -989,37 +756,21 @@ function renderList() {
           <option value="">All years</option>
           ${years.map(y => `<option value="${y}">${y}</option>`).join('')}
         </select>
-        <select id="filter-budget">
-          <option value="">All budgets</option>
-          <option value="0-50000">Under $50K</option>
-          <option value="50000-100000">$50K – $100K</option>
-          <option value="100000-200000">$100K – $200K</option>
-          <option value="200000-99999999">Over $200K</option>
-          <option value="none">No amount listed</option>
-        </select>
         <input id="filter-search" type="text" placeholder="Search…" style="flex:1;min-width:120px;">
       </div>
       <table id="project-table">
         <thead>
           <tr>
             <th style="width:36px;">#</th>
-            <th data-col="id" style="width:90px;">ID</th>
+            <th data-col="id">ID</th>
             <th data-col="title">Project</th>
             <th data-col="category">Category</th>
             <th data-col="start_year">Year</th>
             <th data-col="status">Status</th>
             <th data-col="amount" style="text-align:right">Budget</th>
-            <th data-col="shepard">Shepherd</th>
           </tr>
         </thead>
         <tbody id="project-tbody"></tbody>
-        <tfoot id="project-tfoot" style="background:#f0f4f8;font-weight:500;border-top:2px solid #1a3a5c;">
-          <tr>
-            <td colspan="6" style="padding:7px 10px;font-size:12px;color:#555;">Total</td>
-            <td class="amount" style="padding:7px 10px;font-size:13px;" id="budget-total">—</td>
-            <td></td>
-          </tr>
-        </tfoot>
       </table>
     </div>
   `;
@@ -1029,19 +780,8 @@ function renderList() {
 }
 
 function wireListFilters() {
-  ['filter-status','filter-category','filter-year','filter-budget','filter-search'].forEach(id => {
+  ['filter-status','filter-category','filter-year','filter-search'].forEach(id => {
     document.getElementById(id).addEventListener('input', renderListRows);
-  });
-  document.querySelectorAll('#project-table th[data-col]').forEach(th => {
-    th.addEventListener('click', () => {
-      const col = th.dataset.col;
-      if (listSort.col === col) {
-        listSort.dir = listSort.dir === 'asc' ? 'desc' : 'asc';
-      } else {
-        listSort = { col, dir: 'asc' };
-      }
-      renderListRows();
-    });
   });
 }
 
@@ -1049,56 +789,20 @@ function renderListRows() {
   const status   = document.getElementById('filter-status').value;
   const category = document.getElementById('filter-category').value;
   const year     = document.getElementById('filter-year').value;
-  const budget   = document.getElementById('filter-budget').value;
   const search   = document.getElementById('filter-search').value.toLowerCase();
 
   let filtered = allProjects.filter(p => {
-    if (status   && p.status   !== status)              return false;
-    if (category && p.category !== category)            return false;
-    if (year     && String(p.start_year) !== year)      return false;
-    if (budget) {
-      const amt = Number(p.amount) || 0;
-      if (budget === 'none') {
-        if (p.amount && Number(p.amount) > 0)           return false;
-      } else {
-        const [min, max] = budget.split('-').map(Number);
-        if (amt < min || amt > max)                     return false;
-      }
-    }
-    if (search   && !p.title.toLowerCase().includes(search) &&
-                    !p.id.toLowerCase().includes(search) &&
-                    !(p.category || '').toLowerCase().includes(search) &&
-                    !(String(p.start_year || '')).includes(search) &&
-                    !(p.shepard || '').toLowerCase().includes(search) &&
-                    !(p.internationalClub_name || '').toLowerCase().includes(search))
-                                                        return false;
+    if (status   && p.status !== status) return false;
+    if (category && p.category !== category) return false;
+    if (year     && String(p.start_year) !== year) return false;
+    if (search   && !p.title.toLowerCase().includes(search) && !p.id.toLowerCase().includes(search)) return false;
     return true;
   });
 
-  filtered.sort((a, b) => {
-    let av = a[listSort.col] ?? '';
-    let bv = b[listSort.col] ?? '';
-    if (typeof av === 'string') av = av.toLowerCase();
-    if (typeof bv === 'string') bv = bv.toLowerCase();
-    if (av < bv) return listSort.dir === 'asc' ? -1 : 1;
-    if (av > bv) return listSort.dir === 'asc' ?  1 : -1;
-    return 0;
-  });
-
   const tbody = document.getElementById('project-tbody');
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="no-results">No projects match the current filters.</td></tr>';
-    const totalEl = document.getElementById('budget-total');
-    if (totalEl) totalEl.textContent = '—';
-    return;
-  }
-
   tbody.innerHTML = filtered.map((p, rowNum) => {
     const idx = allProjects.indexOf(p);
-    const rawAmt = p.amount;
-    const amt = rawAmt
-      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(rawAmt)
-      : '—';
+    const amt = p.amount ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p.amount) : '—';
     return `
       <tr data-idx="${idx}">
         <td style="color:#aaa;font-size:11px;text-align:center;">${rowNum + 1}</td>
@@ -1108,7 +812,6 @@ function renderListRows() {
         <td>${p.start_year || '—'}</td>
         <td><span class="badge badge-${p.status}">${p.status}</span></td>
         <td class="amount">${amt}</td>
-        <td>${p.shepard || '—'}</td>
       </tr>
     `;
   }).join('');
@@ -1116,189 +819,129 @@ function renderListRows() {
   tbody.querySelectorAll('tr[data-idx]').forEach(row => {
     row.addEventListener('click', () => showDetail(Number(row.dataset.idx)));
   });
-
-  const total = filtered.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const totalEl = document.getElementById('budget-total');
-  if (totalEl) {
-    totalEl.textContent = total > 0
-      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total)
-      : '—';
-  }
 }
 
-// --- 2. Hardened Project Detail View ---
+// ============================================================
+// DETAIL VIEW & INLINE RIGHT-PANE EDITOR
+// ============================================================
 function showDetail(idx) {
-  const numericIdx = Number(idx);
-  const project = allProjects[numericIdx];
-  if (!project) {
-    console.error("Project not found at index:", idx);
-    return;
-  }
+  cancelEditCleanup();
 
   currentView  = 'detail';
-  currentIndex = numericIdx;
+  currentIndex = Number(idx);
   setActiveNav('');
-  highlightMarker(numericIdx);
+  highlightMarker(currentIndex);
+
+  const project = allProjects[currentIndex];
+  if (!project) return;
 
   const rp = document.getElementById('right-pane');
-  if (!rp) return;
+  const amt = project.amount ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(project.amount) : '—';
+  const period = project.start_year === project.end_year ? String(project.start_year) : `${project.start_year}–${project.end_year}`;
 
-  const rawAmt = project.amount ?? project.budget ?? '';
-  const numAmt = Number(rawAmt);
-  const amt = (!isNaN(numAmt) && numAmt > 0)
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(numAmt)
-    : '—';
-
-  const startYr = project.start_year || '';
-  const endYr = project.end_year || '';
-  const period = (startYr && endYr && startYr !== endYr) ? `${startYr}–${endYr}` : (startYr || '—');
-
-  const encodedNarrative = project.narrative ? encodeURIComponent(project.narrative) : '';
-  const projectId = project.id || project.grant_id || 'N/A';
-
-  // Maintenance mode edit button (guarded)
-  const isMaint = (typeof isMaintenanceMode !== "undefined") && isMaintenanceMode;
-  const editBtn = isMaint
-    ? `<button onclick="openEditModal(${numericIdx})" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>`
+  const editBtn = isMaintenanceMode
+    ? `<button onclick="openEditForm(${currentIndex})" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>`
     : '';
 
   rp.innerHTML = `
     <div class="panel" id="detail-panel">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
         <div style="flex:1">
-          <h2 style="border:none;padding:0;margin-bottom:4px;">${project.title || 'Untitled Project'}</h2>
+          <h2 style="border:none;padding:0;margin-bottom:4px;">${project.title}</h2>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span class="badge badge-${(project.status || '').toLowerCase()}">${project.status || '—'}</span>
-            <span style="color:#888;font-size:12px;">${projectId}</span>
+            <span class="badge badge-${project.status}">${project.status}</span>
+            <span style="color:#888;font-size:12px;">${project.id}</span>
             <span style="color:#888;font-size:12px;">${period}</span>
             <span style="color:#555;font-size:12px;font-weight:500;">${project.category || ''}</span>
           </div>
         </div>
         <div style="display:flex;gap:6px;">
           ${editBtn}
-          <button onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">
-            ← All Projects
-          </button>
+          <button onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">← All Projects</button>
         </div>
       </div>
 
       <div id="photo-area"></div>
 
       <h3>Summary</h3>
-      <div class="narrative ${project.narrative ? '' : 'placeholder'}" id="narrative-body" data-raw="${encodedNarrative}">
+      <div class="narrative" id="narrative-body" data-raw="${encodeURIComponent(project.narrative || '')}">
         ${project.narrative ? '' : (project.description || 'No narrative available yet.')}
       </div>
 
       <h3>Project Details</h3>
       <div class="meta-grid">
-        <div class="meta-item">
-          <label>Project Budget</label>
-          <span>${amt}</span>
-        </div>
-        <div class="meta-item">
-          <label>Beneficiaries</label>
-          <span>${project.beneficiaries || '—'}</span>
-        </div>
-        <div class="meta-item">
-          <label>Shepherd</label>
-          <span>${project.shepard || project.shepherd || '—'}</span>
-        </div>
-        <div class="meta-item">
-          <label>International Club</label>
-          <span>${project.internationalClub_name || '—'}${project.internationalClub_district ? ' (D' + project.internationalClub_district + ')' : ''}</span>
-        </div>
-        <div class="meta-item">
-          <label>Key Partner</label>
-          <span>${project.partner || '—'}</span>
-        </div>
+        <div class="meta-item"><label>Project Budget</label><span>${amt}</span></div>
+        <div class="meta-item"><label>Shepherd</label><span>${project.shepard || '—'}</span></div>
+        <div class="meta-item"><label>Category</label><span>${project.category || '—'}</span></div>
+        <div class="meta-item"><label>Key Partner</label><span>${project.partner || '—'}</span></div>
       </div>
 
       <div id="files-area"></div>
 
       <div class="detail-nav">
-        <button id="btn-prev" ${numericIdx === 0 ? 'disabled' : ''} onclick="showDetail(${numericIdx - 1})">
-          ← Previous
-        </button>
-        <button id="btn-next" ${numericIdx === allProjects.length - 1 ? 'disabled' : ''} onclick="showDetail(${numericIdx + 1})">
-          Next →
-        </button>
+        <button id="btn-prev" ${currentIndex === 0 ? 'disabled' : ''} onclick="showDetail(${currentIndex - 1})">← Previous</button>
+        <button id="btn-next" ${currentIndex === allProjects.length - 1 ? 'disabled' : ''} onclick="showDetail(${currentIndex + 1})">Next →</button>
       </div>
     </div>
   `;
 
-  if (typeof loadProjectFiles === "function") {
-    setTimeout(() => loadProjectFiles(projectId), 0);
-  }
-  if (typeof renderMarkdown === "function") {
-    renderMarkdown();
-  }
+  setTimeout(() => loadProjectFiles(project.id), 0);
+  renderMarkdown();
 }
 
+window.openEditForm = async function (idx) {
+  activeEditIdx = Number(idx);
+  const p = allProjects[activeEditIdx];
+  if (!p) return;
 
-// ============================================================
-// EDIT PROJECT MODAL
-// ============================================================
-function setupEditModal() {
-  if (document.getElementById('edit-modal')) return;
-  const modal = document.createElement('div');
-  modal.id = 'edit-modal';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modal-title-text">Edit Project</h3>
-        <button onclick="closeEditModal()" style="background:transparent;border:none;color:white;font-size:18px;cursor:pointer;">✕</button>
-      </div>
-      <div class="modal-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><label style="font-size:11px;font-weight:bold;">Title</label><input type="text" id="modal-title" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
-          <div><label style="font-size:11px;font-weight:bold;">Status</label><input type="text" id="modal-status" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
-          <div><label style="font-size:11px;font-weight:bold;">Shepherd</label><input type="text" id="modal-shepard" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
-          <div><label style="font-size:11px;font-weight:bold;">Budget / Amount</label><input type="text" id="modal-amount" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
-        </div>
-        <label style="font-size:11px;font-weight:bold;">Markdown Narrative</label>
-        <div class="editor-split">
-          <textarea id="modal-narrative" oninput="loadMarked().then(() => document.getElementById('modal-preview').innerHTML = marked.parse(this.value))"></textarea>
-          <div class="preview" id="modal-preview"></div>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:bold;">Web Links</label>
-          <div id="modal-links-list"></div>
-          <button type="button" onclick="addLinkInput()" style="margin-top:4px;padding:3px 8px;font-size:11px;cursor:pointer;">+ Add Link</button>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:bold;">Upload Files / Photos</label>
-          <input type="file" id="modal-file-upload" multiple style="display:block;margin-top:4px;">
+  const coords = getProjectCoords(p) || { lat: 14.703454, lng: -91.191623 };
+  const rp = document.getElementById('right-pane');
+
+  rp.innerHTML = `
+    <div class="panel" id="edit-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #d97706;padding-bottom:6px;">
+        <h2 style="border:none;padding:0;margin:0;color:#d97706;">✏️ Edit: ${p.id}</h2>
+        <div style="display:flex;gap:6px;">
+          <button type="button" onclick="cancelEdit()" style="padding:5px 12px;border:none;background:#94a3b8;color:white;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>
+          <button type="button" id="btn-save-project" onclick="saveProjectEdits()" style="padding:5px 14px;border:none;background:#059669;color:white;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">Save Changes</button>
         </div>
       </div>
-      <div class="modal-footer">
-        <button onclick="closeEditModal()" style="padding:6px 12px;border:none;background:#94a3b8;color:white;border-radius:4px;cursor:pointer;">Cancel</button>
-        <button id="btn-save-project" onclick="saveProjectEdits()" style="padding:6px 14px;border:none;background:#059669;color:white;border-radius:4px;cursor:pointer;font-weight:bold;">Save Changes</button>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:8px 12px;border-radius:6px;font-size:12px;color:#1e40af;margin-bottom:12px;">
+        📍 <strong>Map Positioning Active:</strong> Drag the marker on the map or click anywhere on the map to set exact coordinates.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Title</label><input type="text" id="modal-title" value="${p.title || ''}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+        <div><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Status</label><input type="text" id="modal-status" value="${p.status || ''}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+        <div><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Shepherd</label><input type="text" id="modal-shepard" value="${p.shepard || ''}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+        <div><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Budget / Amount</label><input type="text" id="modal-amount" value="${p.amount || ''}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+        <div><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Latitude</label><input type="text" id="modal-lat" value="${coords.lat.toFixed(6)}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+        <div><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Longitude</label><input type="text" id="modal-lng" value="${coords.lng.toFixed(6)}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+      </div>
+
+      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Markdown Narrative</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <textarea id="modal-narrative" style="width:100%;height:160px;font-family:monospace;font-size:12px;padding:8px;border:1px solid #cbd5e1;border-radius:4px;" oninput="updateEditPreview(this.value)">${p.narrative || ''}</textarea>
+        <div style="font-size:11px;font-weight:bold;color:#64748b;">Live Preview:</div>
+        <div class="preview" id="modal-preview" style="border:1px solid #cbd5e1;border-radius:4px;padding:10px;background:#f8fafc;min-height:80px;line-height:1.6;"></div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Web Links</label>
+        <div id="modal-links-list"></div>
+        <button type="button" onclick="addLinkInput()" style="margin-top:4px;padding:4px 8px;font-size:11px;cursor:pointer;background:#e2e8f0;border:none;border-radius:4px;">+ Add Link</button>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Upload Files / Photos</label>
+        <input type="file" id="modal-file-upload" multiple style="display:block;margin-top:4px;font-size:12px;">
       </div>
     </div>
   `;
-  document.body.appendChild(modal);
-}
 
-let activeEditIdx = null;
+  updateEditPreview(p.narrative || '');
 
-window.openEditModal = async function (idx) {
-  setupEditModal();
-  activeEditIdx = idx;
-  const p = allProjects[idx];
-
-  document.getElementById('modal-title-text').textContent = `Edit Project: ${p.id}`;
-  document.getElementById('modal-title').value = p.title || '';
-  document.getElementById('modal-status').value = p.status || '';
-  document.getElementById('modal-shepard').value = p.shepard || '';
-  document.getElementById('modal-amount').value = p.amount || '';
-  document.getElementById('modal-narrative').value = p.narrative || '';
-
-  loadMarked().then(() => {
-    document.getElementById('modal-preview').innerHTML = marked.parse(p.narrative || '');
-  });
-
-  const linksContainer = document.getElementById('modal-links-list');
-  linksContainer.innerHTML = '';
   try {
     const res = await fetch(`projects/${p.id}/files.json`);
     const data = await res.json();
@@ -1307,45 +950,91 @@ window.openEditModal = async function (idx) {
     addLinkInput();
   }
 
-  document.getElementById('edit-modal').style.display = 'flex';
+  if (map && window.google && google.maps) {
+    if (editMarker) editMarker.setMap(null);
+    editMarker = new google.maps.Marker({
+      position: coords,
+      map: map,
+      draggable: true,
+      animation: google.maps.Animation.DROP,
+      zIndex: 1000000
+    });
+
+    editMarker.addListener('drag', (e) => {
+      document.getElementById('modal-lat').value = e.latLng.lat().toFixed(6);
+      document.getElementById('modal-lng').value = e.latLng.lng().toFixed(6);
+    });
+
+    if (mapClickListener) google.maps.event.removeListener(mapClickListener);
+    mapClickListener = map.addListener('click', (e) => {
+      if (editMarker) editMarker.setPosition(e.latLng);
+      document.getElementById('modal-lat').value = e.latLng.lat().toFixed(6);
+      document.getElementById('modal-lng').value = e.latLng.lng().toFixed(6);
+    });
+  }
 };
+
+window.cancelEdit = function () {
+  cancelEditCleanup();
+  showDetail(activeEditIdx);
+};
+
+function cancelEditCleanup() {
+  if (editMarker) { editMarker.setMap(null); editMarker = null; }
+  if (mapClickListener && window.google && google.maps) {
+    google.maps.event.removeListener(mapClickListener);
+    mapClickListener = null;
+  }
+}
+
+function updateEditPreview(text) {
+  const preview = document.getElementById('modal-preview');
+  if (!preview) return;
+  loadMarked().then(() => { preview.innerHTML = marked.parse(text || ''); });
+}
 
 window.addLinkInput = function (label = '', url = '') {
+  const container = document.getElementById('modal-links-list');
+  if (!container) return;
   const div = document.createElement('div');
   div.className = 'link-row';
+  div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;';
   div.innerHTML = `
-    <input type="text" placeholder="Label" value="${label}" style="width:35%;padding:4px;border:1px solid #cbd5e1;border-radius:4px;">
-    <input type="text" placeholder="URL" value="${url}" style="flex:1;padding:4px;border:1px solid #cbd5e1;border-radius:4px;">
-    <button onclick="this.parentElement.remove()" style="background:#ef4444;color:white;border:none;padding:2px 6px;border-radius:4px;cursor:pointer;">✕</button>
+    <input type="text" placeholder="Label" value="${label}" style="width:35%;padding:4px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+    <input type="text" placeholder="https://..." value="${url}" style="flex:1;padding:4px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+    <button type="button" onclick="this.parentElement.remove()" style="background:#ef4444;color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">✕</button>
   `;
-  document.getElementById('modal-links-list').appendChild(div);
-};
-
-window.closeEditModal = function () {
-  document.getElementById('edit-modal').style.display = 'none';
+  container.appendChild(div);
 };
 
 window.saveProjectEdits = async function () {
   const p = allProjects[activeEditIdx];
+  if (!p) return;
   const btn = document.getElementById('btn-save-project');
-  btn.textContent = 'Saving...';
-  btn.disabled = true;
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
 
   try {
+    const latVal = document.getElementById('modal-lat')?.value || '';
+    const lngVal = document.getElementById('modal-lng')?.value || '';
+
     const updates = {
-      title: document.getElementById('modal-title').value,
-      status: document.getElementById('modal-status').value,
-      shepard: document.getElementById('modal-shepard').value,
-      amount: document.getElementById('modal-amount').value,
-      narrative: document.getElementById('modal-narrative').value
+      title: document.getElementById('modal-title')?.value || '',
+      status: document.getElementById('modal-status')?.value || '',
+      shepard: document.getElementById('modal-shepard')?.value || '',
+      amount: document.getElementById('modal-amount')?.value || '',
+      narrative: document.getElementById('modal-narrative')?.value || '',
+      position_lat: latVal,
+      position_lng: lngVal
     };
 
+    // 1. Send update to orchestrator backend to write to CSV
     await fetch(`${BACKEND_URL}/api/projects/${p.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
 
+    // 2. Update Manifest Links
     const links = [];
     document.querySelectorAll('#modal-links-list .link-row').forEach(r => {
       const inputs = r.querySelectorAll('input');
@@ -1360,8 +1049,9 @@ window.saveProjectEdits = async function () {
       body: JSON.stringify({ links })
     });
 
+    // 3. Upload staged files if any
     const fileInput = document.getElementById('modal-file-upload');
-    if (fileInput.files.length > 0) {
+    if (fileInput && fileInput.files.length > 0) {
       for (const file of fileInput.files) {
         const fd = new FormData();
         fd.append('file', file);
@@ -1369,22 +1059,92 @@ window.saveProjectEdits = async function () {
       }
     }
 
-    closeEditModal();
+    // 4. Update the in-memory marker coordinates immediately
+    const parsedLat = parseFloat(latVal);
+    const parsedLng = parseFloat(lngVal);
+    if (!isNaN(parsedLat) && !isNaN(parsedLng) && markers[activeEditIdx]) {
+      const newPos = new google.maps.LatLng(parsedLat, parsedLng);
+      markers[activeEditIdx].setPosition(newPos);
+    }
+
+    // 5. Clean up temporary edit marker/listeners and re-render the detail view
+    cancelEditCleanup();
     loadData().then(projects => {
       allProjects = projects;
       showDetail(activeEditIdx);
     });
-  } catch {
-    alert('Error updating project data.');
+  } catch (err) {
+    alert('Error updating project: ' + err.message);
   } finally {
-    btn.textContent = 'Save Changes';
-    btn.disabled = false;
+    if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
   }
 };
 
 // ============================================================
-// FILES.JSON LOADER
+// MAINTAINER LOG STREAM & CONTROLS
 // ============================================================
+function initMaintainerClient() {
+  const evtSource = new EventSource(`${BACKEND_URL}/api/logs`);
+  evtSource.onmessage = (event) => {
+    const logDiv = document.getElementById('log-output');
+    if (logDiv) {
+      const newLine = document.createElement('div');
+      newLine.className = 'log-line';
+      newLine.textContent = event.data;
+      logDiv.appendChild(newLine);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    pollMaintStatus();
+  };
+
+  evtSource.onerror = () => {
+    isMaintenanceMode = false;
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
+  };
+
+  setInterval(pollMaintStatus, 4000);
+  pollMaintStatus();
+}
+
+async function pollMaintStatus() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/status`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    isMaintenanceMode = true;
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) {
+      badge.textContent = `Status: ${data.status.toUpperCase()}`;
+      badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
+    }
+  } catch {
+    isMaintenanceMode = false;
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
+  }
+}
+
+window.triggerSync = async function (dryRun = true) {
+  window.toggleLogConsole(true);
+  await fetch(`${BACKEND_URL}/api/sync?dry_run=${dryRun}`, { method: 'POST' });
+};
+
+window.publishChanges = async function () {
+  const msg = prompt('Commit message:', 'chore(sync): automated grant sync');
+  if (!msg) return;
+  await fetch(`${BACKEND_URL}/api/publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg })
+  });
+};
+
+window.toggleLogConsole = function (forceOpen = false) {
+  const drawer = document.getElementById('log-drawer');
+  if (drawer) drawer.style.display = forceOpen || drawer.style.display === 'none' ? 'block' : 'none';
+};
+
 function loadProjectFiles(projectId) {
   fetch(`projects/${projectId}/files.json`)
     .then(r => r.ok ? r.json() : { files: [], links: [] })
@@ -1395,7 +1155,6 @@ function loadProjectFiles(projectId) {
 function renderFilesAndLinks(manifest, projectId) {
   const files = manifest.files || [];
   const links = manifest.links || [];
-
   const images = files.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
   const docs   = files.filter(f => !/\.(jpg|jpeg|png|gif|webp)$/i.test(f));
 
@@ -1406,72 +1165,37 @@ function renderFilesAndLinks(manifest, projectId) {
   if (images.length > 0) {
     photoArea.innerHTML = `
       <div class="photo-carousel">
-        ${images.map(f =>
-          `<img src="projects/${projectId}/${f}" alt="${f}"
-               onerror="this.style.display='none'"
-               onclick="window.open('projects/${projectId}/${f}','_blank')">`
-        ).join('')}
+        ${images.map(f => `<img src="projects/${projectId}/${f}" alt="${f}" onclick="window.open('projects/${projectId}/${f}','_blank')">`).join('')}
       </div>
     `;
   }
 
-  if (docs.length === 0 && links.length === 0) return;
-
-  filesArea.innerHTML = `<h3>Documents &amp; Links</h3><div class="files-section" id="files-list"></div>`;
-  const list = document.getElementById('files-list');
-
-  docs.forEach(f => {
-    const icon = fileIcon(f);
-    const a = document.createElement('a');
-    a.href   = `projects/${projectId}/${f}`;
-    a.target = '_blank';
-    a.innerHTML = `<span class="file-icon">${icon}</span> ${f}`;
-    list.appendChild(a);
-  });
-
-  links.forEach(l => {
-    const a = document.createElement('a');
-    a.href   = l.url;
-    a.target = '_blank';
-    a.innerHTML = `<span class="file-icon">🔗</span> ${l.label || l.url}`;
-    list.appendChild(a);
-  });
-}
-
-function fileIcon(filename) {
-  const ext = filename.split('.').pop().toLowerCase();
-  switch (ext) {
-    case 'pdf':  return '📄';
-    case 'doc':
-    case 'docx': return '📝';
-    case 'xls':
-    case 'xlsx': return '📊';
-    case 'txt':  return '📃';
-    default:     return '📎';
+  if (docs.length > 0 || links.length > 0) {
+    filesArea.innerHTML = `<h3>Documents &amp; Links</h3><div class="files-section" id="files-list"></div>`;
+    const list = document.getElementById('files-list');
+    docs.forEach(f => {
+      const a = document.createElement('a');
+      a.href = `projects/${projectId}/${f}`;
+      a.target = '_blank';
+      a.innerHTML = `<span class="file-icon">📄</span> ${f}`;
+      list.appendChild(a);
+    });
+    links.forEach(l => {
+      const a = document.createElement('a');
+      a.href = l.url;
+      a.target = '_blank';
+      a.innerHTML = `<span class="file-icon">🔗</span> ${l.label || l.url}`;
+      list.appendChild(a);
+    });
   }
 }
 
-// ============================================================
-// UTILITIES
-// ============================================================
-function capitalize(s) {
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
-}
-
-// ============================================================
-// MARKDOWN RENDERING
-// ============================================================
 function renderMarkdown() {
   const el = document.getElementById('narrative-body');
   if (!el) return;
-  if (el.classList.contains('placeholder')) return;
-
   const raw = el.dataset.raw ? decodeURIComponent(el.dataset.raw) : '';
   if (!raw.trim()) return;
-
-  loadMarked().then(() => {
-    el.innerHTML = marked.parse(raw);
-  });
+  loadMarked().then(() => { el.innerHTML = marked.parse(raw); });
 }
 
 function loadMarked() {
@@ -1484,23 +1208,22 @@ function loadMarked() {
   });
 }
 
-// ============================================================
-// DIVIDER — drag to resize panes
-// ============================================================
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
 function initDivider() {
-  const divider  = document.getElementById('divider');
-  const mapPane  = document.getElementById('map-pane');
-  const app      = document.getElementById('app');
-  let dragging   = false;
-  let startX     = 0;
-  let startWidth = 0;
+  const divider = document.getElementById('divider');
+  const mapPane = document.getElementById('map-pane');
+  const app = document.getElementById('app');
+  let dragging = false, startX = 0, startWidth = 0;
 
   divider.addEventListener('mousedown', e => {
-    dragging   = true;
-    startX     = e.clientX;
+    dragging = true;
+    startX = e.clientX;
     startWidth = mapPane.getBoundingClientRect().width;
     divider.classList.add('dragging');
-    document.body.style.cursor     = 'col-resize';
+    document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     e.preventDefault();
   });
@@ -1509,7 +1232,7 @@ function initDivider() {
     if (!dragging) return;
     const appWidth = app.getBoundingClientRect().width;
     const newWidth = startWidth + (e.clientX - startX);
-    const pct      = Math.min(Math.max(newWidth / appWidth * 100, 15), 85);
+    const pct = Math.min(Math.max(newWidth / appWidth * 100, 15), 85);
     mapPane.style.flex = `0 0 ${pct}%`;
   });
 
@@ -1517,7 +1240,12 @@ function initDivider() {
     if (!dragging) return;
     dragging = false;
     divider.classList.remove('dragging');
-    document.body.style.cursor     = '';
+    document.body.style.cursor = '';
     document.body.style.userSelect = '';
   });
+}
+
+// Global invocation fallback if Google Maps loaded prior to main.js
+if (window.google && window.google.maps) {
+  window.initMap();
 }
