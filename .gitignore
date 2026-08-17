@@ -1,3 +1,4 @@
 *.Identifier
 *:Zone.Identifier
 new_csv_rows.csv
+.env

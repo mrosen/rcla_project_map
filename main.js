@@ -1,7 +1,9 @@
 // ============================================================
 // RCLA Project Map — main.js
-// Phase 1: Layout + Data loading + Map
+// Phase 1: Layout + Data loading + Map + Maintainer Mode
 // ============================================================
+
+const BACKEND_URL = 'http://127.0.0.1:8000';
 
 // --- Inject app CSS ---
 const style = document.createElement('style');
@@ -17,6 +19,64 @@ style.textContent = `
     flex-direction: column;
     overflow: hidden;
   }
+
+  /* ---- Maintainer Mode Toolbar ---- */
+  #maintainer-panel {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    z-index: 1000;
+    border-bottom: 2px solid #3b82f6;
+    flex-shrink: 0;
+  }
+  .maint-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #sync-status-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    background: #475569;
+    color: #fff;
+  }
+  .maint-btn {
+    color: #fff;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 11px;
+    transition: opacity 0.15s;
+  }
+  .maint-btn:hover { opacity: 0.9; }
+  .btn-dry  { background: #3b82f6; }
+  .btn-sync { background: #059669; }
+  .btn-push { background: #d97706; }
+  .btn-log  { background: #334155; }
+
+  /* ---- Maintainer Log Drawer ---- */
+  #log-drawer {
+    display: none;
+    background: #020617;
+    color: #38bdf8;
+    font-family: Consolas, Menlo, Monaco, "Courier New", monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    height: 120px;
+    overflow-y: auto;
+    border-bottom: 1px solid #1e293b;
+    flex-shrink: 0;
+  }
+  .log-line { margin-bottom: 2px; }
 
   /* ---- Top nav ---- */
   #nav {
@@ -363,8 +423,28 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// --- Rebuild the page structure ---
+// --- Rebuild the page structure (including Maintainer Mode overlay) ---
 document.body.innerHTML = `
+  <!-- Maintainer Mode Control Toolbar -->
+  <div id="maintainer-panel">
+    <div class="maint-group">
+      <strong>🛠️ Maint Mode</strong>
+      <span id="sync-status-badge">Connecting...</span>
+      <span id="sync-step" style="color: #94a3b8;"></span>
+    </div>
+    <div class="maint-group">
+      <button id="btn-sync-dry" class="maint-btn btn-dry" onclick="triggerSync(true)">Dry Run Sync</button>
+      <button id="btn-sync-live" class="maint-btn btn-sync" onclick="triggerSync(false)">Full Sync</button>
+      <button id="btn-publish" class="maint-btn btn-push" onclick="publishChanges()">Push to Git</button>
+      <button class="maint-btn btn-log" onclick="toggleLogConsole()">Logs</button>
+    </div>
+  </div>
+
+  <!-- Live Terminal Console Drawer -->
+  <div id="log-drawer">
+    <div id="log-output">-- Orchestrator log stream initialized --</div>
+  </div>
+
   <div id="nav">
     <span class="club-name">Rotary Club of Lake Atitlán — Projects</span>
     <button id="btn-overview" class="active">Overview</button>
@@ -385,14 +465,115 @@ document.body.innerHTML = `
 let allProjects   = [];
 let map           = null;
 let markers       = [];
-let currentView   = 'overview';   // 'overview' | 'list' | 'detail'
-let currentIndex  = 0;            // index into allProjects for detail view
+let currentView   = 'overview';    // 'overview' | 'list' | 'detail'
+let currentIndex  = 0;             // index into allProjects for detail view
 let listSort      = { col: 'start_year', dir: 'asc' };
+
+// ============================================================
+// MAINTAINER MODE: SSE & API CONTROLS
+// ============================================================
+let evtSource = null;
+
+function initMaintainerClient() {
+  try {
+    evtSource = new EventSource(`${BACKEND_URL}/api/logs`);
+    evtSource.onmessage = (event) => {
+      const logDiv = document.getElementById('log-output');
+      if (!logDiv) return;
+      const newLine = document.createElement('div');
+      newLine.className = 'log-line';
+      newLine.textContent = event.data;
+      logDiv.appendChild(newLine);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      pollMaintStatus();
+    };
+
+    evtSource.onerror = () => {
+      const badge = document.getElementById('sync-status-badge');
+      if (badge) {
+        badge.textContent = 'Offline';
+        badge.style.background = '#64748b';
+      }
+    };
+  } catch (e) {
+    console.warn('Could not initialize SSE connection:', e);
+  }
+
+  setInterval(pollMaintStatus, 5000);
+  pollMaintStatus();
+}
+
+async function pollMaintStatus() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/status`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const badge = document.getElementById('sync-status-badge');
+    const step = document.getElementById('sync-step');
+    if (!badge) return;
+
+    badge.textContent = `Status: ${data.status.toUpperCase()}`;
+    if (data.status === 'running') {
+      badge.style.background = '#d97706';
+    } else if (data.status === 'error') {
+      badge.style.background = '#dc2626';
+    } else {
+      badge.style.background = '#059669';
+    }
+
+    if (step) {
+      step.textContent = data.current_step ? `— ${data.current_step}` : '';
+    }
+  } catch {
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) {
+      badge.textContent = 'Offline';
+      badge.style.background = '#64748b';
+    }
+  }
+}
+
+window.triggerSync = async function (dryRun = true) {
+  window.toggleLogConsole(true);
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/sync?dry_run=${dryRun}`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.detail || 'Failed to start sync');
+    }
+    pollMaintStatus();
+  } catch {
+    alert('Could not connect to orchestrator. Is orchestrator.py running?');
+  }
+};
+
+window.publishChanges = async function () {
+  const msg = prompt('Commit message:', 'chore(sync): automated grant sync');
+  if (!msg) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+    alert(data.message || `Published commit: ${data.commit}`);
+  } catch {
+    alert('Publish failed. Check orchestrator logs.');
+  }
+};
+
+window.toggleLogConsole = function (forceOpen = false) {
+  const drawer = document.getElementById('log-drawer');
+  if (!drawer) return;
+  drawer.style.display = forceOpen || drawer.style.display === 'none' ? 'block' : 'none';
+};
 
 // ============================================================
 // ENTRY POINT — called by Google Maps callback
 // ============================================================
-function initMap() {
+window.initMap = function () {
+  initMaintainerClient();
   loadData()
     .then(projects => {
       allProjects = projects;
@@ -406,7 +587,7 @@ function initMap() {
         'Error loading project data: ' + err.message;
       console.error(err);
     });
-}
+};
 
 // ============================================================
 // DATA LOADING
@@ -465,11 +646,11 @@ function buildMap() {
 
 function markerColor(status) {
   switch (status) {
-    case 'closed':             return 'orange';
-    case 'approved':           return 'green';
-    case 'proposed':           return 'blue';
-    case 'approved/delinquent':return 'yellow';
-    default:                   return 'red';
+    case 'closed':               return 'orange';
+    case 'approved':             return 'green';
+    case 'proposed':             return 'blue';
+    case 'approved/delinquent':  return 'yellow';
+    default:                     return 'red';
   }
 }
 
@@ -596,7 +777,6 @@ function showOverview() {
     </div>
   `;
 
-  // Load Chart.js then render
   loadChartJS().then(buildOverviewCharts);
 }
 
@@ -614,14 +794,13 @@ function buildOverviewCharts() {
   const BLUE  = '#1a3a5c';
   const COLORS = ['#1a3a5c','#2196f3','#4caf50','#ff9800','#9c27b0','#f44336'];
 
-  // --- By year ---
   const yearMap = {};
   allProjects.forEach(p => {
     const y = p.start_year;
     if (!y) return;
     yearMap[y] = (yearMap[y] || 0) + (Number(p.amount) || 0);
   });
-  const years  = Object.keys(yearMap).sort();
+  const years   = Object.keys(yearMap).sort();
   const amounts = years.map(y => yearMap[y]);
 
   new Chart(document.getElementById('chart-by-year'), {
@@ -639,7 +818,6 @@ function buildOverviewCharts() {
     }
   });
 
-  // --- By category ---
   const catMap = {};
   allProjects.forEach(p => {
     const c = p.category || 'Unknown';
@@ -662,7 +840,6 @@ function buildOverviewCharts() {
     }
   });
 
-  // --- Cumulative ---
   const sorted = [...allProjects]
     .filter(p => p.start_year && (p.amount))
     .sort((a, b) => a.start_year - b.start_year);
@@ -818,7 +995,6 @@ function renderListRows() {
     return true;
   });
 
-  // Sort
   filtered.sort((a, b) => {
     let av = a[listSort.col] ?? '';
     let bv = b[listSort.col] ?? '';
@@ -861,7 +1037,6 @@ function renderListRows() {
     row.addEventListener('click', () => showDetail(Number(row.dataset.idx)));
   });
 
-  // Update budget total
   const total = filtered.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const totalEl = document.getElementById('budget-total');
   if (totalEl) {
@@ -877,13 +1052,12 @@ function renderListRows() {
 function showDetail(idx) {
   currentView  = 'detail';
   currentIndex = idx;
-  setActiveNav('');   // no top nav button active in detail view
+  setActiveNav('');
   highlightMarker(idx);
 
   const project = allProjects[idx];
   const rp = document.getElementById('right-pane');
 
-  
   const rawAmt = project.amount;
   const amt = rawAmt
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(rawAmt)
@@ -977,12 +1151,10 @@ function renderFilesAndLinks(manifest, projectId) {
   const images = files.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
   const docs   = files.filter(f => !/\.(jpg|jpeg|png|gif|webp)$/i.test(f));
 
-  // Guard: panel may have been replaced before fetch resolved
   const photoArea = document.getElementById('photo-area');
   const filesArea = document.getElementById('files-area');
   if (!photoArea || !filesArea) return;
 
-  // Photos
   if (images.length > 0) {
     photoArea.innerHTML = `
       <div class="photo-carousel">
@@ -995,7 +1167,6 @@ function renderFilesAndLinks(manifest, projectId) {
     `;
   }
 
-  // Docs + links
   if (docs.length === 0 && links.length === 0) return;
 
   filesArea.innerHTML = `<h3>Documents &amp; Links</h3><div class="files-section" id="files-list"></div>`;
