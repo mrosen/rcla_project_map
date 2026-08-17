@@ -641,6 +641,34 @@ function loadData() {
 // ============================================================
 // MAP
 // ============================================================
+// Handles standard separate columns AND combined "lat, lng" strings (like DG projects)
+function getProjectCoords(project) {
+  let latVal = project.position_lat;
+  let lngVal = project.position_lng;
+
+  if (typeof latVal === 'string' && latVal.includes(',')) {
+    const parts = latVal.split(',');
+    latVal = parts[0].trim();
+    lngVal = parts[1].trim();
+  }
+
+  const lat = Number(latVal);
+  const lng = Number(lngVal);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+// 48px illuminated red-and-gold star badge
+const SELECTED_PIN_ICON = {
+  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#dc2626" stroke="#ffffff" stroke-width="2.5"/>
+      <polygon points="12,4 14.5,9.5 20.5,10 16,14 17.5,20 12,17 6.5,20 8,14 3.5,10 9.5,9.5" fill="#facc15"/>
+    </svg>
+  `),
+  scaledSize: new google.maps.Size(46, 46),
+  anchor: new google.maps.Point(23, 23)
+};
+
 function buildMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     zoom: 10,
@@ -657,14 +685,13 @@ function buildMap() {
   });
 
   markers = allProjects.map((project, idx) => {
-    const lat = Number(project.position_lat);
-    const lng = Number(project.position_lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const coords = getProjectCoords(project);
+    if (!coords) return null;
 
     const marker = new google.maps.Marker({
-      position: { lat, lng },
+      position: coords,
       map,
-      title: project.title,
+      title: project.title || project.id,
       icon: `https://maps.google.com/mapfiles/ms/icons/${markerColor(project.status)}-dot.png`,
     });
 
@@ -672,6 +699,52 @@ function buildMap() {
     return marker;
   });
 }
+
+// --- 1. Resilient High-Visibility Marker Selection ---
+function highlightMarker(idx) {
+  resetMarkers();
+  const active = markers[idx];
+  if (!active || typeof active.getPosition !== "function") return;
+
+  try {
+    // High-visibility target icon definition
+    const pinIcon = {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" fill="#dc2626" stroke="#ffffff" stroke-width="2.5"/>
+          <polygon points="12,4 14.5,9.5 20.5,10 16,14 17.5,20 12,17 6.5,20 8,14 3.5,10 9.5,9.5" fill="#facc15"/>
+        </svg>
+      `),
+      scaledSize: (window.google && google.maps && google.maps.Size) ? new google.maps.Size(46, 46) : null,
+      anchor: (window.google && google.maps && google.maps.Point) ? new google.maps.Point(23, 23) : null
+    };
+
+    active.setIcon(pinIcon);
+    if (typeof active.setZIndex === "function") active.setZIndex(999999);
+    if (typeof active.setAnimation === "function" && google.maps.Animation) {
+      active.setAnimation(google.maps.Animation.BOUNCE);
+    }
+
+    if (map && active.getPosition()) {
+      map.panTo(active.getPosition());
+      if (map.getZoom() < 12) map.setZoom(12);
+    }
+  } catch (err) {
+    console.warn("Marker highlighting encountered an issue:", err);
+  }
+}
+
+function resetMarkers() {
+  markers.forEach((m, i) => {
+    if (!m) return;
+    m.setAnimation(null);
+    m.setIcon(
+      `https://maps.google.com/mapfiles/ms/icons/${markerColor(allProjects[i].status)}-dot.png`
+    );
+    m.setZIndex(1);
+  });
+}
+
 
 function markerColor(status) {
   switch (status) {
@@ -681,28 +754,6 @@ function markerColor(status) {
     case 'approved/delinquent':  return 'yellow';
     default:                     return 'red';
   }
-}
-
-function highlightMarker(idx) {
-  resetMarkers();
-  const active = markers[idx];
-  if (active) {
-    active.setIcon('https://maps.google.com/mapfiles/ms/icons/red-dot.png');
-    active.setZIndex(999);
-    active.setAnimation(google.maps.Animation.BOUNCE);
-    setTimeout(() => active.setAnimation(null), 2100);
-    map.panTo(active.getPosition());
-  }
-}
-
-function resetMarkers() {
-  markers.forEach((m, i) => {
-    if (!m) return;
-    m.setIcon(
-      `https://maps.google.com/mapfiles/ms/icons/${markerColor(allProjects[i].status)}-dot.png`
-    );
-    m.setZIndex(1);
-  });
 }
 
 // ============================================================
@@ -1075,42 +1126,50 @@ function renderListRows() {
   }
 }
 
-// ============================================================
-// VIEW: PROJECT DETAIL
-// ============================================================
+// --- 2. Hardened Project Detail View ---
 function showDetail(idx) {
+  const numericIdx = Number(idx);
+  const project = allProjects[numericIdx];
+  if (!project) {
+    console.error("Project not found at index:", idx);
+    return;
+  }
+
   currentView  = 'detail';
-  currentIndex = idx;
+  currentIndex = numericIdx;
   setActiveNav('');
-  highlightMarker(idx);
+  highlightMarker(numericIdx);
 
-  const project = allProjects[idx];
   const rp = document.getElementById('right-pane');
+  if (!rp) return;
 
-  const rawAmt = project.amount;
-  const amt = rawAmt
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(rawAmt)
+  const rawAmt = project.amount ?? project.budget ?? '';
+  const numAmt = Number(rawAmt);
+  const amt = (!isNaN(numAmt) && numAmt > 0)
+    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(numAmt)
     : '—';
 
-  const period = project.start_year === project.end_year
-    ? String(project.start_year)
-    : `${project.start_year}–${project.end_year}`;
+  const startYr = project.start_year || '';
+  const endYr = project.end_year || '';
+  const period = (startYr && endYr && startYr !== endYr) ? `${startYr}–${endYr}` : (startYr || '—');
 
   const encodedNarrative = project.narrative ? encodeURIComponent(project.narrative) : '';
+  const projectId = project.id || project.grant_id || 'N/A';
 
-  // Gated Edit Button: Visible ONLY when backend is connected
-  const editBtn = isMaintenanceMode
-    ? `<button onclick="openEditModal(${idx})" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>`
+  // Maintenance mode edit button (guarded)
+  const isMaint = (typeof isMaintenanceMode !== "undefined") && isMaintenanceMode;
+  const editBtn = isMaint
+    ? `<button onclick="openEditModal(${numericIdx})" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>`
     : '';
 
   rp.innerHTML = `
     <div class="panel" id="detail-panel">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
         <div style="flex:1">
-          <h2 style="border:none;padding:0;margin-bottom:4px;">${project.title}</h2>
+          <h2 style="border:none;padding:0;margin-bottom:4px;">${project.title || 'Untitled Project'}</h2>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span class="badge badge-${project.status}">${project.status}</span>
-            <span style="color:#888;font-size:12px;">${project.id}</span>
+            <span class="badge badge-${(project.status || '').toLowerCase()}">${project.status || '—'}</span>
+            <span style="color:#888;font-size:12px;">${projectId}</span>
             <span style="color:#888;font-size:12px;">${period}</span>
             <span style="color:#555;font-size:12px;font-weight:500;">${project.category || ''}</span>
           </div>
@@ -1142,7 +1201,7 @@ function showDetail(idx) {
         </div>
         <div class="meta-item">
           <label>Shepherd</label>
-          <span>${project.shepard || '—'}</span>
+          <span>${project.shepard || project.shepherd || '—'}</span>
         </div>
         <div class="meta-item">
           <label>International Club</label>
@@ -1157,19 +1216,24 @@ function showDetail(idx) {
       <div id="files-area"></div>
 
       <div class="detail-nav">
-        <button id="btn-prev" ${idx === 0 ? 'disabled' : ''} onclick="showDetail(${idx - 1})">
+        <button id="btn-prev" ${numericIdx === 0 ? 'disabled' : ''} onclick="showDetail(${numericIdx - 1})">
           ← Previous
         </button>
-        <button id="btn-next" ${idx === allProjects.length - 1 ? 'disabled' : ''} onclick="showDetail(${idx + 1})">
+        <button id="btn-next" ${numericIdx === allProjects.length - 1 ? 'disabled' : ''} onclick="showDetail(${numericIdx + 1})">
           Next →
         </button>
       </div>
     </div>
   `;
 
-  setTimeout(() => loadProjectFiles(project.id), 0);
-  renderMarkdown();
+  if (typeof loadProjectFiles === "function") {
+    setTimeout(() => loadProjectFiles(projectId), 0);
+  }
+  if (typeof renderMarkdown === "function") {
+    renderMarkdown();
+  }
 }
+
 
 // ============================================================
 // EDIT PROJECT MODAL
