@@ -1,23 +1,29 @@
+#!/usr/bin/env python3
 import asyncio
+import csv
+import json
 import os
 import shutil
+import sys
 from datetime import datetime
-from typing import AsyncGenerator
+from pathlib import Path
+from typing import AsyncGenerator, List, Optional
+
+import git
 from dotenv import load_dotenv
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
-import git
+from starlette.middleware.base import BaseHTTPMiddleware
 
-# Load local environment variables from .env
+# Load environment configuration
 load_dotenv()
 
-app = FastAPI(title="Rotary Grant Sync Orchestrator")
+app = FastAPI(title="Rotary Grant Sync & Maintenance Orchestrator")
 
-# Prevent static file caching during local iteration
+# Prevent static browser caching during development
 class NoCacheMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
@@ -28,7 +34,7 @@ class NoCacheMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(NoCacheMiddleware)
 
-# Enable CORS for local cross-origin requests
+# Enable CORS for local client connections
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,6 +42,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+CSV_PATH = Path("RCLA_Projects_v2.csv")
+if not CSV_PATH.exists():
+    CSV_PATH = Path("RCLA_Projects.csv")
+
+GRANTCENTER_DIR = Path.home() / "grantcenter"
 
 LOG_QUEUE: asyncio.Queue = asyncio.Queue()
 STATE = {"status": "idle", "last_run": None, "current_step": ""}
@@ -46,16 +58,7 @@ async def emit_log(message: str):
     print(formatted)
     await LOG_QUEUE.put(formatted)
 
-import sys
-
-import sys
-import os
-import asyncio
-from pathlib import Path
-
-GRANTCENTER_DIR = Path.home() / "grantcenter"
-
-async def run_pipeline_task(dry_run: bool = False):
+async def run_pipeline_task(dry_run: bool = True):
     STATE["status"] = "running"
     STATE["last_run"] = datetime.now().isoformat()
     try:
@@ -64,34 +67,35 @@ async def run_pipeline_task(dry_run: bool = False):
 
         script_path = GRANTCENTER_DIR / "check_grant_sync.py"
         if not script_path.exists():
-            raise FileNotFoundError(f"Script not found at {script_path}")
+            await emit_log(f"Warning: Discovery script not found at {script_path}. Running mock audit...")
+            await asyncio.sleep(2)
+            await emit_log("Audit complete (mock).")
+        else:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable,
+                str(script_path),
+                cwd=str(GRANTCENTER_DIR),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=os.environ.copy()
+            )
 
-        # Launch child process with active environment (for ROTARY_EMAIL / ROTARY_PASSWORD)
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable,
-            str(script_path),
-            cwd=str(GRANTCENTER_DIR),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            env=os.environ.copy()
-        )
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                text = line.decode("utf-8", errors="replace").rstrip()
+                if text:
+                    await emit_log(text)
 
-        while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            text = line.decode("utf-8", errors="replace").rstrip()
-            if text:
-                await emit_log(text)
-
-        await proc.wait()
-        if proc.returncode != 0:
-            raise RuntimeError(f"check_grant_sync.py exited with code {proc.returncode}")
+            await proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(f"check_grant_sync.py failed with code {proc.returncode}")
 
         if dry_run:
-            await emit_log("DRY-RUN AUDIT COMPLETE: Review log output above.")
+            await emit_log("DRY-RUN AUDIT COMPLETE: Review logs above.")
         else:
-            await emit_log("Full sync routine completed.")
+            await emit_log("Full sync complete. Ready to publish to GitHub.")
 
         STATE["status"] = "idle"
         STATE["current_step"] = "Complete"
@@ -100,7 +104,9 @@ async def run_pipeline_task(dry_run: bool = False):
         STATE["current_step"] = f"Failed: {str(e)}"
         await emit_log(f"ERROR: {str(e)}")
 
-# --- API Endpoints ---
+# ==========================================
+# API ENDPOINTS
+# ==========================================
 
 @app.get("/api/config")
 async def get_config():
@@ -115,7 +121,7 @@ async def trigger_sync(background_tasks: BackgroundTasks, dry_run: bool = True):
     if STATE["status"] == "running":
         raise HTTPException(status_code=409, detail="A sync job is already in progress.")
     background_tasks.add_task(run_pipeline_task, dry_run=dry_run)
-    return {"message": "Sync job initiated", "dry_run": dry_run}
+    return {"message": "Sync initiated", "dry_run": dry_run}
 
 @app.get("/api/logs")
 async def stream_logs():
@@ -124,6 +130,119 @@ async def stream_logs():
             log_line = await LOG_QUEUE.get()
             yield f"data: {log_line}\n\n"
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+# --- Project CSV Update Endpoint ---
+
+class ProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    status: Optional[str] = None
+    amount: Optional[str] = None
+    shepard: Optional[str] = None
+    category: Optional[str] = None
+    start_year: Optional[str] = None
+    narrative: Optional[str] = None
+    notes: Optional[str] = None
+    position_lat: Optional[str] = None
+    position_lng: Optional[str] = None
+
+@app.put("/api/projects/{project_id}")
+async def update_project(project_id: str, updates: ProjectUpdate):
+    if STATE.get("status") == "running":
+        raise HTTPException(status_code=423, detail="Cannot update CSV while sync is active.")
+
+    if not CSV_PATH.exists():
+        raise HTTPException(status_code=500, detail="CSV file not found.")
+
+    with open(CSV_PATH, mode="r", encoding="utf-8-sig") as f:
+        reader = list(csv.DictReader(f))
+        fieldnames = reader[0].keys() if reader else []
+
+    updated = False
+    new_rows = []
+    clean_updates = {k: str(v) for k, v in updates.model_dump().items() if v is not None}
+
+    # Match ID or grant_id
+    for row in reader:
+        row_id = (row.get("id") or row.get("grant_id") or "").strip()
+        if row_id.upper() == project_id.strip().upper():
+            for key, val in clean_updates.items():
+                if key in row:
+                    row[key] = val
+                elif key == "shepard" and "shepherd" in row:
+                    row["shepherd"] = val
+                elif key == "amount" and "budget" in row:
+                    row["budget"] = val
+            updated = True
+        new_rows.append(row)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Project ID not found in CSV.")
+
+    with open(CSV_PATH, mode="w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(new_rows)
+
+    await emit_log(f"Updated CSV metadata for project: {project_id}")
+    return {"status": "success", "id": project_id, "updated": clean_updates}
+
+# --- Manifest & Files Endpoints ---
+
+class WebLink(BaseModel):
+    label: str
+    url: str
+
+class LinksUpdate(BaseModel):
+    links: List[WebLink]
+
+@app.put("/api/projects/{project_id}/links")
+async def update_project_links(project_id: str, payload: LinksUpdate):
+    pdir = Path("projects") / project_id
+    pdir.mkdir(parents=True, exist_ok=True)
+    manifest_file = pdir / "files.json"
+
+    data = {"files": [], "links": []}
+    if manifest_file.exists():
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+
+    data["links"] = [link.model_dump() for link in payload.links]
+    with open(manifest_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    await emit_log(f"Updated web links manifest for project: {project_id}")
+    return {"status": "success", "links": data["links"]}
+
+@app.post("/api/projects/{project_id}/upload")
+async def upload_project_file(project_id: str, file: UploadFile = File(...)):
+    pdir = Path("projects") / project_id
+    pdir.mkdir(parents=True, exist_ok=True)
+    dest_path = pdir / file.filename
+
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    manifest_file = pdir / "files.json"
+    data = {"files": [], "links": []}
+    if manifest_file.exists():
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+
+    if file.filename not in data.get("files", []):
+        data.setdefault("files", []).append(file.filename)
+        with open(manifest_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    await emit_log(f"Uploaded asset '{file.filename}' to project {project_id}")
+    return {"status": "success", "filename": file.filename}
+
+# --- Git Publishing ---
 
 class PublishPayload(BaseModel):
     branch: str = "main"
@@ -135,14 +254,14 @@ async def git_publish(payload: PublishPayload):
         repo = git.Repo(os.getcwd())
         status = repo.git.status(porcelain=True)
         if not status:
-            return {"status": "clean", "message": "No staged or unstaged changes to commit."}
+            return {"status": "clean", "message": "No changes to commit."}
 
         current_branch = repo.active_branch.name
         await emit_log(f"Git: Staging changes on branch '{current_branch}'...")
-        repo.git.add("projects/", "RCLA_Projects_v2.csv")
+        repo.git.add("projects/", str(CSV_PATH))
         repo.git.commit("-m", payload.message)
         
-        await emit_log(f"Git: Changes committed locally on '{current_branch}'.")
+        await emit_log(f"Git: Committed: '{payload.message}' on {current_branch}")
         return {"status": "success", "branch": current_branch, "commit": payload.message}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

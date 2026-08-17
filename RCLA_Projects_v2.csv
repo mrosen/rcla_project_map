@@ -1,4 +1,4 @@
-id,title,category,status,start_year,end_year,position_lat,position_lng,shepard,internationalClub_name,internationalClub_district,partner,amount,beneficiaries,description,narrative
+﻿id,title,category,status,start_year,end_year,position_lat,position_lng,shepard,internationalClub_name,internationalClub_district,partner,amount,beneficiaries,description,narrative
 GG1871794,"X-ray Fluoroscopy, Hosp Schafer, San Lucas",Health,closed,2018,2018,14.63707,-91.14876,Will,"Ferndale, WA",5050,Friends of St Lucas Toliman,94479,,"Hospitalito in Santiago needs an X-ray machine!
 
 The objectives of this global grant are to purchase and install two greatly needed pieces of medical equipment into the Hospital in San Lucas Toliman, Guatemala. The first is a full body x-ray machine with CR digital developing or image acquisition technology. The second is a mini-C-arm portable fluoroscopy machine, primarily for use in the operating room but also for use in the ER and bedside.","## GG1871794 — C-arm X-ray Fluoroscopy Unit for San Lucas Toliman Hospital
@@ -2043,10 +2043,42 @@ This project launched efficiently during the acute phase of the COVID-19 pandemi
 - The actual scope of the Axis Community Health reimbursement ($76,752) differed from the original line-item budget (which totaled ~$76,752 across four separate Axis budget lines), suggesting some reallocation within the Axis allocation — notably, the final report references a vaccine refrigerator and CareSignal subscription not listed in the original application. The total remained exactly $96,850 with no net variance.
 - The E-Rotary Club of Lake Atitlan (Guatemala) served as the international partner primarily for communication and knowledge-sharing purposes; no funds flowed internationally, as the entire project was implemented in California.
 - The grant was funded entirely through D5170 DDF matched 1:1 by the Rotary Foundation World Fund; no club cash fundraising was required."
-DG_2020_SanFranChinaTown,Wallspring installation Novillero,,closed,2020,2020,"14.704113012876011, -91.20079762542586",,Joe ,San Francisco Rotary Chinatown,,,21600,,Wallspring installation Novillero secondary school Santa Lucia Utatlan,
-DG_2020_SantaCruz,Sunspring installation Santa Lucia Utatlan,,closed,2020,2020,"14.789563188328259, -91.26035059969375",,Joe ,"Santa Cruz, California",,,29800,,Sunspring installationmunicipal building Santa Lucia Utatlan,
-DG_2016_SanFranRotaryChinatown,Sunspring Installation San Lucas Toliman,,closed,2016,2016,"14.635633594542035, -91.14244376420669",,Joe ,San Francisco Rotary Chinatown,,,29500,,Sunspring installation at colegio prarocial San Lucas Soliman,
-DG_2016_WatsonVille,"Sunspring installation G Shafer Clinic, SLT",,closed,2016,2016,"14.631948837129809, -91.1459265685936",,Joe ,"Watsonville, California",,,29300,,Sunspring installation at G Shaffer Clinic San Lucas Toliman,
+DG_2020_SanFranChinaTown,Wallspring installation Novillero,,closed,2020,2020,"14.704113012876011, -91.20079762542586",,Joe ,San Francisco Rotary Chinatown,,,21600,,Wallspring installation Novillero secondary school Santa Lucia Utatlan,"Project Title: Wallspring Installation Novillero
+
+Partner / International Club: San Francisco Rotary Chinatown
+
+Budget & Year: $21,600 | 2020 (Status: Closed)
+
+Location: Secondary School, Novillero (Santa Lucía Utatlán)
+
+Summary & Field Notes: Installed a Wallspring water filtration unit"
+DG_2020_SantaCruz,Sunspring installation Santa Lucia Utatlan,,closed,2020,2020,"14.789563188328259, -91.26035059969375",,Joe ,"Santa Cruz, California",,,29800,,Sunspring installationmunicipal building Santa Lucia Utatlan,"Project Title: Sunspring Installation Santa Lucía Utatlán
+
+Partner / International Club: Santa Cruz, California Rotary Club
+
+Budget & Year: $29,800 | 2020 (Status: Closed)
+
+Location: Municipal Building roof, Santa Lucía Utatlán
+
+Summary & Field Notes: Installed a rooftop Sunspring unit and supplied 500 new garrafones (5-gallon water jugs), caps, and bottling equipment to establish a small-scale municipal potable water enterprise. While mechanically complete, navigating local health ministry licensing encountered bureaucratic delays around water test submission timelines."
+DG_2016_SanFranRotaryChinatown,Sunspring Installation San Lucas Toliman,,closed,2016,2016,"14.635633594542035, -91.14244376420669",,Joe ,San Francisco Rotary Chinatown,,,29500,,Sunspring installation at colegio prarocial San Lucas Soliman,"Project Title: Sunspring Installation San Lucas Tolimán (Parochial School)
+
+Partner / International Club: San Francisco Rotary Chinatown
+
+Budget & Year: $29,500 | 2016 (Status: Closed)
+
+Location: Parroquia / Catholic Church school, San Lucas Tolimán
+
+Summary & Field Notes: Installed a Sunspring solar- and wind-powered nanofiltration water purification unit to provide clean, potable water directly to students and staff at the parish school."
+DG_2016_WatsonVille,"Sunspring installation G Shafer Clinic, SLT",,closed,2016,2016,"14.631948837129809, -91.1459265685936",,Joe ,"Watsonville, California",,,29300,,Sunspring installation at G Shaffer Clinic San Lucas Toliman,"Project Title: Sunspring Installation G. Shafer Clinic, San Lucas Tolimán
+
+Partner / International Club: Watsonville, California Rotary Club
+
+Budget & Year: $29,300 | 2016 (Status: Closed)
+
+Location: Hospitalito / Gregory Shafer Medical Clinic, San Lucas Tolimán
+
+Summary & Field Notes: Installed a Sunspring solar/wind nanofiltration water treatment unit at the clinic. According to the shepherd's field check, the system has operated exceptionally well, producing over 8.8 million liters of clean drinking water for clinic patients and community members."
 GG2578692,"Water, Sanitation, Hygiene for Vista Hermosa, Phase II",Water & Sanitation,approved,2026,2026,14.77701,-91.2675,Clint,Annapolis,7620,AdP,51550,,,"## GG2578692 — WASH for Vista Hermosa, Phase 2
 
 *Global Grant · 2026–2027 · Vista Hermosa, Santa Lucia Utatlan, Solola, Guatemala*

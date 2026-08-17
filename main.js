@@ -420,12 +420,39 @@ style.textContent = `
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
+
+  /* ---- EDIT MODAL ---- */
+  #edit-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-content {
+    background: #fff;
+    width: 850px;
+    max-width: 95vw;
+    height: 85vh;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header { background: #1a3a5c; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .editor-split { display: flex; gap: 12px; height: 220px; }
+  .editor-split textarea { flex: 1; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+  .editor-split .preview { flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; overflow-y: auto; background: #f8fafc; }
+  .modal-footer { padding: 12px 16px; background: #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; }
+  .link-row { display: flex; gap: 8px; margin-bottom: 6px; }
 `;
 document.head.appendChild(style);
 
-// --- Rebuild the page structure (including Maintainer Mode overlay) ---
+// --- Render Page Structure ---
 document.body.innerHTML = `
-  <!-- Maintainer Mode Control Toolbar -->
   <div id="maintainer-panel">
     <div class="maint-group">
       <strong>🛠️ Maint Mode</strong>
@@ -440,7 +467,6 @@ document.body.innerHTML = `
     </div>
   </div>
 
-  <!-- Live Terminal Console Drawer -->
   <div id="log-drawer">
     <div id="log-output">-- Orchestrator log stream initialized --</div>
   </div>
@@ -462,44 +488,40 @@ document.body.innerHTML = `
 // ============================================================
 // STATE
 // ============================================================
-let allProjects   = [];
-let map           = null;
-let markers       = [];
-let currentView   = 'overview';    // 'overview' | 'list' | 'detail'
-let currentIndex  = 0;             // index into allProjects for detail view
-let listSort      = { col: 'start_year', dir: 'asc' };
+let allProjects      = [];
+let map              = null;
+let markers          = [];
+let currentView      = 'overview';
+let currentIndex     = 0;
+let isMaintenanceMode= false;
+let listSort         = { col: 'start_year', dir: 'asc' };
 
 // ============================================================
-// MAINTAINER MODE: SSE & API CONTROLS
+// MAINTAINER CLIENT (SSE & STATUS)
 // ============================================================
-let evtSource = null;
-
 function initMaintainerClient() {
-  try {
-    evtSource = new EventSource(`${BACKEND_URL}/api/logs`);
-    evtSource.onmessage = (event) => {
-      const logDiv = document.getElementById('log-output');
-      if (!logDiv) return;
-      const newLine = document.createElement('div');
-      newLine.className = 'log-line';
-      newLine.textContent = event.data;
-      logDiv.appendChild(newLine);
-      logDiv.scrollTop = logDiv.scrollHeight;
-      pollMaintStatus();
-    };
+  const evtSource = new EventSource(`${BACKEND_URL}/api/logs`);
+  evtSource.onmessage = (event) => {
+    const logDiv = document.getElementById('log-output');
+    if (!logDiv) return;
+    const newLine = document.createElement('div');
+    newLine.className = 'log-line';
+    newLine.textContent = event.data;
+    logDiv.appendChild(newLine);
+    logDiv.scrollTop = logDiv.scrollHeight;
+    pollMaintStatus();
+  };
 
-    evtSource.onerror = () => {
-      const badge = document.getElementById('sync-status-badge');
-      if (badge) {
-        badge.textContent = 'Offline';
-        badge.style.background = '#64748b';
-      }
-    };
-  } catch (e) {
-    console.warn('Could not initialize SSE connection:', e);
-  }
+  evtSource.onerror = () => {
+    isMaintenanceMode = false;
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) {
+      badge.textContent = 'Offline';
+      badge.style.background = '#64748b';
+    }
+  };
 
-  setInterval(pollMaintStatus, 5000);
+  setInterval(pollMaintStatus, 4000);
   pollMaintStatus();
 }
 
@@ -508,6 +530,7 @@ async function pollMaintStatus() {
     const res = await fetch(`${BACKEND_URL}/api/status`);
     if (!res.ok) throw new Error();
     const data = await res.json();
+    isMaintenanceMode = true;
     const badge = document.getElementById('sync-status-badge');
     const step = document.getElementById('sync-step');
     if (!badge) return;
@@ -525,6 +548,7 @@ async function pollMaintStatus() {
       step.textContent = data.current_step ? `— ${data.current_step}` : '';
     }
   } catch {
+    isMaintenanceMode = false;
     const badge = document.getElementById('sync-status-badge');
     if (badge) {
       badge.textContent = 'Offline';
@@ -543,7 +567,7 @@ window.triggerSync = async function (dryRun = true) {
     }
     pollMaintStatus();
   } catch {
-    alert('Could not connect to orchestrator. Is orchestrator.py running?');
+    alert('Could not connect to orchestrator.');
   }
 };
 
@@ -570,7 +594,7 @@ window.toggleLogConsole = function (forceOpen = false) {
 };
 
 // ============================================================
-// ENTRY POINT — called by Google Maps callback
+// ENTRY POINT (Explicitly on window for Google Maps callback)
 // ============================================================
 window.initMap = function () {
   initMaintainerClient();
@@ -588,6 +612,11 @@ window.initMap = function () {
       console.error(err);
     });
 };
+
+// If Google Maps loaded prior to main.js definition, initialize immediately
+if (window.google && window.google.maps) {
+  window.initMap();
+}
 
 // ============================================================
 // DATA LOADING
@@ -1069,6 +1098,11 @@ function showDetail(idx) {
 
   const encodedNarrative = project.narrative ? encodeURIComponent(project.narrative) : '';
 
+  // Gated Edit Button: Visible ONLY when backend is connected
+  const editBtn = isMaintenanceMode
+    ? `<button onclick="openEditModal(${idx})" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>`
+    : '';
+
   rp.innerHTML = `
     <div class="panel" id="detail-panel">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
@@ -1081,9 +1115,12 @@ function showDetail(idx) {
             <span style="color:#555;font-size:12px;font-weight:500;">${project.category || ''}</span>
           </div>
         </div>
-        <button onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">
-          ← All Projects
-        </button>
+        <div style="display:flex;gap:6px;">
+          ${editBtn}
+          <button onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">
+            ← All Projects
+          </button>
+        </div>
       </div>
 
       <div id="photo-area"></div>
@@ -1133,6 +1170,153 @@ function showDetail(idx) {
   setTimeout(() => loadProjectFiles(project.id), 0);
   renderMarkdown();
 }
+
+// ============================================================
+// EDIT PROJECT MODAL
+// ============================================================
+function setupEditModal() {
+  if (document.getElementById('edit-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'edit-modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title-text">Edit Project</h3>
+        <button onclick="closeEditModal()" style="background:transparent;border:none;color:white;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label style="font-size:11px;font-weight:bold;">Title</label><input type="text" id="modal-title" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+          <div><label style="font-size:11px;font-weight:bold;">Status</label><input type="text" id="modal-status" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+          <div><label style="font-size:11px;font-weight:bold;">Shepherd</label><input type="text" id="modal-shepard" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+          <div><label style="font-size:11px;font-weight:bold;">Budget / Amount</label><input type="text" id="modal-amount" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;"></div>
+        </div>
+        <label style="font-size:11px;font-weight:bold;">Markdown Narrative</label>
+        <div class="editor-split">
+          <textarea id="modal-narrative" oninput="loadMarked().then(() => document.getElementById('modal-preview').innerHTML = marked.parse(this.value))"></textarea>
+          <div class="preview" id="modal-preview"></div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:bold;">Web Links</label>
+          <div id="modal-links-list"></div>
+          <button type="button" onclick="addLinkInput()" style="margin-top:4px;padding:3px 8px;font-size:11px;cursor:pointer;">+ Add Link</button>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:bold;">Upload Files / Photos</label>
+          <input type="file" id="modal-file-upload" multiple style="display:block;margin-top:4px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeEditModal()" style="padding:6px 12px;border:none;background:#94a3b8;color:white;border-radius:4px;cursor:pointer;">Cancel</button>
+        <button id="btn-save-project" onclick="saveProjectEdits()" style="padding:6px 14px;border:none;background:#059669;color:white;border-radius:4px;cursor:pointer;font-weight:bold;">Save Changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+let activeEditIdx = null;
+
+window.openEditModal = async function (idx) {
+  setupEditModal();
+  activeEditIdx = idx;
+  const p = allProjects[idx];
+
+  document.getElementById('modal-title-text').textContent = `Edit Project: ${p.id}`;
+  document.getElementById('modal-title').value = p.title || '';
+  document.getElementById('modal-status').value = p.status || '';
+  document.getElementById('modal-shepard').value = p.shepard || '';
+  document.getElementById('modal-amount').value = p.amount || '';
+  document.getElementById('modal-narrative').value = p.narrative || '';
+
+  loadMarked().then(() => {
+    document.getElementById('modal-preview').innerHTML = marked.parse(p.narrative || '');
+  });
+
+  const linksContainer = document.getElementById('modal-links-list');
+  linksContainer.innerHTML = '';
+  try {
+    const res = await fetch(`projects/${p.id}/files.json`);
+    const data = await res.json();
+    (data.links || []).forEach(l => addLinkInput(l.label, l.url));
+  } catch {
+    addLinkInput();
+  }
+
+  document.getElementById('edit-modal').style.display = 'flex';
+};
+
+window.addLinkInput = function (label = '', url = '') {
+  const div = document.createElement('div');
+  div.className = 'link-row';
+  div.innerHTML = `
+    <input type="text" placeholder="Label" value="${label}" style="width:35%;padding:4px;border:1px solid #cbd5e1;border-radius:4px;">
+    <input type="text" placeholder="URL" value="${url}" style="flex:1;padding:4px;border:1px solid #cbd5e1;border-radius:4px;">
+    <button onclick="this.parentElement.remove()" style="background:#ef4444;color:white;border:none;padding:2px 6px;border-radius:4px;cursor:pointer;">✕</button>
+  `;
+  document.getElementById('modal-links-list').appendChild(div);
+};
+
+window.closeEditModal = function () {
+  document.getElementById('edit-modal').style.display = 'none';
+};
+
+window.saveProjectEdits = async function () {
+  const p = allProjects[activeEditIdx];
+  const btn = document.getElementById('btn-save-project');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    const updates = {
+      title: document.getElementById('modal-title').value,
+      status: document.getElementById('modal-status').value,
+      shepard: document.getElementById('modal-shepard').value,
+      amount: document.getElementById('modal-amount').value,
+      narrative: document.getElementById('modal-narrative').value
+    };
+
+    await fetch(`${BACKEND_URL}/api/projects/${p.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+
+    const links = [];
+    document.querySelectorAll('#modal-links-list .link-row').forEach(r => {
+      const inputs = r.querySelectorAll('input');
+      if (inputs[0].value.trim() && inputs[1].value.trim()) {
+        links.push({ label: inputs[0].value.trim(), url: inputs[1].value.trim() });
+      }
+    });
+
+    await fetch(`${BACKEND_URL}/api/projects/${p.id}/links`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ links })
+    });
+
+    const fileInput = document.getElementById('modal-file-upload');
+    if (fileInput.files.length > 0) {
+      for (const file of fileInput.files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        await fetch(`${BACKEND_URL}/api/projects/${p.id}/upload`, { method: 'POST', body: fd });
+      }
+    }
+
+    closeEditModal();
+    loadData().then(projects => {
+      allProjects = projects;
+      showDetail(activeEditIdx);
+    });
+  } catch {
+    alert('Error updating project data.');
+  } finally {
+    btn.textContent = 'Save Changes';
+    btn.disabled = false;
+  }
+};
 
 // ============================================================
 // FILES.JSON LOADER
