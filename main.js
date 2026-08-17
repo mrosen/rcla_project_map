@@ -786,11 +786,12 @@ function wireListFilters() {
 }
 
 function renderListRows() {
-  const status   = document.getElementById('filter-status').value;
-  const category = document.getElementById('filter-category').value;
-  const year     = document.getElementById('filter-year').value;
-  const search   = document.getElementById('filter-search').value.toLowerCase();
+  const status   = document.getElementById('filter-status')?.value || '';
+  const category = document.getElementById('filter-category')?.value || '';
+  const year     = document.getElementById('filter-year')?.value || '';
+  const search   = document.getElementById('filter-search')?.value.toLowerCase() || '';
 
+  // 1. Filter project records
   let filtered = allProjects.filter(p => {
     if (status   && p.status !== status) return false;
     if (category && p.category !== category) return false;
@@ -799,7 +800,44 @@ function renderListRows() {
     return true;
   });
 
+  // 2. Synchronize Map Markers with Filtered Set
+  const filteredSet = new Set(filtered);
+  const bounds = new google.maps.LatLngBounds();
+  let visibleCount = 0;
+
+  allProjects.forEach((p, idx) => {
+    const marker = markers[idx];
+    if (!marker) return;
+
+    if (filteredSet.has(p)) {
+      marker.setMap(map); // Show marker
+      if (typeof marker.getPosition === 'function' && marker.getPosition()) {
+        bounds.extend(marker.getPosition());
+        visibleCount++;
+      }
+    } else {
+      marker.setMap(null); // Hide marker
+    }
+  });
+
+  // Re-fit map view to matching visible pins
+  if (visibleCount > 0 && map) {
+    map.fitBounds(bounds);
+    // If only 1 marker matches, prevent over-zooming
+    if (visibleCount === 1 && map.getZoom() > 14) {
+      map.setZoom(14);
+    }
+  }
+
+  // 3. Render Table Rows
   const tbody = document.getElementById('project-tbody');
+  if (!tbody) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px;font-style:italic;">No projects match the selected filters.</td></tr>';
+    return;
+  }
+
   tbody.innerHTML = filtered.map((p, rowNum) => {
     const idx = allProjects.indexOf(p);
     const amt = p.amount ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p.amount) : '—';
