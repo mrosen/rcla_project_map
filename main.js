@@ -1,6 +1,6 @@
 // ============================================================
 // RCLA Project Map — main.js
-// Complete: Overview + List + Detail + Maint Mode & Inline Editor
+// Complete: Overview + List + Detail + Maint Mode & Hover Effects
 // ============================================================
 
 const BACKEND_URL = 'http://127.0.0.1:8000';
@@ -21,7 +21,7 @@ style.textContent = `
     overflow: hidden;
   }
 
-  /* ---- Maintainer Mode Toolbar ---- */
+  /* Maintainer Mode Toolbar */
   #maintainer-panel {
     background: #0f172a;
     color: #f8fafc;
@@ -64,7 +64,7 @@ style.textContent = `
   .btn-push { background: #d97706; }
   .btn-log  { background: #334155; }
 
-  /* ---- Maintainer Log Drawer ---- */
+  /* Maintainer Log Drawer */
   #log-drawer {
     display: none;
     background: #020617;
@@ -79,7 +79,7 @@ style.textContent = `
   }
   .log-line { margin-bottom: 2px; }
 
-  /* ---- Top Nav ---- */
+  /* Top Nav */
   #nav {
     background: #1a3a5c;
     color: white;
@@ -108,14 +108,12 @@ style.textContent = `
   #nav button:hover    { background: rgba(255,255,255,0.15); }
   #nav button.active   { background: rgba(255,255,255,0.25); border-color: white; }
 
-  /* ---- Two-Pane Body ---- */
+  /* Layout */
   #app {
     display: flex;
     flex: 1;
     overflow: hidden;
   }
-
-  /* ---- Left Pane: Map ---- */
   #map-pane {
     flex: 0 0 55%;
     position: relative;
@@ -125,8 +123,6 @@ style.textContent = `
     width: 100%;
     height: 100%;
   }
-
-  /* ---- Divider ---- */
   #divider {
     width: 6px;
     background: #ddd;
@@ -148,7 +144,6 @@ style.textContent = `
   }
   #divider:hover::after, #divider.dragging::after { color: white; }
 
-  /* ---- Right Pane ---- */
   #right-pane {
     flex: 1;
     overflow-y: auto;
@@ -158,9 +153,8 @@ style.textContent = `
     min-width: 200px;
   }
 
-  /* ---- Shared Panel Styles ---- */
+  /* Panels */
   .panel { padding: 20px; flex: 1; }
-
   .panel h2 {
     font-size: 17px;
     color: #1a3a5c;
@@ -168,14 +162,12 @@ style.textContent = `
     border-bottom: 2px solid #1a3a5c;
     padding-bottom: 6px;
   }
-
   .panel h3 {
     font-size: 14px;
     color: #1a3a5c;
     margin: 16px 0 6px;
   }
 
-  /* ---- Loading / Error States ---- */
   #loading {
     display: flex;
     align-items: center;
@@ -185,7 +177,7 @@ style.textContent = `
     font-size: 15px;
   }
 
-  /* ---- Status Badges ---- */
+  /* Status Badges */
   .badge {
     display: inline-block;
     padding: 2px 8px;
@@ -199,7 +191,7 @@ style.textContent = `
   .badge-approved { background: #c8e6c9; color: #1b5e20; }
   .badge-proposed { background: #bbdefb; color: #0d47a1; }
 
-  /* ---- Project Detail ---- */
+  /* Project Detail */
   #detail-panel .meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -241,30 +233,9 @@ style.textContent = `
     border: none;
   }
   #detail-panel .narrative p  { margin-bottom: 8px; }
-  #detail-panel .narrative ul,
-  #detail-panel .narrative ol { margin: 6px 0 8px 18px; }
+  #detail-panel .narrative ul { margin: 6px 0 8px 18px; }
   #detail-panel .narrative li { margin-bottom: 3px; }
-  #detail-panel .narrative table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 12px;
-    margin: 8px 0;
-  }
-  #detail-panel .narrative th,
-  #detail-panel .narrative td {
-    border: 1px solid #ddd;
-    padding: 4px 8px;
-    text-align: left;
-  }
-  #detail-panel .narrative th { background: #f0f4f8; }
-  #detail-panel .narrative hr { border: none; border-top: 1px solid #eee; margin: 10px 0; }
 
-  #detail-panel .narrative.placeholder {
-    color: #aaa;
-    font-style: italic;
-  }
-
-  /* ---- Files & Links ---- */
   .files-section {
     background: white;
     border: 1px solid #ddd;
@@ -286,7 +257,6 @@ style.textContent = `
   .files-section a:hover { background: #f0f4f8; border-radius: 4px; }
   .file-icon { font-size: 16px; }
 
-  /* ---- Photo Carousel ---- */
   .photo-carousel {
     display: flex;
     gap: 8px;
@@ -303,7 +273,6 @@ style.textContent = `
     border: 1px solid #ddd;
   }
 
-  /* ---- Detail Navigation ---- */
   .detail-nav {
     display: flex;
     justify-content: space-between;
@@ -323,7 +292,7 @@ style.textContent = `
   .detail-nav button:hover { background: #2a5a8c; }
   .detail-nav button:disabled { background: #ccc; cursor: default; }
 
-  /* ---- Filters ---- */
+  /* Filters */
   .filters {
     display: flex;
     gap: 8px;
@@ -339,7 +308,7 @@ style.textContent = `
     background: white;
   }
 
-  /* ---- Project List Table ---- */
+  /* Table */
   #list-panel table {
     width: 100%;
     border-collapse: collapse;
@@ -374,7 +343,7 @@ style.textContent = `
     font-style: italic;
   }
 
-  /* ---- Overview ---- */
+  /* Overview */
   #overview-panel .summary-text {
     background: white;
     border: 1px solid #ddd;
@@ -466,6 +435,7 @@ document.body.innerHTML = `
 let allProjects       = [];
 let map               = null;
 let markers           = [];
+let hoverInfoWindow   = null;
 let currentView       = 'overview';
 let currentIndex      = 0;
 let isMaintenanceMode = false;
@@ -473,6 +443,7 @@ let listSort          = { col: 'start_year', dir: 'asc' };
 let activeEditIdx     = null;
 let editMarker        = null;
 let mapClickListener  = null;
+let bounceTimer       = null;
 
 let currentFilters = {
   status: '',
@@ -481,7 +452,7 @@ let currentFilters = {
   search: ''
 };
 
-// Safe Coordinate Parser (Handles separate columns & single-column "lat, lng" strings)
+// Safe Coordinate Parser
 function getProjectCoords(project) {
   if (!project) return null;
   let latVal = project.position_lat ?? project.lat;
@@ -565,6 +536,10 @@ function buildMap() {
     fullscreenControl: true,
   });
 
+  hoverInfoWindow = new google.maps.InfoWindow({
+    disableAutoPan: true
+  });
+
   markers = allProjects.map((project, idx) => {
     const coords = getProjectCoords(project);
     if (!coords) return null;
@@ -576,7 +551,38 @@ function buildMap() {
       icon: `https://maps.google.com/mapfiles/ms/icons/${markerColor(project.status)}-dot.png`,
     });
 
-    marker.addListener('click', () => showDetail(idx));
+    // 1. Click to view project details
+    marker.addListener('click', () => {
+      if (hoverInfoWindow) hoverInfoWindow.close();
+      showDetail(idx);
+    });
+
+    // 2. Hover over map marker to display tooltip overview card
+    marker.addListener('mouseover', () => {
+      const amt = project.amount
+        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(project.amount)
+        : '—';
+
+      const tooltipContent = `
+        <div style="font-family:Arial,sans-serif;font-size:12px;line-height:1.4;padding:4px 6px;max-width:240px;">
+          <div style="font-weight:bold;color:#1a3a5c;margin-bottom:4px;font-size:13px;">${project.title || 'Untitled Project'}</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+            <span class="badge badge-${(project.status || '').toLowerCase()}" style="font-size:9px;padding:1px 6px;">${project.status || '—'}</span>
+            <span style="color:#64748b;font-size:11px;">${project.id || ''}</span>
+          </div>
+          <div style="color:#475569;font-size:11px;"><strong>Budget:</strong> ${amt}</div>
+          <div style="color:#475569;font-size:11px;"><strong>Category:</strong> ${project.category || '—'}</div>
+        </div>
+      `;
+
+      hoverInfoWindow.setContent(tooltipContent);
+      hoverInfoWindow.open(map, marker);
+    });
+
+    marker.addListener('mouseout', () => {
+      if (hoverInfoWindow) hoverInfoWindow.close();
+    });
+
     return marker;
   });
 }
@@ -612,6 +618,11 @@ function highlightMarker(idx) {
     active.setZIndex(999999);
     active.setAnimation(google.maps.Animation.BOUNCE);
 
+    if (bounceTimer) clearTimeout(bounceTimer);
+    bounceTimer = setTimeout(() => {
+      if (active) active.setAnimation(null);
+    }, 1500);
+
     if (map && active.getPosition()) {
       map.panTo(active.getPosition());
       if (map.getZoom() < 12) map.setZoom(12);
@@ -622,6 +633,13 @@ function highlightMarker(idx) {
 }
 
 function resetMarkers() {
+  if (bounceTimer) {
+    clearTimeout(bounceTimer);
+    bounceTimer = null;
+  }
+  if (hoverInfoWindow) {
+    hoverInfoWindow.close();
+  }
   markers.forEach((m, i) => {
     if (!m) return;
     m.setAnimation(null);
@@ -652,7 +670,6 @@ function showOverview() {
 
   const filtered = getFilteredProjects();
 
-  // Synchronize map markers with active filter
   if (markers.length) {
     resetMarkers();
     const filteredSet = new Set(filtered);
@@ -747,13 +764,11 @@ function showOverview() {
     </div>
   `;
 
-  // Restore filter values into overview dropdowns
   if (document.getElementById('overview-filter-status'))   document.getElementById('overview-filter-status').value = currentFilters.status;
   if (document.getElementById('overview-filter-category')) document.getElementById('overview-filter-category').value = currentFilters.category;
   if (document.getElementById('overview-filter-year'))     document.getElementById('overview-filter-year').value = currentFilters.year;
   if (document.getElementById('overview-filter-search'))   document.getElementById('overview-filter-search').value = currentFilters.search;
 
-  // Wire overview filter events
   ['overview-filter-status', 'overview-filter-category', 'overview-filter-year', 'overview-filter-search'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
       currentFilters.status   = document.getElementById('overview-filter-status')?.value || '';
@@ -782,7 +797,6 @@ function buildOverviewCharts(projects) {
   const BLUE = '#1a3a5c';
   const COLORS = ['#1a3a5c','#2196f3','#4caf50','#ff9800','#9c27b0','#f44336','#059669','#d97706'];
 
-  // 1. Funding by year
   const yearMap = {};
   dataset.forEach(p => {
     const y = p.start_year;
@@ -808,7 +822,6 @@ function buildOverviewCharts(projects) {
     });
   }
 
-  // 2. Portfolio by category
   const catMap = {};
   dataset.forEach(p => {
     const c = p.category || 'General';
@@ -839,6 +852,7 @@ function buildOverviewCharts(projects) {
 function showList() {
   currentView = 'list';
   setActiveNav('list');
+  if (markers.length) resetMarkers();
   renderList();
 }
 
@@ -850,7 +864,6 @@ function wireListFilters() {
     }
   });
 
-  // Column header sorting
   document.querySelectorAll('#project-table th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
       const col = th.dataset.col;
@@ -905,7 +918,6 @@ function renderList() {
     </div>
   `;
 
-  // Restore saved filter selections into the newly created inputs
   if (document.getElementById('filter-status'))   document.getElementById('filter-status').value = currentFilters.status;
   if (document.getElementById('filter-category')) document.getElementById('filter-category').value = currentFilters.category;
   if (document.getElementById('filter-year'))     document.getElementById('filter-year').value = currentFilters.year;
@@ -923,7 +935,6 @@ function renderListRows() {
 
   let filtered = getFilteredProjects();
 
-  // Apply sorting
   filtered.sort((a, b) => {
     let av = a[listSort.col] ?? '';
     let bv = b[listSort.col] ?? '';
@@ -934,7 +945,6 @@ function renderListRows() {
     return 0;
   });
 
-  // Synchronize Map Markers with Filtered Set
   const filteredSet = new Set(filtered);
   const bounds = new google.maps.LatLngBounds();
   let visibleCount = 0;
@@ -961,7 +971,6 @@ function renderListRows() {
     }
   }
 
-  // Render Table Rows
   const tbody = document.getElementById('project-tbody');
   if (!tbody) return;
 
@@ -987,7 +996,25 @@ function renderListRows() {
   }).join('');
 
   tbody.querySelectorAll('tr[data-idx]').forEach(row => {
-    row.addEventListener('click', () => showDetail(Number(row.dataset.idx)));
+    const rowIdx = Number(row.dataset.idx);
+
+    // Row Click: View project details
+    row.addEventListener('click', () => showDetail(rowIdx));
+
+    // Row Hover: Briefly animate matching map marker
+    row.addEventListener('mouseenter', () => {
+      const targetMarker = markers[rowIdx];
+      if (targetMarker && targetMarker.getMap()) {
+        targetMarker.setAnimation(google.maps.Animation.BOUNCE);
+      }
+    });
+
+    row.addEventListener('mouseleave', () => {
+      const targetMarker = markers[rowIdx];
+      if (targetMarker && targetMarker.getMap()) {
+        targetMarker.setAnimation(null);
+      }
+    });
   });
 }
 
@@ -1229,7 +1256,7 @@ window.saveProjectEdits = async function () {
       }
     }
 
-    // 4. Update the in-memory marker coordinates immediately
+    // 4. Update in-memory marker coordinates
     const parsedLat = parseFloat(latVal);
     const parsedLng = parseFloat(lngVal);
     if (!isNaN(parsedLat) && !isNaN(parsedLng) && markers[activeEditIdx]) {
@@ -1237,7 +1264,7 @@ window.saveProjectEdits = async function () {
       markers[activeEditIdx].setPosition(newPos);
     }
 
-    // 5. Clean up temporary edit marker/listeners and re-render the detail view
+    // 5. Clean up temporary edit marker/listeners and re-render detail view
     cancelEditCleanup();
     loadData().then(projects => {
       allProjects = projects;
@@ -1353,7 +1380,7 @@ function renderFilesAndLinks(manifest, projectId) {
     links.forEach(l => {
       const a = document.createElement('a');
       a.href = l.url;
-      a.tart = '_blank';
+      a.target = '_blank';
       a.innerHTML = `<span class="file-icon">🔗</span> ${l.label || l.url}`;
       list.appendChild(a);
     });
@@ -1371,7 +1398,7 @@ function renderMarkdown() {
 function loadMarked() {
   return new Promise(resolve => {
     if (window.marked) { resolve(); return; }
-  const s = document.createElement('script');
+    const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js';
     s.onload = resolve;
     document.head.appendChild(s);
@@ -1415,7 +1442,7 @@ function initDivider() {
   });
 }
 
-// Fallback initialization if Google Maps was already loaded
+// Global invocation fallback if Google Maps loaded prior to main.js
 if (window.google && window.google.maps) {
   window.initMap();
 }
