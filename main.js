@@ -6,7 +6,7 @@
 const BACKEND_URL = 'http://127.0.0.1:8000';
 const CSV_PATH = 'RCLA_Projects_v2.csv';
 
-// --- Inject App CSS ---
+// --- 1. Inject App CSS ---
 const style = document.createElement('style');
 style.textContent = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -323,21 +323,23 @@ style.textContent = `
   .detail-nav button:hover { background: #2a5a8c; }
   .detail-nav button:disabled { background: #ccc; cursor: default; }
 
-  /* ---- Project List ---- */
-  #list-panel .filters {
+  /* ---- Filters ---- */
+  .filters {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 14px;
   }
-  #list-panel .filters select,
-  #list-panel .filters input {
+  .filters select,
+  .filters input {
     padding: 5px 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 13px;
     background: white;
   }
+
+  /* ---- Project List Table ---- */
   #list-panel table {
     width: 100%;
     border-collapse: collapse;
@@ -424,7 +426,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// --- Base DOM Structure ---
+// --- 2. Base DOM Structure ---
 document.body.innerHTML = `
   <div id="maintainer-panel">
     <div class="maint-group">
@@ -472,7 +474,14 @@ let activeEditIdx     = null;
 let editMarker        = null;
 let mapClickListener  = null;
 
-// Helper: Resilient Coordinate Parser
+let currentFilters = {
+  status: '',
+  category: '',
+  year: '',
+  search: ''
+};
+
+// Safe Coordinate Parser (Handles separate columns & single-column "lat, lng" strings)
 function getProjectCoords(project) {
   if (!project) return null;
   let latVal = project.position_lat ?? project.lat;
@@ -487,6 +496,27 @@ function getProjectCoords(project) {
   const lat = Number(latVal);
   const lng = Number(lngVal);
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+// Centralized Filter Calculation
+function getFilteredProjects() {
+  const s = (currentFilters.status || '').trim().toLowerCase();
+  const c = (currentFilters.category || '').trim().toLowerCase();
+  const y = (currentFilters.year || '').trim();
+  const q = (currentFilters.search || '').trim().toLowerCase();
+
+  return allProjects.filter(p => {
+    if (s && String(p.status || '').trim().toLowerCase() !== s) return false;
+    if (c && String(p.category || '').trim().toLowerCase() !== c) return false;
+    if (y && String(p.start_year || '').trim() !== y) return false;
+    if (q) {
+      const matchTitle   = String(p.title || '').toLowerCase().includes(q);
+      const matchId      = String(p.id || '').toLowerCase().includes(q);
+      const matchShepard = String(p.shepard || p.shepherd || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchId && !matchShepard) return false;
+    }
+    return true;
+  });
 }
 
 // ============================================================
@@ -520,7 +550,7 @@ function loadData() {
         header: true,
         skipEmptyLines: true,
         dynamicTyping: true,
-        complete: res => resolve(res.data),
+        complete: res => resolve(res.data.filter(p => p.id || p.grant_id)),
         error:    err => reject(err),
       });
     }));
@@ -552,7 +582,7 @@ function buildMap() {
 }
 
 function markerColor(status) {
-  switch (status) {
+  switch (String(status).toLowerCase()) {
     case 'closed':               return 'orange';
     case 'approved':             return 'green';
     case 'proposed':             return 'blue';
@@ -613,20 +643,70 @@ function setActiveNav(view) {
   document.getElementById('btn-list').classList.toggle('active', view === 'list');
 }
 
+// ============================================================
+// VIEW: OVERVIEW (HONORS ACTIVE FILTERS)
+// ============================================================
 function showOverview() {
   currentView = 'overview';
   setActiveNav('overview');
-  if (markers.length) resetMarkers();
 
-  const closed   = allProjects.filter(p => p.status === 'closed');
-  const approved = allProjects.filter(p => p.status === 'approved');
-  const proposed = allProjects.filter(p => p.status === 'proposed');
-  const totalGrants = allProjects.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const filtered = getFilteredProjects();
+
+  // Synchronize map markers with active filter
+  if (markers.length) {
+    resetMarkers();
+    const filteredSet = new Set(filtered);
+    const bounds = new google.maps.LatLngBounds();
+    let count = 0;
+    allProjects.forEach((p, idx) => {
+      const m = markers[idx];
+      if (!m) return;
+      if (filteredSet.has(p)) {
+        m.setMap(map);
+        if (m.getPosition()) {
+          bounds.extend(m.getPosition());
+          count++;
+        }
+      } else {
+        m.setMap(null);
+      }
+    });
+    if (count > 0 && map) map.fitBounds(bounds);
+  }
+
+  const closed   = filtered.filter(p => String(p.status).toLowerCase() === 'closed');
+  const approved = filtered.filter(p => String(p.status).toLowerCase() === 'approved');
+  const proposed = filtered.filter(p => String(p.status).toLowerCase() === 'proposed');
+  const totalGrants = filtered.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  const statuses   = [...new Set(allProjects.map(p => p.status).filter(Boolean))].sort();
+  const categories = [...new Set(allProjects.map(p => p.category).filter(Boolean))].sort();
+  const years      = [...new Set(allProjects.map(p => p.start_year).filter(Boolean))].sort();
+
+  const isFiltered = currentFilters.status || currentFilters.category || currentFilters.year || currentFilters.search;
+  const filterNotice = isFiltered ? `<span style="font-size:12px;color:#d97706;font-weight:normal;"> (Filtered: ${filtered.length} of ${allProjects.length})</span>` : '';
 
   const rp = document.getElementById('right-pane');
   rp.innerHTML = `
     <div class="panel" id="overview-panel">
-      <h2>Club Projects Overview</h2>
+      <h2>Club Projects Overview ${filterNotice}</h2>
+
+      <div class="filters">
+        <select id="overview-filter-status">
+          <option value="">All statuses</option>
+          ${statuses.map(s => `<option value="${s}">${capitalize(s)}</option>`).join('')}
+        </select>
+        <select id="overview-filter-category">
+          <option value="">All categories</option>
+          ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <select id="overview-filter-year">
+          <option value="">All years</option>
+          ${years.map(y => `<option value="${y}">${y}</option>`).join('')}
+        </select>
+        <input id="overview-filter-search" type="text" placeholder="Search…" style="flex:1;min-width:120px;">
+      </div>
+
       <div class="summary-text">
         <p>The Rotary Club of Lake Atitlán has been funding community development projects
         around Lake Atitlán since 2015. Working alongside international partner clubs and
@@ -642,12 +722,12 @@ function showOverview() {
 
       <div class="stat-row">
         <div class="stat-card">
-          <div class="stat-value">${allProjects.length}</div>
-          <div class="stat-label">Total Projects</div>
+          <div class="stat-value">${filtered.length}</div>
+          <div class="stat-label">Projects in View</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">$${(totalGrants / 1e6).toFixed(2)}M</div>
-          <div class="stat-label">Total Grant Funding</div>
+          <div class="stat-label">Funding in View</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${closed.length} / ${approved.length} / ${proposed.length}</div>
@@ -667,7 +747,24 @@ function showOverview() {
     </div>
   `;
 
-  loadChartJS().then(buildOverviewCharts);
+  // Restore filter values into overview dropdowns
+  if (document.getElementById('overview-filter-status'))   document.getElementById('overview-filter-status').value = currentFilters.status;
+  if (document.getElementById('overview-filter-category')) document.getElementById('overview-filter-category').value = currentFilters.category;
+  if (document.getElementById('overview-filter-year'))     document.getElementById('overview-filter-year').value = currentFilters.year;
+  if (document.getElementById('overview-filter-search'))   document.getElementById('overview-filter-search').value = currentFilters.search;
+
+  // Wire overview filter events
+  ['overview-filter-status', 'overview-filter-category', 'overview-filter-year', 'overview-filter-search'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+      currentFilters.status   = document.getElementById('overview-filter-status')?.value || '';
+      currentFilters.category = document.getElementById('overview-filter-category')?.value || '';
+      currentFilters.year     = document.getElementById('overview-filter-year')?.value || '';
+      currentFilters.search   = document.getElementById('overview-filter-search')?.value || '';
+      showOverview();
+    });
+  });
+
+  loadChartJS().then(() => buildOverviewCharts(filtered));
 }
 
 function loadChartJS() {
@@ -680,12 +777,14 @@ function loadChartJS() {
   });
 }
 
-function buildOverviewCharts() {
+function buildOverviewCharts(projects) {
+  const dataset = projects || allProjects;
   const BLUE = '#1a3a5c';
-  const COLORS = ['#1a3a5c','#2196f3','#4caf50','#ff9800','#9c27b0','#f44336'];
+  const COLORS = ['#1a3a5c','#2196f3','#4caf50','#ff9800','#9c27b0','#f44336','#059669','#d97706'];
 
+  // 1. Funding by year
   const yearMap = {};
-  allProjects.forEach(p => {
+  dataset.forEach(p => {
     const y = p.start_year;
     if (!y) return;
     yearMap[y] = (yearMap[y] || 0) + (Number(p.amount) || 0);
@@ -693,51 +792,82 @@ function buildOverviewCharts() {
   const years = Object.keys(yearMap).sort();
   const amounts = years.map(y => yearMap[y]);
 
-  new Chart(document.getElementById('chart-by-year'), {
-    type: 'bar',
-    data: {
-      labels: years,
-      datasets: [{ label: 'Grant Amount', data: amounts, backgroundColor: BLUE }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } } }
-    }
-  });
+  const yearEl = document.getElementById('chart-by-year');
+  if (yearEl) {
+    new Chart(yearEl, {
+      type: 'bar',
+      data: {
+        labels: years.length ? years : ['No Data'],
+        datasets: [{ label: 'Grant Amount', data: amounts.length ? amounts : [0], backgroundColor: BLUE }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } } }
+      }
+    });
+  }
 
+  // 2. Portfolio by category
   const catMap = {};
-  allProjects.forEach(p => {
-    const c = p.category || 'Unknown';
+  dataset.forEach(p => {
+    const c = p.category || 'General';
     catMap[c] = (catMap[c] || 0) + (Number(p.amount) || 0);
   });
   const cats = Object.keys(catMap);
   const catAmts = cats.map(c => catMap[c]);
 
-  new Chart(document.getElementById('chart-by-cat'), {
-    type: 'doughnut',
-    data: {
-      labels: cats,
-      datasets: [{ data: catAmts, backgroundColor: COLORS }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } }
-    }
-  });
+  const catEl = document.getElementById('chart-by-cat');
+  if (catEl) {
+    new Chart(catEl, {
+      type: 'doughnut',
+      data: {
+        labels: cats.length ? cats : ['No Data'],
+        datasets: [{ data: catAmts.length ? catAmts : [1], backgroundColor: cats.length ? COLORS : ['#cbd5e1'] }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } }
+      }
+    });
+  }
 }
 
+// ============================================================
+// VIEW: PROJECT LIST
+// ============================================================
 function showList() {
   currentView = 'list';
   setActiveNav('list');
-  if (markers.length) resetMarkers();
   renderList();
+}
+
+function wireListFilters() {
+  ['filter-status', 'filter-category', 'filter-year', 'filter-search'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', renderListRows);
+    }
+  });
+
+  // Column header sorting
+  document.querySelectorAll('#project-table th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (listSort.col === col) {
+        listSort.dir = listSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        listSort = { col, dir: 'asc' };
+      }
+      renderListRows();
+    });
+  });
 }
 
 function renderList() {
   const rp = document.getElementById('right-pane');
-  const statuses   = [...new Set(allProjects.map(p => p.status))].sort();
-  const categories = [...new Set(allProjects.map(p => p.category))].sort();
+  const statuses   = [...new Set(allProjects.map(p => p.status).filter(Boolean))].sort();
+  const categories = [...new Set(allProjects.map(p => p.category).filter(Boolean))].sort();
   const years      = [...new Set(allProjects.map(p => p.start_year).filter(Boolean))].sort();
 
   rp.innerHTML = `
@@ -775,32 +905,36 @@ function renderList() {
     </div>
   `;
 
+  // Restore saved filter selections into the newly created inputs
+  if (document.getElementById('filter-status'))   document.getElementById('filter-status').value = currentFilters.status;
+  if (document.getElementById('filter-category')) document.getElementById('filter-category').value = currentFilters.category;
+  if (document.getElementById('filter-year'))     document.getElementById('filter-year').value = currentFilters.year;
+  if (document.getElementById('filter-search'))   document.getElementById('filter-search').value = currentFilters.search;
+
   wireListFilters();
   renderListRows();
 }
 
-function wireListFilters() {
-  ['filter-status','filter-category','filter-year','filter-search'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderListRows);
-  });
-}
-
 function renderListRows() {
-  const status   = document.getElementById('filter-status')?.value || '';
-  const category = document.getElementById('filter-category')?.value || '';
-  const year     = document.getElementById('filter-year')?.value || '';
-  const search   = document.getElementById('filter-search')?.value.toLowerCase() || '';
+  currentFilters.status   = document.getElementById('filter-status')?.value || '';
+  currentFilters.category = document.getElementById('filter-category')?.value || '';
+  currentFilters.year     = document.getElementById('filter-year')?.value || '';
+  currentFilters.search   = document.getElementById('filter-search')?.value || '';
 
-  // 1. Filter project records
-  let filtered = allProjects.filter(p => {
-    if (status   && p.status !== status) return false;
-    if (category && p.category !== category) return false;
-    if (year     && String(p.start_year) !== year) return false;
-    if (search   && !p.title.toLowerCase().includes(search) && !p.id.toLowerCase().includes(search)) return false;
-    return true;
+  let filtered = getFilteredProjects();
+
+  // Apply sorting
+  filtered.sort((a, b) => {
+    let av = a[listSort.col] ?? '';
+    let bv = b[listSort.col] ?? '';
+    if (typeof av === 'string') av = av.toLowerCase();
+    if (typeof bv === 'string') bv = bv.toLowerCase();
+    if (av < bv) return listSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return listSort.dir === 'asc' ?  1 : -1;
+    return 0;
   });
 
-  // 2. Synchronize Map Markers with Filtered Set
+  // Synchronize Map Markers with Filtered Set
   const filteredSet = new Set(filtered);
   const bounds = new google.maps.LatLngBounds();
   let visibleCount = 0;
@@ -810,26 +944,24 @@ function renderListRows() {
     if (!marker) return;
 
     if (filteredSet.has(p)) {
-      marker.setMap(map); // Show marker
+      marker.setMap(map);
       if (typeof marker.getPosition === 'function' && marker.getPosition()) {
         bounds.extend(marker.getPosition());
         visibleCount++;
       }
     } else {
-      marker.setMap(null); // Hide marker
+      marker.setMap(null);
     }
   });
 
-  // Re-fit map view to matching visible pins
-  if (visibleCount > 0 && map) {
+  if (visibleCount > 0 && map && currentView === 'list') {
     map.fitBounds(bounds);
-    // If only 1 marker matches, prevent over-zooming
     if (visibleCount === 1 && map.getZoom() > 14) {
       map.setZoom(14);
     }
   }
 
-  // 3. Render Table Rows
+  // Render Table Rows
   const tbody = document.getElementById('project-tbody');
   if (!tbody) return;
 
@@ -1221,7 +1353,7 @@ function renderFilesAndLinks(manifest, projectId) {
     links.forEach(l => {
       const a = document.createElement('a');
       a.href = l.url;
-      a.target = '_blank';
+      a.tart = '_blank';
       a.innerHTML = `<span class="file-icon">🔗</span> ${l.label || l.url}`;
       list.appendChild(a);
     });
@@ -1239,7 +1371,7 @@ function renderMarkdown() {
 function loadMarked() {
   return new Promise(resolve => {
     if (window.marked) { resolve(); return; }
-    const s = document.createElement('script');
+  const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js';
     s.onload = resolve;
     document.head.appendChild(s);
@@ -1283,7 +1415,7 @@ function initDivider() {
   });
 }
 
-// Global invocation fallback if Google Maps loaded prior to main.js
+// Fallback initialization if Google Maps was already loaded
 if (window.google && window.google.maps) {
   window.initMap();
 }
