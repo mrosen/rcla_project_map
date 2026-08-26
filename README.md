@@ -43,6 +43,8 @@ To reference from Windows assuming checkout via WSL:
 To test locally, 
   python3 -m http.server
   http://localhost:8000/
+
+  python orchestrator.py
   
   **********************************
   Don't forget to modify index.html to reference the local copy of main.js!
