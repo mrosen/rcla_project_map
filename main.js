@@ -1054,6 +1054,8 @@ function escapeHtml(str) {
 }
 
 function initMaintainerClient() {
+  return;
+  // msr.
   try {
     const evtSource = new EventSource(BACKEND_URL + '/api/logs');
     evtSource.onmessage = function(event) {
