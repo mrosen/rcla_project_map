@@ -1,8 +1,5 @@
 const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8000'
-  : window.location.origin;
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8000'
   : 'https://your-production-backend-domain.com'; // or window.location.origin if backend is served on the same domain/port
 const CSV_PATH = 'RCLA_Projects_v2.csv';
 
