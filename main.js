@@ -1,6 +1,6 @@
 const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8000'
-  : 'https://your-production-backend-domain.com'; // or window.location.origin if backend is served on the same domain/port
+  : window.location.origin;
 const CSV_PATH = 'RCLA_Projects_v2.csv';
 
 let allProjects       = [];
@@ -14,6 +14,14 @@ let activeEditIdx     = null;
 let editMarker        = null;
 let mapClickListener  = null;
 let easyMDEInstance   = null;
+let overviewChartInstance = null;
+
+let currentFilters = {
+  type: '',
+  status: '',
+  category: '',
+  search: ''
+};
 
 function getProjectType(p) {
   if (p.project_type && String(p.project_type).trim()) return p.project_type;
@@ -186,6 +194,7 @@ function resetMarkers() {
     if (!m || !allProjects[i]) return;
     m.setIcon('https://maps.google.com/mapfiles/ms/icons/' + markerColor(allProjects[i].status) + '-dot.png');
     m.setZIndex(1);
+    m.setVisible(true);
   });
 }
 
@@ -199,34 +208,104 @@ function setActiveNav(view) {
   document.getElementById('btn-list').classList.toggle('active', view === 'list');
 }
 
+function getFilteredProjects() {
+  return allProjects.filter(function(p) {
+    const pType = getProjectType(p);
+    if (currentFilters.type && pType !== currentFilters.type) return false;
+    if (currentFilters.status && p.status !== currentFilters.status) return false;
+    if (currentFilters.category && p.category !== currentFilters.category) return false;
+    if (currentFilters.search) {
+      const q = currentFilters.search.toLowerCase();
+      const match = (p.title && p.title.toLowerCase().includes(q)) ||
+                    (p.id && String(p.id).toLowerCase().includes(q)) ||
+                    (p.partner && p.partner.toLowerCase().includes(q)) ||
+                    (p.narrative && p.narrative.toLowerCase().includes(q)) ||
+                    (p.description && p.description.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    return true;
+  });
+}
+
+function syncFilterInputs() {
+  const typeEl = document.getElementById('filter-type');
+  const statusEl = document.getElementById('filter-status');
+  const catEl = document.getElementById('filter-category');
+  const searchEl = document.getElementById('filter-search');
+
+  if (typeEl) typeEl.value = currentFilters.type;
+  if (statusEl) statusEl.value = currentFilters.status;
+  if (catEl) catEl.value = currentFilters.category;
+  if (searchEl) searchEl.value = currentFilters.search;
+}
+
+function handleFilterInput(e) {
+  const val = e.target.value;
+  const id = e.target.id;
+
+  if (id === 'filter-type') currentFilters.type = val;
+  else if (id === 'filter-status') currentFilters.status = val;
+  else if (id === 'filter-category') currentFilters.category = val;
+  else if (id === 'filter-search') currentFilters.search = val;
+
+  syncFilterInputs();
+
+  if (currentView === 'overview') {
+    updateOverviewMetricsAndChart();
+  } else if (currentView === 'list') {
+    renderListRows();
+  }
+}
+
+function renderFilterBar(types, statuses, categories) {
+  const typeOptions = types.map(function(t) { return '<option value="' + t + '" ' + (currentFilters.type === t ? 'selected' : '') + '>' + t + '</option>'; }).join('');
+  const statusOptions = statuses.map(function(s) { return '<option value="' + s + '" ' + (currentFilters.status === s ? 'selected' : '') + '>' + capitalize(s) + '</option>'; }).join('');
+  const catOptions = categories.map(function(c) { return '<option value="' + c + '" ' + (currentFilters.category === c ? 'selected' : '') + '>' + c + '</option>'; }).join('');
+
+  return ''
+    + '<div class="filters">'
+    + '  <select id="filter-type"><option value="">All Grant / Project Types</option>' + typeOptions + '</select>'
+    + '  <select id="filter-status"><option value="">All statuses</option>' + statusOptions + '</select>'
+    + '  <select id="filter-category"><option value="">All categories</option>' + catOptions + '</select>'
+    + '  <input id="filter-search" type="text" placeholder="Search title, ID, partner…" value="' + escapeHtml(currentFilters.search) + '" style="flex:1;min-width:120px;">'
+    + '</div>';
+}
+
+function attachFilterListeners() {
+  ['filter-type', 'filter-status', 'filter-category', 'filter-search'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', handleFilterInput);
+  });
+}
+
 function showOverview() {
   cancelEditCleanup();
   currentView = 'overview';
   setActiveNav('overview');
-  if (markers.length) resetMarkers();
-
-  const totalFunding = allProjects.reduce(function(s, p) { return s + (Number(p.amount) || Number(p.budget) || 0); }, 0);
-  const ggCount = allProjects.filter(function(p) { return getProjectType(p) === 'Global Grant'; }).length;
-  const directCount = allProjects.filter(function(p) { return getProjectType(p) !== 'Global Grant'; }).length;
 
   const rp = document.getElementById('right-pane');
+  const types = Array.from(new Set(allProjects.map(function(p) { return getProjectType(p); }))).sort();
+  const statuses = Array.from(new Set(allProjects.map(function(p) { return p.status; }).filter(Boolean))).sort();
+  const categories = Array.from(new Set(allProjects.map(function(p) { return p.category; }).filter(Boolean))).sort();
+
   rp.innerHTML = ''
     + '<div class="panel" id="overview-panel">'
     + '  <h2>Club Projects Overview</h2>'
+    +    renderFilterBar(types, statuses, categories)
     + '  <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:14px;line-height:1.7;margin-bottom:16px;">'
     + '    <p>The Rotary Club of Lake Atitlán funds community development projects across Guatemala through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.</p>'
     + '  </div>'
     + '  <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:16px;">'
     + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
-    + '      <div style="font-size:22px;font-weight:bold;color:#1a3a5c;">' + allProjects.length + '</div>'
+    + '      <div id="ov-total-count" style="font-size:22px;font-weight:bold;color:#1a3a5c;">0</div>'
     + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Total Projects</div>'
     + '    </div>'
     + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
-    + '      <div style="font-size:22px;font-weight:bold;color:#1a3a5c;">$' + (totalFunding / 1e6).toFixed(2) + 'M</div>'
+    + '      <div id="ov-total-funding" style="font-size:22px;font-weight:bold;color:#1a3a5c;">$0.00M</div>'
     + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Total Deployed</div>'
     + '    </div>'
     + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
-    + '      <div style="font-size:22px;font-weight:bold;color:#1a3a5c;">' + ggCount + ' / ' + directCount + '</div>'
+    + '      <div id="ov-split-count" style="font-size:22px;font-weight:bold;color:#1a3a5c;">0 / 0</div>'
     + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Global Grants / Direct & Other</div>'
     + '    </div>'
     + '  </div>'
@@ -236,12 +315,41 @@ function showOverview() {
     + '  </div>'
     + '</div>';
 
-  renderTypeChart();
+  attachFilterListeners();
+  updateOverviewMetricsAndChart();
 }
 
-function renderTypeChart() {
+function updateOverviewMetricsAndChart() {
+  const filtered = getFilteredProjects();
+
+  if (markers.length) {
+    allProjects.forEach(function(p, idx) {
+      const marker = markers[idx];
+      if (marker) {
+        marker.setVisible(filtered.includes(p));
+      }
+    });
+  }
+
+  const totalFunding = filtered.reduce(function(s, p) { return s + (Number(p.amount) || Number(p.budget) || 0); }, 0);
+  const ggCount = filtered.filter(function(p) { return getProjectType(p) === 'Global Grant'; }).length;
+  const directCount = filtered.filter(function(p) { return getProjectType(p) !== 'Global Grant'; }).length;
+
+  const countEl = document.getElementById('ov-total-count');
+  const fundingEl = document.getElementById('ov-total-funding');
+  const splitEl = document.getElementById('ov-split-count');
+
+  if (countEl) countEl.textContent = filtered.length;
+  if (fundingEl) fundingEl.textContent = '$' + (totalFunding / 1e6).toFixed(2) + 'M';
+  if (splitEl) splitEl.textContent = ggCount + ' / ' + directCount;
+
+  renderTypeChart(filtered);
+}
+
+function renderTypeChart(filteredProjects) {
+  const projectsToUse = filteredProjects || getFilteredProjects();
   const typeMap = {};
-  allProjects.forEach(function(p) {
+  projectsToUse.forEach(function(p) {
     const t = getProjectType(p);
     typeMap[t] = (typeMap[t] || 0) + 1;
   });
@@ -249,7 +357,11 @@ function renderTypeChart() {
   const canvas = document.getElementById('chart-types');
   if (!canvas || !window.Chart) return;
 
-  new Chart(canvas, {
+  if (overviewChartInstance) {
+    overviewChartInstance.destroy();
+  }
+
+  overviewChartInstance = new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels: Object.keys(typeMap),
@@ -263,26 +375,16 @@ function showList() {
   cancelEditCleanup();
   currentView = 'list';
   setActiveNav('list');
-  if (markers.length) resetMarkers();
 
   const rp = document.getElementById('right-pane');
   const types = Array.from(new Set(allProjects.map(function(p) { return getProjectType(p); }))).sort();
   const statuses = Array.from(new Set(allProjects.map(function(p) { return p.status; }).filter(Boolean))).sort();
   const categories = Array.from(new Set(allProjects.map(function(p) { return p.category; }).filter(Boolean))).sort();
 
-  const typeOptions = types.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('');
-  const statusOptions = statuses.map(function(s) { return '<option value="' + s + '">' + capitalize(s) + '</option>'; }).join('');
-  const catOptions = categories.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
-
   rp.innerHTML = ''
     + '<div class="panel" id="list-panel">'
     + '  <h2>All Projects</h2>'
-    + '  <div class="filters">'
-    + '    <select id="filter-type"><option value="">All Grant / Project Types</option>' + typeOptions + '</select>'
-    + '    <select id="filter-status"><option value="">All statuses</option>' + statusOptions + '</select>'
-    + '    <select id="filter-category"><option value="">All categories</option>' + catOptions + '</select>'
-    + '    <input id="filter-search" type="text" placeholder="Search title, ID, partner…" style="flex:1;min-width:120px;">'
-    + '  </div>'
+    +    renderFilterBar(types, statuses, categories)
     + '  <table id="project-table">'
     + '    <thead>'
     + '      <tr>'
@@ -299,35 +401,23 @@ function showList() {
     + '  </table>'
     + '</div>';
 
-  ['filter-type', 'filter-status', 'filter-category', 'filter-search'].forEach(function(id) {
-    document.getElementById(id).addEventListener('input', renderListRows);
-  });
+  attachFilterListeners();
   renderListRows();
 }
 
 function renderListRows() {
-  const typeVal = document.getElementById('filter-type').value;
-  const statusVal = document.getElementById('filter-status').value;
-  const catVal = document.getElementById('filter-category').value;
-  const searchVal = document.getElementById('filter-search').value.toLowerCase();
-
+  const filtered = getFilteredProjects();
   const tbody = document.getElementById('project-tbody');
-  const filtered = allProjects.filter(function(p) {
-    const pType = getProjectType(p);
-    if (typeVal && pType !== typeVal) return false;
-    if (statusVal && p.status !== statusVal) return false;
-    if (catVal && p.category !== catVal) return false;
-    if (searchVal) {
-      const q = searchVal;
-      const match = (p.title && p.title.toLowerCase().includes(q)) ||
-                    (p.id && String(p.id).toLowerCase().includes(q)) ||
-                    (p.partner && p.partner.toLowerCase().includes(q)) ||
-                    (p.narrative && p.narrative.toLowerCase().includes(q)) ||
-                    (p.description && p.description.toLowerCase().includes(q));
-      if (!match) return false;
-    }
-    return true;
-  });
+  if (!tbody) return;
+
+  if (markers.length) {
+    allProjects.forEach(function(p, idx) {
+      const marker = markers[idx];
+      if (marker) {
+        marker.setVisible(filtered.includes(p));
+      }
+    });
+  }
 
   let rowsHtml = '';
   filtered.forEach(function(p) {
@@ -556,7 +646,7 @@ function loadEditFiles(projectId) {
     .catch(function() {
       container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No files uploaded yet.</div>';
     });
-}
+};
 
 window.deleteProjectAsset = function(projectId, filename, elementId) {
   if (!confirm('Are you sure you want to delete "' + filename + '"?')) return;
@@ -1010,8 +1100,7 @@ window.showDiffModal = function () {
       }
 
       let out = '';
-      if (data.untracked && data.untracked.length > 0) {
-        out += '<span style="color:#f59e0b;font-weight:bold;">Untracked New Files:</span>\n';
+      if (data.untracked && data.untracked.length > 0) {       out += '<span style="color:#f59e0b;font-weight:bold;">Untracked New Files:</span>\n';
         data.untracked.forEach(function(f) {
           out += '<span class="diff-line-add">? ' + escapeHtml(f) + '</span>\n';
         });
@@ -1047,7 +1136,7 @@ window.closeDiffModal = function () {
 };
 
 function escapeHtml(str) {
-  return String(str)
+  return String(str || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
@@ -1055,51 +1144,6 @@ function escapeHtml(str) {
 
 function initMaintainerClient() {
   return;
-  // msr.
-  try {
-    const evtSource = new EventSource(BACKEND_URL + '/api/logs');
-    evtSource.onmessage = function(event) {
-      const logDiv = document.getElementById('log-output');
-      if (logDiv) {
-        const newLine = document.createElement('div');
-        newLine.className = 'log-line';
-        newLine.textContent = event.data;
-        logDiv.appendChild(newLine);
-        logDiv.scrollTop = logDiv.scrollHeight;
-      }
-      pollMaintStatus();
-    };
-
-    evtSource.onerror = function() {
-      isMaintenanceMode = false;
-      const badge = document.getElementById('sync-status-badge');
-      if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
-    };
-  } catch (e) {}
-
-  setInterval(pollMaintStatus, 4000);
-  pollMaintStatus();
-}
-
-function pollMaintStatus() {
-  fetch(BACKEND_URL + '/api/status')
-    .then(function(res) {
-      if (!res.ok) throw new Error();
-      return res.json();
-    })
-    .then(function(data) {
-      isMaintenanceMode = true;
-      const badge = document.getElementById('sync-status-badge');
-      if (badge) {
-        badge.textContent = 'Status: ' + data.status.toUpperCase();
-        badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
-      }
-    })
-    .catch(function() {
-      isMaintenanceMode = false;
-      const badge = document.getElementById('sync-status-badge');
-      if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
-    });
 }
 
 window.triggerSync = function (dryRun) {
