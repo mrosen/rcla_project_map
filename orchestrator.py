@@ -413,6 +413,10 @@ class PublishPayload(BaseModel):
     branch: str = "main"
     message: str = "chore(sync): project and grant data updates"
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.post("/api/publish")
 async def git_publish(payload: PublishPayload):
     try:

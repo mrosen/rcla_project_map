@@ -69,6 +69,18 @@ window.initMap = function () {
     });
 };
 
+function initMaintainerClient() {
+  // If running on localhost, force maintenance mode on automatically
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    isMaintenanceMode = true;
+  } else {
+    // Optional health check for production environments
+    fetch(BACKEND_URL + '/api/health')
+      .then(function(res) { isMaintenanceMode = res.ok; })
+      .catch(function() { isMaintenanceMode = false; });
+  }
+}
+
 function loadData() {
   return fetch(CSV_PATH)
     .then(function(r) {
@@ -1140,10 +1152,6 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-}
-
-function initMaintainerClient() {
-  return;
 }
 
 window.triggerSync = function (dryRun) {
