@@ -92,6 +92,7 @@ let editMarker        = null;
 let mapClickListener  = null;
 let overviewChart     = null;
 let isUploadingImage  = false;
+let globalPasteAbortCtrl = null;
 
 let currentFilters = {
   type: '',
@@ -151,7 +152,12 @@ window.initMap = function () {
         });
 
         if (foundIdx !== -1) {
-          showDetail(foundIdx);
+          const isEditMode = params.get('edit') === 'true' || params.get('mode') === 'edit';
+          if (isEditMode) {
+            openEditForm(foundIdx);
+          } else {
+            showDetail(foundIdx);
+          }
           return;
         }
       }
@@ -485,6 +491,8 @@ function showDetail(idx) {
   // Sync browser URL for deep-linking
   var newUrl = new URL(window.location);
   newUrl.searchParams.set('project', gid);
+  newUrl.searchParams.delete('edit');
+  newUrl.searchParams.delete('mode');
   window.history.replaceState({ projectId: gid }, '', newUrl);
 
   var pType = getProjectType(project);
@@ -494,14 +502,14 @@ function showDetail(idx) {
   var pStatus = (project.status || '').toLowerCase();
 
   var editBtn = isMaintenanceMode
-    ? '<button onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>'
+    ? '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>'
     : '';
 
   rp.innerHTML = ''
     + '<div class="panel" id="detail-panel" tabindex="0" style="outline:none;">'
     + '  <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'
     + '    <div style="flex:1">'
-    + '      <h2 style="border:none;padding:0;margin-bottom:4px;">' + project.title + '</h2>'
+    + '      <h2 style="border:none;padding:0;margin-bottom:4px;">' + (project.title || 'Untitled') + '</h2>'
     + '      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
     + '        <span class="badge badge-type">' + pType + '</span>'
     + '        <span class="badge badge-' + pStatus + '">' + (project.status || '—') + '</span>'
@@ -511,27 +519,15 @@ function showDetail(idx) {
     + '    </div>'
     + '    <div style="display:flex;gap:6px;">'
     +        editBtn
-    + '      <button onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;">← All Projects</button>'
+    + '      <button type="button" onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;">← All Projects</button>'
     + '    </div>'
     + '  </div>'
     + '  <div id="photo-area"></div>'
-    + '  <div id="paste-status-banner" style="display:none;background:#fef3c7;border:1px solid #fde047;padding:8px 12px;border-radius:4px;font-size:12px;color:#854d0e;margin-bottom:10px;"></div>'
-    + '  <div class="paste-drop-zone" onclick="document.getElementById(\'hidden-photo-picker\').click()">'
-    + '    📋 <strong>Paste Image Here:</strong> Press <code>Ctrl+V</code> / <code>Cmd+V</code> anywhere in this panel to paste an image, or click to browse.'
-    + '    <input type="file" id="hidden-photo-picker" accept="image/*" style="display:none;" onchange="handleFilePickerUpload(event, \'' + gid + '\')">'
+    + '  <h3 style="margin-top:16px;margin-bottom:6px;">Summary & Narrative</h3>'
+    + '  <div class="narrative" id="narrative-body" data-raw="' + encodeURIComponent(rawText) + '" style="padding:10px;background:#fff;border:1px solid #ddd;border-radius:6px;line-height:1.6;">'
+    +      (rawText || 'No narrative available yet.')
     + '  </div>'
-    + '  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:16px;margin-bottom:6px;">'
-    + '    <h3 style="margin:0;">Summary & Narrative</h3>'
-    + '    <button onclick="enableNarrativeEdit(\'' + gid + '\')" style="background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;text-decoration:underline;">✏️ Edit Narrative</button>'
-    + '  </div>'
-    + '  <div class="narrative" id="narrative-body" '
-    + '       ondblclick="enableNarrativeEdit(\'' + gid + '\')" '
-    + '       data-raw="' + encodeURIComponent(rawText) + '" '
-    + '       title="Double-click to edit narrative" '
-    + '       style="cursor:pointer;border:1px solid transparent;border-radius:4px;padding:6px;">'
-    +      (rawText || 'No narrative available yet. Double-click to write one.')
-    + '  </div>'
-    + '  <h3>Project Details</h3>'
+    + '  <h3>Project Details & Financials</h3>'
     + '  <div class="meta-grid">'
     + '    <div class="meta-item"><label>Budget / Amount</label><span>' + amt + '</span></div>'
     + '    <div class="meta-item"><label>Project Type</label><span>' + pType + '</span></div>'
@@ -543,16 +539,238 @@ function showDetail(idx) {
     + '  <div id="files-area"></div>'
     + '</div>';
 
-  attachGlobalPasteHandler(gid);
-  setTimeout(function () { loadProjectFiles(gid); }, 0);
+  setTimeout(function () { loadProjectFiles(gid, 'photo-area', 'files-area'); }, 0);
   renderMarkdown();
 }
 
-function attachGlobalPasteHandler(projectId) {
-  var panel = document.getElementById('detail-panel');
-  if (!panel) return;
+function loadProjectFiles(projectId, photoContainerId, docContainerId) {
+  if (!projectId) return;
 
-  panel.addEventListener('paste', function (e) {
+  fetch('projects/' + encodeURIComponent(projectId) + '/files.json')
+    .then(function (r) {
+      if (r.ok) return r.json();
+      return fetch(BACKEND_URL + '/projects/' + encodeURIComponent(projectId) + '/files.json').then(function (b) {
+        return b.ok ? b.json() : { files: [], links: [] };
+      });
+    })
+    .catch(function () { return { files: [], links: [] }; })
+    .then(function (manifest) { renderFilesAndLinks(manifest, projectId, photoContainerId, docContainerId); });
+}
+
+function renderFilesAndLinks(manifest, projectId, photoContainerId, docContainerId) {
+  var rawFiles = manifest.files || [];
+  var links = manifest.links || [];
+
+  var files = rawFiles.map(function (f) {
+    if (typeof f === 'string') return f;
+    if (f && typeof f === 'object') return f.filename || f.name || '';
+    return '';
+  }).filter(Boolean);
+
+  var images = files.filter(function (f) { return /\.(jpg|jpeg|png|gif|webp)$/i.test(f); });
+  var docs   = files.filter(function (f) { return !/\.(jpg|jpeg|png|gif|webp)$/i.test(f); });
+
+  var photoArea = photoContainerId ? document.getElementById(photoContainerId) : null;
+  var filesArea = docContainerId ? document.getElementById(docContainerId) : null;
+
+  if (photoArea) {
+    if (images.length > 0) {
+      photoArea.innerHTML = '<div class="photo-carousel">' +
+        images.map(function (f) {
+          var src = 'projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(f);
+          return '<img src="' + src + '" alt="' + escapeHtml(f) + '" '
+               + 'onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" '
+               + 'onclick="window.open(this.src,\'_blank\')">';
+        }).join('') +
+        '</div>';
+    } else {
+      photoArea.innerHTML = '';
+    }
+  }
+
+  if (filesArea) {
+    if (docs.length > 0 || links.length > 0) {
+      filesArea.innerHTML = '<h3>Attached Documents & Web Links</h3><div class="files-section" id="files-list-' + docContainerId + '"></div>';
+      var list = document.getElementById('files-list-' + docContainerId);
+      docs.forEach(function (f) {
+        var a = document.createElement('a');
+        a.href = 'projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(f);
+        a.target = '_blank';
+        a.innerHTML = '<span class="file-icon">📄</span> ' + escapeHtml(f);
+        list.appendChild(a);
+      });
+      links.forEach(function (l) {
+        var a = document.createElement('a');
+        a.href = l.url;
+        a.target = '_blank';
+        a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || l.url);
+        list.appendChild(a);
+      });
+    } else {
+      filesArea.innerHTML = '';
+    }
+  }
+}
+
+function renderMarkdown() {
+  var el = document.getElementById('narrative-body');
+  if (!el) return;
+  var raw = el.dataset.raw ? decodeURIComponent(el.dataset.raw) : '';
+  if (!raw.trim()) {
+    el.innerHTML = '<span style="color:#94a3b8;font-style:italic;">No narrative available yet.</span>';
+    return;
+  }
+  loadMarked().then(function () { el.innerHTML = marked.parse(raw); });
+}
+
+function loadMarked() {
+  return new Promise(function (resolve) {
+    if (window.marked) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js';
+    s.onload = resolve;
+    document.head.appendChild(s);
+  });
+}
+
+// ============================================================
+// EDIT PROJECT FORM & INTERACTIVE ASSET MANAGEMENT
+// ============================================================
+window.openEditForm = function (idx) {
+  cancelEditCleanup();
+  activeEditIdx = Number(idx);
+  var p = allProjects[activeEditIdx];
+  if (!p) return;
+
+  var gid = String(p.id || p.grant_id || '').trim();
+  var coords = getProjectCoords(p) || { lat: 14.703454, lng: -91.191623 };
+  var rp = document.getElementById('right-pane');
+  var pType = getProjectType(p);
+  var initialText = getProjectSummaryText(p);
+
+  // Sync URL for direct link to edit
+  var newUrl = new URL(window.location);
+  newUrl.searchParams.set('project', gid);
+  newUrl.searchParams.set('edit', 'true');
+  window.history.replaceState({ projectId: gid, edit: true }, '', newUrl);
+
+  var optDirect = pType === 'Club Direct / Donation' ? 'selected' : '';
+  var optDG = pType === 'District Grant' ? 'selected' : '';
+  var optC2C = pType === 'Club-to-Club Grant' ? 'selected' : '';
+  var optGG = pType === 'Global Grant' ? 'selected' : '';
+
+  rp.innerHTML = ''
+    + '<div class="panel" id="edit-panel">'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #d97706;padding-bottom:6px;">'
+    + '    <h2 style="border:none;padding:0;margin:0;color:#d97706;">✏️ Edit Project & Media</h2>'
+    + '    <div style="display:flex;gap:6px;">'
+    + '      <button type="button" onclick="showDetail(' + activeEditIdx + ')" style="padding:5px 12px;border:none;background:#94a3b8;color:white;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>'
+    + '      <button type="button" id="btn-save-project" onclick="saveProjectEdits()" style="padding:5px 14px;border:none;background:#059669;color:white;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">Save Changes</button>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:8px 12px;border-radius:6px;font-size:12px;color:#1e40af;margin-bottom:12px;">'
+    + '    📍 <strong>Map Pinning Active:</strong> Drag the marker on the map or click anywhere on the map to set coordinates.'
+    + '  </div>'
+    + '  <div id="edit-photo-area"></div>'
+    + '  <div style="margin-bottom:12px;">'
+    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Manage Staged Photos & Files</label>'
+    + '    <div id="modal-existing-files">Loading assets…</div>'
+    + '  </div>'
+    + '  <div id="paste-status-banner" style="display:none;background:#fef3c7;border:1px solid #fde047;padding:8px 12px;border-radius:4px;font-size:12px;color:#854d0e;margin-bottom:10px;"></div>'
+    + '  <div class="paste-drop-zone" onclick="document.getElementById(\'modal-file-upload\').click()">'
+    + '    📋 <strong>Paste Images (Ctrl+V) or Click to Upload:</strong> Press <code>Ctrl+V</code> anywhere on this page to paste, or click here to browse files.'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project ID / Grant Number *</label>'
+    + '      <input type="text" id="edit-id" value="' + escapeHtml(gid) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:bold;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Type</label>'
+    + '      <select id="edit-type" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;background:white;">'
+    + '        <option value="Club Direct / Donation" ' + optDirect + '>Club Direct / Donation</option>'
+    + '        <option value="District Grant" ' + optDG + '>District Grant</option>'
+    + '        <option value="Club-to-Club Grant" ' + optC2C + '>Club-to-Club Grant</option>'
+    + '        <option value="Global Grant" ' + optGG + '>Global Grant</option>'
+    + '      </select>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="margin-bottom:10px;">'
+    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Title</label>'
+    + '    <input type="text" id="edit-title" value="' + escapeHtml(p.title || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Budget / Amount ($)</label>'
+    + '      <input type="number" id="edit-amount" value="' + escapeHtml(p.amount || p.budget || 0) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Start Year</label>'
+    + '      <input type="text" id="edit-year" value="' + escapeHtml(p.start_year || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Status</label>'
+    + '      <input type="text" id="edit-status" value="' + escapeHtml(p.status || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Category</label>'
+    + '      <input type="text" id="edit-category" value="' + escapeHtml(p.category || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Latitude</label>'
+    + '      <input type="text" id="edit-lat" value="' + coords.lat.toFixed(6) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Longitude</label>'
+    + '      <input type="text" id="edit-lng" value="' + coords.lng.toFixed(6) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Shepherd</label>'
+    + '      <input type="text" id="edit-shepard" value="' + escapeHtml(p.shepard || p.shepherd || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Key Partner</label>'
+    + '      <input type="text" id="edit-partner" value="' + escapeHtml(p.partner || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Narrative & Field Notes</label>'
+    + '  <textarea id="edit-narrative" style="width:100%;height:200px;font-family:monospace;padding:8px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;line-height:1.5;">' + escapeHtml(initialText) + '</textarea>'
+    + '  <div style="margin-top:14px;margin-bottom:14px;">'
+    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Web Links</label>'
+    + '    <div id="modal-links-list"></div>'
+    + '    <button type="button" onclick="addLinkInput()" style="margin-top:4px;padding:4px 8px;font-size:11px;cursor:pointer;background:#e2e8f0;border:none;border-radius:4px;">+ Add Link</button>'
+    + '  </div>'
+    + '  <div style="margin-bottom:20px;">'
+    + '    <input type="file" id="modal-file-upload" multiple style="display:none;" onchange="handleFileInputUpload(event, \'' + gid + '\')">'
+    + '  </div>'
+    + '</div>';
+
+  loadProjectFiles(gid, 'edit-photo-area', null);
+  loadEditFiles(gid);
+  attachActiveWindowPaste(gid);
+
+  fetch('projects/' + encodeURIComponent(gid) + '/files.json')
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      (data.links || []).forEach(function (l) { addLinkInput(l.label, l.url); });
+    })
+    .catch(function () { addLinkInput(); });
+
+  setupLocationPicker(coords);
+};
+
+// Global active paste listener while edit view is mounted
+function attachActiveWindowPaste(projectId) {
+  if (globalPasteAbortCtrl) {
+    globalPasteAbortCtrl.abort();
+  }
+  globalPasteAbortCtrl = new AbortController();
+
+  window.addEventListener('paste', function (e) {
     var clipboardData = e.clipboardData || window.clipboardData;
     if (!clipboardData || !clipboardData.items) return;
 
@@ -562,20 +780,15 @@ function attachGlobalPasteHandler(projectId) {
         var blob = item.getAsFile();
         if (blob) {
           e.preventDefault();
-          uploadImageBlob(blob, projectId);
+          uploadImageBlobInEdit(blob, projectId);
           return;
         }
       }
     }
-  });
+  }, { signal: globalPasteAbortCtrl.signal });
 }
 
-function handleFilePickerUpload(event, projectId) {
-  var file = event.target.files && event.target.files[0];
-  if (file) uploadImageBlob(file, projectId);
-}
-
-function uploadImageBlob(blob, projectId) {
+function uploadImageBlobInEdit(blob, projectId) {
   if (isUploadingImage) return;
   isUploadingImage = true;
 
@@ -603,11 +816,21 @@ function uploadImageBlob(blob, projectId) {
     return res.json();
   })
   .then(function () {
+    var textarea = document.getElementById('edit-narrative');
+    if (textarea) {
+      var tag = '\n\n![' + filename + '](projects/' + projectId + '/' + filename + ')\n\n';
+      var start = textarea.selectionStart || textarea.value.length;
+      var end = textarea.selectionEnd || textarea.value.length;
+      textarea.value = textarea.value.substring(0, start) + tag + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    }
+
     if (banner) {
-      banner.textContent = '✅ Image successfully uploaded & saved to project!';
+      banner.textContent = '✅ Image uploaded and inserted into narrative!';
       setTimeout(function () { banner.style.display = 'none'; }, 3000);
     }
-    loadProjectFiles(projectId);
+    loadProjectFiles(projectId, 'edit-photo-area', null);
+    loadEditFiles(projectId);
   })
   .catch(function (err) {
     if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
@@ -617,148 +840,140 @@ function uploadImageBlob(blob, projectId) {
   });
 }
 
-function loadProjectFiles(projectId) {
-  if (!projectId) return;
+async function loadEditFiles(projectId) {
+  var container = document.getElementById('modal-existing-files');
+  if (!container) return;
 
-  fetch('projects/' + encodeURIComponent(projectId) + '/files.json')
-    .then(function (r) {
-      if (r.ok) return r.json();
-      return fetch(BACKEND_URL + '/projects/' + encodeURIComponent(projectId) + '/files.json').then(function(b) {
-        return b.ok ? b.json() : { files: [], links: [] };
-      });
+  try {
+    var res = await fetch('projects/' + encodeURIComponent(projectId) + '/files.json');
+    if (!res.ok) {
+      res = await fetch(BACKEND_URL + '/projects/' + encodeURIComponent(projectId) + '/files.json');
+    }
+    var data = await res.json();
+    var rawFiles = data.files || [];
+
+    var files = rawFiles.map(function (f) {
+      if (typeof f === 'string') return f;
+      if (f && typeof f === 'object') return f.filename || f.name || '';
+      return '';
+    }).filter(Boolean);
+
+    if (files.length === 0) {
+      container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No files or photos uploaded yet.</div>';
+      return;
+    }
+
+    var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">';
+    files.forEach(function (f, i) {
+      var isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(f);
+      var elemId = 'file-thumb-' + i;
+      var src = 'projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(f);
+
+      var mediaTag = isImg
+        ? '<img src="' + src + '" onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" style="width:100%;height:60px;object-fit:cover;border-radius:2px;">'
+        : '<div style="font-size:28px;line-height:60px;">📄</div>';
+
+      html += '<div id="' + elemId + '" style="position:relative;border:1px solid #cbd5e1;border-radius:4px;padding:4px;background:#fff;width:90px;text-align:center;">'
+            + mediaTag
+            + '<div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" title="' + escapeHtml(f) + '">' + escapeHtml(f) + '</div>'
+            + '<button type="button" onclick="deleteProjectAsset(\'' + projectId + '\', \'' + escapeHtml(f) + '\', \'' + elemId + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;" title="Delete file">✕</button>'
+            + '</div>';
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No photos uploaded yet.</div>';
+  }
+}
+
+window.deleteProjectAsset = async function (projectId, filename, elementId) {
+  if (!confirm('Are you sure you want to delete "' + filename + '"?')) return;
+
+  try {
+    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/files/' + encodeURIComponent(filename), {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+
+    var el = document.getElementById(elementId);
+    if (el) el.remove();
+
+    loadProjectFiles(projectId, 'edit-photo-area', null);
+  } catch (err) {
+    alert('Error deleting file: ' + err.message);
+  }
+};
+
+function handleFileInputUpload(event, projectId) {
+  var files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  var banner = document.getElementById('paste-status-banner');
+  if (banner) {
+    banner.style.display = 'block';
+    banner.textContent = '⏳ Uploading ' + files.length + ' file(s)...';
+  }
+
+  var uploads = Array.from(files).map(function (file) {
+    var fd = new FormData();
+    fd.append('file', file);
+    return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/upload', {
+      method: 'POST',
+      body: fd
+    });
+  });
+
+  Promise.all(uploads)
+    .then(function () {
+      if (banner) {
+        banner.textContent = '✅ Files uploaded successfully!';
+        setTimeout(function () { banner.style.display = 'none'; }, 3000);
+      }
+      loadProjectFiles(projectId, 'edit-photo-area', null);
+      loadEditFiles(projectId);
     })
-    .catch(function () { return { files: [], links: [] }; })
-    .then(function (manifest) { renderFilesAndLinks(manifest, projectId); });
-}
-
-function renderFilesAndLinks(manifest, projectId) {
-  var rawFiles = manifest.files || [];
-  var links = manifest.links || [];
-
-  var files = rawFiles.map(function (f) {
-    if (typeof f === 'string') return f;
-    if (f && typeof f === 'object') return f.filename || f.name || '';
-    return '';
-  }).filter(Boolean);
-
-  var images = files.filter(function (f) { return /\.(jpg|jpeg|png|gif|webp)$/i.test(f); });
-  var docs   = files.filter(function (f) { return !/\.(jpg|jpeg|png|gif|webp)$/i.test(f); });
-
-  var photoArea = document.getElementById('photo-area');
-  var filesArea = document.getElementById('files-area');
-  if (!photoArea || !filesArea) return;
-
-  if (images.length > 0) {
-    photoArea.innerHTML = '<div class="photo-carousel">' +
-      images.map(function (f) {
-        var src = 'projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(f);
-        return '<img src="' + src + '" alt="' + escapeHtml(f) + '" '
-             + 'onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" '
-             + 'onclick="window.open(this.src,\'_blank\')">';
-      }).join('') +
-      '</div>';
-  } else {
-    photoArea.innerHTML = '<div style="font-size:12px;color:#94a3b8;font-style:italic;margin-bottom:10px;">No images associated with this project yet. Paste or drop images above.</div>';
-  }
-
-  if (docs.length > 0 || links.length > 0) {
-    filesArea.innerHTML = '<h3>Attached Documents & Web Links</h3><div class="files-section" id="files-list"></div>';
-    var list = document.getElementById('files-list');
-    docs.forEach(function (f) {
-      var a = document.createElement('a');
-      a.href = 'projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(f);
-      a.target = '_blank';
-      a.innerHTML = '<span class="file-icon">📄</span> ' + escapeHtml(f);
-      list.appendChild(a);
+    .catch(function (err) {
+      if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
     });
-    links.forEach(function (l) {
-      var a = document.createElement('a');
-      a.href = l.url;
-      a.target = '_blank';
-      a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || l.url);
-      list.appendChild(a);
+}
+
+function setupLocationPicker(initialCoords) {
+  if (map && window.google && google.maps) {
+    if (editMarker) editMarker.setMap(null);
+    editMarker = new google.maps.Marker({
+      position: initialCoords,
+      map: map,
+      draggable: true,
+      animation: google.maps.Animation.DROP,
+      zIndex: 1000000
     });
-  } else {
-    filesArea.innerHTML = '';
+
+    editMarker.addListener('drag', function (e) {
+      var latEl = document.getElementById('edit-lat');
+      var lngEl = document.getElementById('edit-lng');
+      if (latEl) latEl.value = e.latLng.lat().toFixed(6);
+      if (lngEl) lngEl.value = e.latLng.lng().toFixed(6);
+    });
+
+    if (mapClickListener) google.maps.event.removeListener(mapClickListener);
+    mapClickListener = map.addListener('click', function (e) {
+      if (editMarker) editMarker.setPosition(e.latLng);
+      var latEl = document.getElementById('edit-lat');
+      var lngEl = document.getElementById('edit-lng');
+      if (latEl) latEl.value = e.latLng.lat().toFixed(6);
+      if (lngEl) lngEl.value = e.latLng.lng().toFixed(6);
+    });
+
+    map.panTo(initialCoords);
   }
-}
-
-window.enableNarrativeEdit = function(projectId) {
-  var el = document.getElementById('narrative-body');
-  if (!el || el.dataset.isEditing === 'true') return;
-
-  el.dataset.isEditing = 'true';
-  var rawMarkdown = el.dataset.raw ? decodeURIComponent(el.dataset.raw) : '';
-
-  el.innerHTML = ''
-    + '<div style="display:flex;flex-direction:column;gap:8px;">'
-    + '  <textarea id="narrative-inline-input" style="width:100%;height:320px;font-family:monospace;font-size:13px;line-height:1.5;padding:10px;border:1px solid #3b82f6;border-radius:4px;box-sizing:border-box;">' + escapeHtml(rawMarkdown) + '</textarea>'
-    + '  <div style="display:flex;justify-content:space-between;align-items:center;">'
-    + '    <span style="font-size:11px;color:#64748b;">Markdown supported. Double enter between sections.</span>'
-    + '    <div style="display:flex;gap:6px;">'
-    + '      <button type="button" onclick="cancelNarrativeEdit()" style="padding:5px 12px;background:#94a3b8;color:white;border:none;border-radius:4px;font-size:12px;cursor:pointer;">Cancel</button>'
-    + '      <button type="button" onclick="saveNarrativeInline(\'' + projectId + '\')" style="padding:5px 16px;background:#059669;color:white;border:none;border-radius:4px;font-weight:bold;font-size:12px;cursor:pointer;">Save</button>'
-    + '    </div>'
-    + '  </div>'
-    + '</div>';
-
-  var txt = document.getElementById('narrative-inline-input');
-  if (txt) txt.focus();
-};
-
-window.cancelNarrativeEdit = function() {
-  var el = document.getElementById('narrative-body');
-  if (!el) return;
-  el.dataset.isEditing = 'false';
-  renderMarkdown();
-};
-
-window.saveNarrativeInline = function(projectId) {
-  var input = document.getElementById('narrative-inline-input');
-  if (!input) return;
-
-  var newContent = input.value;
-  var el = document.getElementById('narrative-body');
-  el.dataset.raw = encodeURIComponent(newContent);
-  el.dataset.isEditing = 'false';
-
-  var p = allProjects.find(function(item) { return (item.id || item.grant_id) === projectId; });
-  if (p) p.narrative = newContent;
-
-  fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ narrative: newContent })
-  })
-  .then(function() { renderMarkdown(); })
-  .catch(function(err) {
-    console.warn('Could not persist narrative:', err);
-    renderMarkdown();
-  });
-};
-
-function renderMarkdown() {
-  var el = document.getElementById('narrative-body');
-  if (!el) return;
-  var raw = el.dataset.raw ? decodeURIComponent(el.dataset.raw) : '';
-  if (!raw.trim()) {
-    el.innerHTML = '<span style="color:#94a3b8;font-style:italic;">No narrative available yet. Double-click to add.</span>';
-    return;
-  }
-  loadMarked().then(function () { el.innerHTML = marked.parse(raw); });
-}
-
-function loadMarked() {
-  return new Promise(function (resolve) {
-    if (window.marked) { resolve(); return; }
-    var s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js';
-    s.onload = resolve;
-    document.head.appendChild(s);
-  });
 }
 
 function cancelEditCleanup() {
+  if (globalPasteAbortCtrl) {
+    globalPasteAbortCtrl.abort();
+    globalPasteAbortCtrl = null;
+  }
   if (editMarker) {
     editMarker.setMap(null);
     editMarker = null;
@@ -773,6 +988,92 @@ function cancelEditCleanup() {
   }
 }
 
+window.addLinkInput = function (label, url) {
+  label = label || '';
+  url = url || '';
+  var container = document.getElementById('modal-links-list');
+  if (!container) return;
+  var div = document.createElement('div');
+  div.className = 'link-row';
+  div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;';
+  div.innerHTML = ''
+    + '<input type="text" placeholder="Label" value="' + escapeHtml(label) + '" style="width:35%;padding:4px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">'
+    + '<input type="text" placeholder="https://..." value="' + escapeHtml(url) + '" style="flex:1;padding:4px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">'
+    + '<button type="button" onclick="this.parentElement.remove()" style="background:#ef4444;color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">✕</button>';
+  container.appendChild(div);
+};
+
+function saveProjectEdits() {
+  var p = allProjects[activeEditIdx];
+  if (!p) return;
+  var oldGid = String(p.id || p.grant_id || '').trim();
+  var btn = document.getElementById('btn-save-project');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+
+  var latVal = (document.getElementById('edit-lat') && document.getElementById('edit-lat').value) || '';
+  var lngVal = (document.getElementById('edit-lng') && document.getElementById('edit-lng').value) || '';
+  var newGid = (document.getElementById('edit-id') && document.getElementById('edit-id').value.trim()) || oldGid;
+  var newAmt = (document.getElementById('edit-amount') && document.getElementById('edit-amount').value) || '0';
+  var newYear = (document.getElementById('edit-year') && document.getElementById('edit-year').value) || '';
+
+  var updates = {
+    id: newGid,
+    title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
+    project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
+    status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
+    shepard: (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value) || '',
+    category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
+    amount: newAmt,
+    budget: newAmt,
+    start_year: newYear,
+    partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
+    narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
+    position_lat: latVal,
+    position_lng: lngVal
+  };
+
+  fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(oldGid), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  })
+  .then(function (res) {
+    if (!res.ok) return res.json().then(function(err) { throw new Error(err.detail || 'Server error'); });
+    var links = [];
+    document.querySelectorAll('#modal-links-list .link-row').forEach(function (r) {
+      var inputs = r.querySelectorAll('input');
+      if (inputs[0].value.trim() && inputs[1].value.trim()) {
+        links.push({ label: inputs[0].value.trim(), url: inputs[1].value.trim() });
+      }
+    });
+    return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(newGid) + '/links', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ links: links })
+    });
+  })
+  .then(function () {
+    var parsedLat = parseFloat(latVal);
+    var parsedLng = parseFloat(lngVal);
+    if (!isNaN(parsedLat) && !isNaN(parsedLng) && markers[activeEditIdx]) {
+      markers[activeEditIdx].setPosition(new google.maps.LatLng(parsedLat, parsedLng));
+    }
+    cancelEditCleanup();
+    return loadData();
+  })
+  .then(function (projects) {
+    allProjects = projects;
+    var targetIdx = allProjects.findIndex(function (item) {
+      return String(item.id || item.grant_id || '').trim().toLowerCase() === newGid.toLowerCase();
+    });
+    showDetail(targetIdx !== -1 ? targetIdx : activeEditIdx);
+  })
+  .catch(function (err) { alert('Error updating project: ' + err.message); })
+  .finally(function () {
+    if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+  });
+}
+
 function escapeHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')
@@ -785,6 +1086,11 @@ function capitalize(s) {
 }
 
 function initMaintainerClient() {
+  // If running on localhost or 127.0.0.1, enable maintenance mode immediately
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    isMaintenanceMode = true;
+  }
+
   try {
     var evtSource = new EventSource(BACKEND_URL + '/api/logs');
     evtSource.onmessage = function (event) {
@@ -800,7 +1106,9 @@ function initMaintainerClient() {
     };
 
     evtSource.onerror = function () {
-      isMaintenanceMode = false;
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        isMaintenanceMode = false;
+      }
       var badge = document.getElementById('sync-status-badge');
       if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
     };
@@ -825,7 +1133,9 @@ function pollMaintStatus() {
       }
     })
     .catch(function () {
-      isMaintenanceMode = false;
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        isMaintenanceMode = false;
+      }
       var badge = document.getElementById('sync-status-badge');
       if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
     });
