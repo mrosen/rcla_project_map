@@ -76,7 +76,8 @@
   <div id="maintainer-panel">
     <div class="maint-group">
       <strong>🛠️ Maint Mode</strong>
-      <span id="sync-status-badge">Connecting...</span>
+      <span id="db-status-badge" style="padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 10px; background: #059669; color: #fff;">⚡ DB: Supabase (Live)</span>
+      <span id="sync-status-badge">Sync: Connecting...</span>
       <span id="sync-step" style="color: #94a3b8;"></span>
     </div>
     <div class="maint-group">
@@ -113,6 +114,10 @@
     <span class="club-name">Rotary Club of Lake Atitlán — Projects</span>
     <button id="btn-overview" class="active">Overview</button>
     <button id="btn-list">Projects</button>
+    <div id="backend-status-indicator" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:12px;background:rgba(16,185,129,0.18);border:1px solid #10b981;color:#34d399;font-weight:600;margin-left:8px;cursor:default;" title="Database connection status">
+      <span style="width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;"></span>
+      <span id="backend-status-text">⚡ Supabase Cloud</span>
+    </div>
   </div>
   <div id="app">
     <div id="map-pane">
@@ -127,11 +132,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
   <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
-  <!-- Load our app first, synchronously -->
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Load our app first, synchronously.  GitHub or Local (testing)  -->
+    <!--    
     <script src="https://mrosen.github.io/rcla_project_map/main.js"></script>
-    <!--
-    <script src="main.js"></script>
     -->
+    <script src="main.js"></script>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCO2h4ZlPyPDPuZaK1ljB2Rq3ZR_-b9178&libraries=places&callback=initMap" async defer></script>
 </body>
 </html>

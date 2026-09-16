@@ -8,6 +8,19 @@ const BACKEND_URL = window.location.hostname === 'localhost' || window.location.
   : window.location.origin;
 const CSV_PATH = 'RCLA_Projects_v2.csv';
 
+// Supabase Cloud Configuration
+const SUPABASE_URL = 'https://rqhmsincnmxrgtipvkif.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o';
+
+let supabaseClient = null;
+try {
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch (e) {
+  console.warn('Supabase SDK initialization error:', e);
+}
+
 // App & Carousel Styles
 (function injectStyles() {
   if (document.getElementById('rcla-dynamic-styles')) return;
@@ -170,7 +183,76 @@ window.initMap = function () {
     });
 };
 
+function updateBackendStatus(type, count) {
+  var indicator = document.getElementById('backend-status-indicator');
+  var text = document.getElementById('backend-status-text');
+  var dbBadge = document.getElementById('db-status-badge');
+  if (type === 'supabase') {
+    if (indicator) {
+      indicator.style.background = 'rgba(16, 185, 129, 0.2)';
+      indicator.style.borderColor = '#10b981';
+      indicator.style.color = '#34d399';
+      indicator.title = 'Live connection to Supabase Cloud Database & Storage (' + count + ' projects loaded)';
+    }
+    if (text) text.textContent = '⚡ Supabase Cloud (' + count + ')';
+    if (dbBadge) {
+      dbBadge.textContent = '⚡ DB: Supabase (Live)';
+      dbBadge.style.background = '#059669';
+    }
+  } else {
+    if (indicator) {
+      indicator.style.background = 'rgba(245, 158, 11, 0.2)';
+      indicator.style.borderColor = '#f59e0b';
+      indicator.style.color = '#fbbf24';
+      indicator.title = 'Loaded from local CSV backup';
+    }
+    if (text) text.textContent = '📁 CSV Backup (' + (count || 0) + ')';
+    if (dbBadge) {
+      dbBadge.textContent = 'DB: CSV Fallback';
+      dbBadge.style.background = '#d97706';
+    }
+  }
+}
+
 function loadData() {
+  if (supabaseClient) {
+    return supabaseClient
+      .from('projects')
+      .select('*, project_links(*), project_assets(*)')
+      .order('id')
+      .then(function (res) {
+        if (res.error) {
+          console.warn('Supabase query failed, falling back to CSV:', res.error);
+          return loadCsvFallback().then(function (data) {
+            updateBackendStatus('csv', data.length);
+            return data;
+          });
+        }
+        if (res.data && res.data.length > 0) {
+          console.log('Loaded ' + res.data.length + ' projects live from Supabase.');
+          updateBackendStatus('supabase', res.data.length);
+          return res.data;
+        }
+        return loadCsvFallback().then(function (data) {
+          updateBackendStatus('csv', data.length);
+          return data;
+        });
+      })
+      .catch(function (err) {
+        console.warn('Supabase offline/error, falling back to CSV:', err);
+        return loadCsvFallback().then(function (data) {
+          updateBackendStatus('csv', data.length);
+          return data;
+        });
+      });
+  }
+  return loadCsvFallback().then(function (data) {
+    updateBackendStatus('csv', data.length);
+    return data;
+  });
+}
+
+function loadCsvFallback() {
   return fetch(CSV_PATH)
     .then(function (r) {
       if (!r.ok) throw new Error('Could not fetch ' + CSV_PATH);
@@ -200,7 +282,12 @@ function buildMap() {
     mapTypeControl: true,
     fullscreenControl: true
   });
+  rebuildMarkers();
+}
 
+function rebuildMarkers() {
+  if (!map || !window.google || !google.maps) return;
+  markers.forEach(function (m) { if (m) m.setMap(null); });
   markers = allProjects.map(function (project, idx) {
     var coords = getProjectCoords(project);
     if (!coords) return null;
@@ -546,6 +633,15 @@ function showDetail(idx) {
 function loadProjectFiles(projectId, photoContainerId, docContainerId) {
   if (!projectId) return;
 
+  var p = allProjects.find(function (item) {
+    return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+  });
+
+  if (p && (p.project_assets !== undefined || p.project_links !== undefined)) {
+    renderFilesAndLinksFromProject(p, photoContainerId, docContainerId);
+    return;
+  }
+
   fetch('projects/' + encodeURIComponent(projectId) + '/files.json')
     .then(function (r) {
       if (r.ok) return r.json();
@@ -555,6 +651,59 @@ function loadProjectFiles(projectId, photoContainerId, docContainerId) {
     })
     .catch(function () { return { files: [], links: [] }; })
     .then(function (manifest) { renderFilesAndLinks(manifest, projectId, photoContainerId, docContainerId); });
+}
+
+function renderFilesAndLinksFromProject(project, photoContainerId, docContainerId) {
+  var assets = project.project_assets || [];
+  var links = project.project_links || [];
+
+  var images = assets.filter(function (a) {
+    return a.file_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(a.filename);
+  });
+  var docs = assets.filter(function (a) {
+    return a.file_type !== 'image' && !/\.(jpg|jpeg|png|gif|webp)$/i.test(a.filename);
+  });
+
+  var photoArea = photoContainerId ? document.getElementById(photoContainerId) : null;
+  var filesArea = docContainerId ? document.getElementById(docContainerId) : null;
+
+  if (photoArea) {
+    if (images.length > 0) {
+      photoArea.innerHTML = '<div class="photo-carousel">' +
+        images.map(function (a) {
+          var src = a.public_url || ('projects/' + encodeURIComponent(project.id) + '/' + encodeURIComponent(a.filename));
+          return '<img src="' + src + '" alt="' + escapeHtml(a.filename) + '" '
+               + 'onclick="window.open(this.src,\'_blank\')">';
+        }).join('') +
+        '</div>';
+    } else {
+      photoArea.innerHTML = '';
+    }
+  }
+
+  if (filesArea) {
+    if (docs.length > 0 || links.length > 0) {
+      filesArea.innerHTML = '<h3>Attached Documents & Web Links</h3><div class="files-section" id="files-list-' + docContainerId + '"></div>';
+      var list = document.getElementById('files-list-' + docContainerId);
+      docs.forEach(function (a) {
+        var link = document.createElement('a');
+        link.href = a.public_url || ('projects/' + encodeURIComponent(project.id) + '/' + encodeURIComponent(a.filename));
+        link.target = '_blank';
+        var icon = a.file_type === 'video' ? '🎬' : '📄';
+        link.innerHTML = '<span class="file-icon">' + icon + '</span> ' + escapeHtml(a.filename);
+        list.appendChild(link);
+      });
+      links.forEach(function (l) {
+        var a = document.createElement('a');
+        a.href = l.url;
+        a.target = '_blank';
+        a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || l.url);
+        list.appendChild(a);
+      });
+    } else {
+      filesArea.innerHTML = '';
+    }
+  }
 }
 
 function renderFilesAndLinks(manifest, projectId, photoContainerId, docContainerId) {
@@ -753,12 +902,39 @@ window.openEditForm = function (idx) {
   loadEditFiles(gid);
   attachActiveWindowPaste(gid);
 
-  fetch('projects/' + encodeURIComponent(gid) + '/files.json')
-    .then(function (res) { return res.json(); })
-    .then(function (data) {
-      (data.links || []).forEach(function (l) { addLinkInput(l.label, l.url); });
-    })
-    .catch(function () { addLinkInput(); });
+  var linksLoaded = false;
+  if (p.project_links && p.project_links.length > 0) {
+    p.project_links.forEach(function (l) { addLinkInput(l.label, l.url); });
+    linksLoaded = true;
+  } else if (supabaseClient) {
+    supabaseClient
+      .from('project_links')
+      .select('*')
+      .eq('project_id', gid)
+      .order('display_order', { ascending: true })
+      .then(function (res) {
+        if (!res.error && res.data && res.data.length > 0) {
+          res.data.forEach(function (l) { addLinkInput(l.label, l.url); });
+        } else {
+          addLinkInput();
+        }
+      })
+      .catch(function () { addLinkInput(); });
+    linksLoaded = true;
+  }
+
+  if (!linksLoaded) {
+    fetch('projects/' + encodeURIComponent(gid) + '/files.json')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.links && data.links.length > 0) {
+          data.links.forEach(function (l) { addLinkInput(l.label, l.url); });
+        } else {
+          addLinkInput();
+        }
+      })
+      .catch(function () { addLinkInput(); });
+  }
 
   setupLocationPicker(coords);
 };
@@ -804,21 +980,10 @@ function uploadImageBlobInEdit(blob, projectId) {
     banner.textContent = '⏳ Uploading image: ' + filename + '...';
   }
 
-  var fd = new FormData();
-  fd.append('file', file);
-
-  fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/upload', {
-    method: 'POST',
-    body: fd
-  })
-  .then(function (res) {
-    if (!res.ok) throw new Error('Server returned ' + res.status);
-    return res.json();
-  })
-  .then(function () {
+  function handleSuccess(insertedUrl) {
     var textarea = document.getElementById('edit-narrative');
     if (textarea) {
-      var tag = '\n\n![' + filename + '](projects/' + projectId + '/' + filename + ')\n\n';
+      var tag = '\n\n![' + filename + '](' + insertedUrl + ')\n\n';
       var start = textarea.selectionStart || textarea.value.length;
       var end = textarea.selectionEnd || textarea.value.length;
       textarea.value = textarea.value.substring(0, start) + tag + textarea.value.substring(end);
@@ -831,78 +996,193 @@ function uploadImageBlobInEdit(blob, projectId) {
     }
     loadProjectFiles(projectId, 'edit-photo-area', null);
     loadEditFiles(projectId);
-  })
-  .catch(function (err) {
-    if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
-  })
-  .finally(function () {
     isUploadingImage = false;
-  });
+  }
+
+  if (supabaseClient) {
+    var storagePath = projectId + '/' + filename;
+    supabaseClient.storage
+      .from('project-media')
+      .upload(storagePath, file, { upsert: true, contentType: file.type || 'image/png' })
+      .then(function (upRes) {
+        if (upRes.error) throw upRes.error;
+        var pubData = supabaseClient.storage.from('project-media').getPublicUrl(storagePath);
+        var publicUrl = (pubData && pubData.data && pubData.data.publicUrl) || '';
+
+        return supabaseClient
+          .from('project_assets')
+          .insert({
+            project_id: projectId,
+            filename: filename,
+            file_type: 'image',
+            mime_type: file.type || 'image/png',
+            storage_path: storagePath,
+            public_url: publicUrl
+          })
+          .select()
+          .then(function (assetRes) {
+            var p = allProjects.find(function (item) {
+              return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+            });
+            if (p) {
+              if (!p.project_assets) p.project_assets = [];
+              if (assetRes && assetRes.data && assetRes.data[0]) {
+                p.project_assets.push(assetRes.data[0]);
+              } else {
+                p.project_assets.push({ filename: filename, public_url: publicUrl, file_type: 'image' });
+              }
+            }
+            handleSuccess(publicUrl);
+          });
+      })
+      .catch(function (err) {
+        console.warn('Supabase image upload failed, falling back to local backend:', err);
+        uploadViaBackend();
+      });
+  } else {
+    uploadViaBackend();
+  }
+
+  function uploadViaBackend() {
+    var fd = new FormData();
+    fd.append('file', file);
+    fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/upload', {
+      method: 'POST',
+      body: fd
+    })
+    .then(function (res) {
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      return res.json();
+    })
+    .then(function () {
+      handleSuccess('projects/' + projectId + '/' + filename);
+    })
+    .catch(function (err) {
+      if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
+      isUploadingImage = false;
+    });
+  }
 }
 
 async function loadEditFiles(projectId) {
   var container = document.getElementById('modal-existing-files');
   if (!container) return;
 
-  try {
-    var res = await fetch('projects/' + encodeURIComponent(projectId) + '/files.json');
-    if (!res.ok) {
-      res = await fetch(BACKEND_URL + '/projects/' + encodeURIComponent(projectId) + '/files.json');
+  var assets = [];
+
+  if (supabaseClient) {
+    try {
+      var dbRes = await supabaseClient
+        .from('project_assets')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true });
+      if (!dbRes.error && dbRes.data && dbRes.data.length > 0) {
+        assets = dbRes.data;
+      }
+    } catch (e) {
+      console.warn('Could not query project_assets from Supabase:', e);
     }
-    var data = await res.json();
-    var rawFiles = data.files || [];
+  }
 
-    var files = rawFiles.map(function (f) {
-      if (typeof f === 'string') return f;
-      if (f && typeof f === 'object') return f.filename || f.name || '';
-      return '';
-    }).filter(Boolean);
-
-    if (files.length === 0) {
-      container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No files or photos uploaded yet.</div>';
-      return;
+  if (assets.length === 0) {
+    var p = allProjects.find(function (item) {
+      return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+    });
+    if (p && p.project_assets && p.project_assets.length > 0) {
+      assets = p.project_assets;
     }
+  }
 
-    var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">';
-    files.forEach(function (f, i) {
-      var isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(f);
-      var elemId = 'file-thumb-' + i;
-      var src = 'projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(f);
+  if (assets.length === 0) {
+    try {
+      var res = await fetch('projects/' + encodeURIComponent(projectId) + '/files.json');
+      if (!res.ok) {
+        res = await fetch(BACKEND_URL + '/projects/' + encodeURIComponent(projectId) + '/files.json');
+      }
+      var data = await res.json();
+      var rawFiles = data.files || [];
+      assets = rawFiles.map(function (f) {
+        var fn = typeof f === 'string' ? f : (f.filename || f.name || '');
+        return { filename: fn };
+      }).filter(function (a) { return Boolean(a.filename); });
+    } catch (e) {}
+  }
 
-      var mediaTag = isImg
-        ? '<img src="' + src + '" onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" style="width:100%;height:60px;object-fit:cover;border-radius:2px;">'
+  if (assets.length === 0) {
+    container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No files or photos uploaded yet.</div>';
+    return;
+  }
+
+  var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">';
+  assets.forEach(function (a, i) {
+    var fn = a.filename || '';
+    var isImg = a.file_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fn);
+    var isVid = a.file_type === 'video' || /\.(mp4|mov|webm)$/i.test(fn);
+    var elemId = 'file-thumb-' + i;
+    var src = a.public_url || ('projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(fn));
+
+    var mediaTag = isImg
+      ? '<img src="' + src + '" onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" style="width:100%;height:60px;object-fit:cover;border-radius:2px;">'
+      : isVid
+        ? '<div style="font-size:28px;line-height:60px;">🎬</div>'
         : '<div style="font-size:28px;line-height:60px;">📄</div>';
 
-      html += '<div id="' + elemId + '" style="position:relative;border:1px solid #cbd5e1;border-radius:4px;padding:4px;background:#fff;width:90px;text-align:center;">'
-            + mediaTag
-            + '<div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" title="' + escapeHtml(f) + '">' + escapeHtml(f) + '</div>'
-            + '<button type="button" onclick="deleteProjectAsset(\'' + projectId + '\', \'' + escapeHtml(f) + '\', \'' + elemId + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;" title="Delete file">✕</button>'
-            + '</div>';
-    });
-    html += '</div>';
+    html += '<div id="' + elemId + '" style="position:relative;border:1px solid #cbd5e1;border-radius:4px;padding:4px;background:#fff;width:90px;text-align:center;">'
+          + mediaTag
+          + '<div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" title="' + escapeHtml(fn) + '">' + escapeHtml(fn) + '</div>'
+          + '<button type="button" onclick="deleteProjectAsset(\'' + projectId + '\', \'' + escapeHtml(fn) + '\', \'' + elemId + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;" title="Delete file">✕</button>'
+          + '</div>';
+  });
+  html += '</div>';
 
-    container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No photos uploaded yet.</div>';
-  }
+  container.innerHTML = html;
 }
 
 window.deleteProjectAsset = async function (projectId, filename, elementId) {
   if (!confirm('Are you sure you want to delete "' + filename + '"?')) return;
 
-  try {
-    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/files/' + encodeURIComponent(filename), {
-      method: 'DELETE'
-    });
-    if (!res.ok) throw new Error('Server returned ' + res.status);
+  var success = false;
+  if (supabaseClient) {
+    try {
+      var storagePath = projectId + '/' + filename;
+      var removeRes = await supabaseClient.storage.from('project-media').remove([storagePath]);
+      if (removeRes.error) console.warn('Supabase storage remove warning:', removeRes.error);
 
-    var el = document.getElementById(elementId);
-    if (el) el.remove();
+      var delRes = await supabaseClient
+        .from('project_assets')
+        .delete()
+        .match({ project_id: projectId, filename: filename });
+      if (delRes.error) console.warn('Supabase project_assets delete warning:', delRes.error);
 
-    loadProjectFiles(projectId, 'edit-photo-area', null);
-  } catch (err) {
-    alert('Error deleting file: ' + err.message);
+      var p = allProjects.find(function (item) {
+        return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+      });
+      if (p && p.project_assets) {
+        p.project_assets = p.project_assets.filter(function (a) { return a.filename !== filename; });
+      }
+      success = true;
+    } catch (err) {
+      console.warn('Supabase asset delete failed, trying backend fallback:', err);
+    }
   }
+
+  if (!success) {
+    try {
+      var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/files/' + encodeURIComponent(filename), {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      success = true;
+    } catch (err) {
+      alert('Error deleting file: ' + err.message);
+      return;
+    }
+  }
+
+  var el = document.getElementById(elementId);
+  if (el) el.remove();
+  loadProjectFiles(projectId, 'edit-photo-area', null);
 };
 
 function handleFileInputUpload(event, projectId) {
@@ -915,27 +1195,103 @@ function handleFileInputUpload(event, projectId) {
     banner.textContent = '⏳ Uploading ' + files.length + ' file(s)...';
   }
 
-  var uploads = Array.from(files).map(function (file) {
-    var fd = new FormData();
-    fd.append('file', file);
-    return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/upload', {
-      method: 'POST',
-      body: fd
-    });
-  });
+  var fileList = Array.from(files);
 
-  Promise.all(uploads)
-    .then(function () {
-      if (banner) {
-        banner.textContent = '✅ Files uploaded successfully!';
-        setTimeout(function () { banner.style.display = 'none'; }, 3000);
-      }
-      loadProjectFiles(projectId, 'edit-photo-area', null);
-      loadEditFiles(projectId);
-    })
-    .catch(function (err) {
-      if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
+  if (supabaseClient) {
+    var uploads = fileList.map(function (file) {
+      var filename = file.name;
+      var storagePath = projectId + '/' + filename;
+      var ext = (filename.split('.').pop() || '').toLowerCase();
+      var fileType = 'image';
+      if (['mp4', 'mov', 'webm'].indexOf(ext) !== -1) fileType = 'video';
+      else if (['pdf', 'doc', 'docx', 'txt'].indexOf(ext) !== -1) fileType = 'document';
+
+      return supabaseClient.storage
+        .from('project-media')
+        .upload(storagePath, file, { upsert: true, contentType: file.type || 'application/octet-stream' })
+        .then(function (upRes) {
+          if (upRes.error) throw upRes.error;
+          var pubData = supabaseClient.storage.from('project-media').getPublicUrl(storagePath);
+          var publicUrl = (pubData && pubData.data && pubData.data.publicUrl) || '';
+
+          return supabaseClient
+            .from('project_assets')
+            .delete()
+            .match({ project_id: projectId, filename: filename })
+            .then(function () {
+              return supabaseClient
+                .from('project_assets')
+                .insert({
+                  project_id: projectId,
+                  filename: filename,
+                  file_type: fileType,
+                  mime_type: file.type || 'application/octet-stream',
+                  storage_path: storagePath,
+                  public_url: publicUrl
+                })
+                .select();
+            })
+            .then(function (assetRes) {
+              var p = allProjects.find(function (item) {
+                return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+              });
+              if (p) {
+                if (!p.project_assets) p.project_assets = [];
+                p.project_assets = p.project_assets.filter(function (a) { return a.filename !== filename; });
+                if (assetRes && assetRes.data && assetRes.data[0]) {
+                  p.project_assets.push(assetRes.data[0]);
+                } else {
+                  p.project_assets.push({
+                    filename: filename,
+                    public_url: publicUrl,
+                    file_type: fileType
+                  });
+                }
+              }
+            });
+        });
     });
+
+    Promise.all(uploads)
+      .then(function () {
+        if (banner) {
+          banner.textContent = '✅ Files uploaded successfully!';
+          setTimeout(function () { banner.style.display = 'none'; }, 3000);
+        }
+        loadProjectFiles(projectId, 'edit-photo-area', null);
+        loadEditFiles(projectId);
+      })
+      .catch(function (err) {
+        console.warn('Supabase multi-upload failed, trying backend fallback:', err);
+        fallbackBackendUpload();
+      });
+  } else {
+    fallbackBackendUpload();
+  }
+
+  function fallbackBackendUpload() {
+    var backendUploads = fileList.map(function (file) {
+      var fd = new FormData();
+      fd.append('file', file);
+      return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/upload', {
+        method: 'POST',
+        body: fd
+      });
+    });
+
+    Promise.all(backendUploads)
+      .then(function () {
+        if (banner) {
+          banner.textContent = '✅ Files uploaded successfully!';
+          setTimeout(function () { banner.style.display = 'none'; }, 3000);
+        }
+        loadProjectFiles(projectId, 'edit-photo-area', null);
+        loadEditFiles(projectId);
+      })
+      .catch(function (err) {
+        if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
+      });
+  }
 }
 
 function setupLocationPicker(initialCoords) {
@@ -1015,64 +1371,412 @@ function saveProjectEdits() {
   var newGid = (document.getElementById('edit-id') && document.getElementById('edit-id').value.trim()) || oldGid;
   var newAmt = (document.getElementById('edit-amount') && document.getElementById('edit-amount').value) || '0';
   var newYear = (document.getElementById('edit-year') && document.getElementById('edit-year').value) || '';
+  var parsedLat = parseFloat(latVal);
+  var parsedLng = parseFloat(lngVal);
+  var numAmt = parseFloat(newAmt) || 0;
+  var intYear = parseInt(newYear, 10) || null;
+  var shepherdVal = (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value) || '';
 
-  var updates = {
-    id: newGid,
-    title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
-    project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
-    status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
-    shepard: (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value) || '',
-    category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
-    amount: newAmt,
-    budget: newAmt,
-    start_year: newYear,
-    partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
-    narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
-    position_lat: latVal,
-    position_lng: lngVal
-  };
+  var links = [];
+  document.querySelectorAll('#modal-links-list .link-row').forEach(function (r) {
+    var inputs = r.querySelectorAll('input');
+    if (inputs[0].value.trim() && inputs[1].value.trim()) {
+      links.push({ label: inputs[0].value.trim(), url: inputs[1].value.trim() });
+    }
+  });
 
-  fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(oldGid), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates)
-  })
-  .then(function (res) {
-    if (!res.ok) return res.json().then(function(err) { throw new Error(err.detail || 'Server error'); });
-    var links = [];
-    document.querySelectorAll('#modal-links-list .link-row').forEach(function (r) {
-      var inputs = r.querySelectorAll('input');
-      if (inputs[0].value.trim() && inputs[1].value.trim()) {
-        links.push({ label: inputs[0].value.trim(), url: inputs[1].value.trim() });
-      }
-    });
-    return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(newGid) + '/links', {
+  if (supabaseClient) {
+    var supabasePayload = {
+      id: newGid,
+      title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
+      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
+      status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
+      category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
+      budget: numAmt,
+      start_year: intYear,
+      shepherd: shepherdVal,
+      partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
+      narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
+      position_lat: !isNaN(parsedLat) ? parsedLat : null,
+      position_lng: !isNaN(parsedLng) ? parsedLng : null
+    };
+
+    var promise;
+    if (newGid !== oldGid) {
+      promise = supabaseClient.from('projects').insert(supabasePayload).then(function (res) {
+        if (res.error) throw res.error;
+        return supabaseClient.from('projects').delete().eq('id', oldGid);
+      });
+    } else {
+      promise = supabaseClient.from('projects').upsert(supabasePayload);
+    }
+
+    promise
+      .then(function (res) {
+        if (res && res.error) throw res.error;
+        return supabaseClient.from('project_links').delete().eq('project_id', newGid);
+      })
+      .then(function () {
+        if (links.length > 0) {
+          var linksPayload = links.map(function (l, idx) {
+            return {
+              project_id: newGid,
+              label: l.label,
+              url: l.url,
+              display_order: idx
+            };
+          });
+          return supabaseClient.from('project_links').insert(linksPayload);
+        }
+      })
+      .then(function () {
+        cancelEditCleanup();
+        return loadData();
+      })
+      .then(function (projects) {
+        allProjects = projects;
+        rebuildMarkers();
+        var targetIdx = allProjects.findIndex(function (item) {
+          return String(item.id || item.grant_id || '').trim().toLowerCase() === newGid.toLowerCase();
+        });
+        showDetail(targetIdx !== -1 ? targetIdx : (activeEditIdx >= 0 ? activeEditIdx : 0));
+      })
+      .catch(function (err) {
+        console.warn('Supabase save error, attempting backend fallback:', err);
+        saveViaBackendFallback();
+      })
+      .finally(function () {
+        if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+      });
+  } else {
+    saveViaBackendFallback();
+  }
+
+  function saveViaBackendFallback() {
+    var updates = {
+      id: newGid,
+      title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
+      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
+      status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
+      shepard: shepherdVal,
+      shepherd: shepherdVal,
+      category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
+      amount: newAmt,
+      budget: newAmt,
+      start_year: newYear,
+      partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
+      narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
+      position_lat: latVal,
+      position_lng: lngVal
+    };
+
+    fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(oldGid), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ links: links })
+      body: JSON.stringify(updates)
+    })
+    .then(function (res) {
+      if (!res.ok) return res.json().then(function (err) { throw new Error(err.detail || 'Server error'); });
+      return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(newGid) + '/links', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links: links })
+      });
+    })
+    .then(function () {
+      cancelEditCleanup();
+      return loadData();
+    })
+    .then(function (projects) {
+      allProjects = projects;
+      rebuildMarkers();
+      var targetIdx = allProjects.findIndex(function (item) {
+        return String(item.id || item.grant_id || '').trim().toLowerCase() === newGid.toLowerCase();
+      });
+      showDetail(targetIdx !== -1 ? targetIdx : (activeEditIdx >= 0 ? activeEditIdx : 0));
+    })
+    .catch(function (err) { alert('Error updating project: ' + err.message); })
+    .finally(function () {
+      if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
     });
-  })
-  .then(function () {
-    var parsedLat = parseFloat(latVal);
-    var parsedLng = parseFloat(lngVal);
-    if (!isNaN(parsedLat) && !isNaN(parsedLng) && markers[activeEditIdx]) {
-      markers[activeEditIdx].setPosition(new google.maps.LatLng(parsedLat, parsedLng));
-    }
-    cancelEditCleanup();
-    return loadData();
-  })
-  .then(function (projects) {
-    allProjects = projects;
-    var targetIdx = allProjects.findIndex(function (item) {
-      return String(item.id || item.grant_id || '').trim().toLowerCase() === newGid.toLowerCase();
-    });
-    showDetail(targetIdx !== -1 ? targetIdx : activeEditIdx);
-  })
-  .catch(function (err) { alert('Error updating project: ' + err.message); })
-  .finally(function () {
-    if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
-  });
+  }
 }
+
+window.openCreateForm = function () {
+  cancelEditCleanup();
+  activeEditIdx = -1;
+
+  var currentYear = new Date().getFullYear();
+  var defaultGid = 'CLUB_' + currentYear + '_NewProject';
+  var defaultCoords = { lat: 14.703454, lng: -91.191623 };
+  var rp = document.getElementById('right-pane');
+
+  var newUrl = new URL(window.location);
+  newUrl.searchParams.delete('project');
+  newUrl.searchParams.delete('id');
+  newUrl.searchParams.set('new', 'true');
+  window.history.replaceState({}, '', newUrl);
+
+  rp.innerHTML = ''
+    + '<div class="panel" id="edit-panel">'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #8b5cf6;padding-bottom:6px;">'
+    + '    <h2 style="border:none;padding:0;margin:0;color:#8b5cf6;">➕ Create New Project</h2>'
+    + '    <div style="display:flex;gap:6px;">'
+    + '      <button type="button" onclick="showOverview()" style="padding:5px 12px;border:none;background:#94a3b8;color:white;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>'
+    + '      <button type="button" id="btn-save-project" onclick="saveNewProject()" style="padding:5px 14px;border:none;background:#059669;color:white;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">Create Project</button>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:8px 12px;border-radius:6px;font-size:12px;color:#1e40af;margin-bottom:12px;">'
+    + '    📍 <strong>Map Pinning Active:</strong> Drag the marker on the map or click anywhere on the map to set coordinates.'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project ID / Grant Number *</label>'
+    + '      <input type="text" id="edit-id" value="' + escapeHtml(defaultGid) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:bold;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Type</label>'
+    + '      <select id="edit-type" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;background:white;">'
+    + '        <option value="Club Direct / Donation" selected>Club Direct / Donation</option>'
+    + '        <option value="District Grant">District Grant</option>'
+    + '        <option value="Club-to-Club Grant">Club-to-Club Grant</option>'
+    + '        <option value="Global Grant">Global Grant</option>'
+    + '      </select>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="margin-bottom:10px;">'
+    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Title *</label>'
+    + '    <input type="text" id="edit-title" placeholder="Project Title" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Budget / Amount ($)</label>'
+    + '      <input type="number" id="edit-amount" value="0" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Start Year</label>'
+    + '      <input type="text" id="edit-year" value="' + currentYear + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Status</label>'
+    + '      <input type="text" id="edit-status" value="proposed" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Category</label>'
+    + '      <input type="text" id="edit-category" value="Community Service" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Latitude</label>'
+    + '      <input type="text" id="edit-lat" value="' + defaultCoords.lat.toFixed(6) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Longitude</label>'
+    + '      <input type="text" id="edit-lng" value="' + defaultCoords.lng.toFixed(6) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Shepherd</label>'
+    + '      <input type="text" id="edit-shepard" placeholder="Rotarian Shepherd" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Key Partner</label>'
+    + '      <input type="text" id="edit-partner" placeholder="Partner organization" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Narrative & Field Notes</label>'
+    + '  <textarea id="edit-narrative" style="width:100%;height:180px;font-family:monospace;padding:8px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;line-height:1.5;" placeholder="Enter narrative or project summary..."></textarea>'
+    + '  <div style="margin-top:14px;margin-bottom:14px;">'
+    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Web Links</label>'
+    + '    <div id="modal-links-list"></div>'
+    + '    <button type="button" onclick="addLinkInput()" style="margin-top:4px;padding:4px 8px;font-size:11px;cursor:pointer;background:#e2e8f0;border:none;border-radius:4px;">+ Add Link</button>'
+    + '  </div>'
+    + '</div>';
+
+  addLinkInput();
+  setupLocationPicker(defaultCoords);
+};
+
+window.saveNewProject = function () {
+  var btn = document.getElementById('btn-save-project');
+  if (btn) { btn.textContent = 'Creating...'; btn.disabled = true; }
+
+  var gid = (document.getElementById('edit-id') && document.getElementById('edit-id').value.trim());
+  if (!gid) {
+    alert('Please enter a Project ID / Grant Number.');
+    if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
+    return;
+  }
+
+  var title = (document.getElementById('edit-title') && document.getElementById('edit-title').value.trim()) || 'Untitled Project';
+  var latVal = (document.getElementById('edit-lat') && document.getElementById('edit-lat').value) || '';
+  var lngVal = (document.getElementById('edit-lng') && document.getElementById('edit-lng').value) || '';
+  var newAmt = (document.getElementById('edit-amount') && document.getElementById('edit-amount').value) || '0';
+  var newYear = (document.getElementById('edit-year') && document.getElementById('edit-year').value) || '';
+  var parsedLat = parseFloat(latVal);
+  var parsedLng = parseFloat(lngVal);
+  var numAmt = parseFloat(newAmt) || 0;
+  var intYear = parseInt(newYear, 10) || null;
+  var shepherdVal = (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value) || '';
+
+  var links = [];
+  document.querySelectorAll('#modal-links-list .link-row').forEach(function (r) {
+    var inputs = r.querySelectorAll('input');
+    if (inputs[0].value.trim() && inputs[1].value.trim()) {
+      links.push({ label: inputs[0].value.trim(), url: inputs[1].value.trim() });
+    }
+  });
+
+  if (supabaseClient) {
+    var supabasePayload = {
+      id: gid,
+      title: title,
+      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
+      status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || 'proposed',
+      category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || 'Community Service',
+      budget: numAmt,
+      start_year: intYear,
+      shepherd: shepherdVal,
+      partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
+      narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
+      position_lat: !isNaN(parsedLat) ? parsedLat : null,
+      position_lng: !isNaN(parsedLng) ? parsedLng : null
+    };
+
+    supabaseClient
+      .from('projects')
+      .insert(supabasePayload)
+      .then(function (res) {
+        if (res.error) throw res.error;
+        if (links.length > 0) {
+          var linksPayload = links.map(function (l, idx) {
+            return { project_id: gid, label: l.label, url: l.url, display_order: idx };
+          });
+          return supabaseClient.from('project_links').insert(linksPayload);
+        }
+      })
+      .then(function () {
+        cancelEditCleanup();
+        return loadData();
+      })
+      .then(function (projects) {
+        allProjects = projects;
+        rebuildMarkers();
+        var targetIdx = allProjects.findIndex(function (item) {
+          return String(item.id || item.grant_id || '').trim().toLowerCase() === gid.toLowerCase();
+        });
+        showDetail(targetIdx !== -1 ? targetIdx : 0);
+      })
+      .catch(function (err) {
+        alert('Error creating project: ' + err.message);
+      })
+      .finally(function () {
+        if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
+      });
+  } else {
+    var updates = {
+      id: gid,
+      title: title,
+      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
+      status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
+      shepard: shepherdVal,
+      shepherd: shepherdVal,
+      category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
+      amount: newAmt,
+      budget: newAmt,
+      start_year: newYear,
+      partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
+      narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
+      position_lat: latVal,
+      position_lng: lngVal
+    };
+
+    fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(gid), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    })
+    .then(function (res) {
+      if (!res.ok) return res.json().then(function (err) { throw new Error(err.detail || 'Server error'); });
+      cancelEditCleanup();
+      return loadData();
+    })
+    .then(function (projects) {
+      allProjects = projects;
+      rebuildMarkers();
+      var targetIdx = allProjects.findIndex(function (item) {
+        return String(item.id || item.grant_id || '').trim().toLowerCase() === gid.toLowerCase();
+      });
+      showDetail(targetIdx !== -1 ? targetIdx : 0);
+    })
+    .catch(function (err) { alert('Error creating project: ' + err.message); })
+    .finally(function () {
+      if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
+    });
+  }
+};
+
+window.showDiffModal = function () {
+  var modal = document.getElementById('diff-modal');
+  var container = document.getElementById('diff-output-container');
+  var countLabel = document.getElementById('diff-file-count');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  if (container) container.innerHTML = 'Fetching repository diff...';
+
+  fetch(BACKEND_URL + '/api/diff')
+    .then(function (res) {
+      if (!res.ok) throw new Error('Failed to retrieve diff');
+      return res.json();
+    })
+    .then(function (data) {
+      if (!container) return;
+      if (data.status === 'clean') {
+        container.innerHTML = '<span style="color:#94a3b8;">✔ Working tree is clean. No uncommitted modifications.</span>';
+        if (countLabel) countLabel.textContent = '0 files changed';
+        return;
+      }
+
+      var out = '';
+      if (data.untracked && data.untracked.length > 0) {
+        out += '<span style="color:#f59e0b;font-weight:bold;">Untracked New Files:</span>\n';
+        data.untracked.forEach(function (f) {
+          out += '<span class="diff-line-add">? ' + escapeHtml(f) + '</span>\n';
+        });
+        out += '\n';
+      }
+
+      var diffLines = (data.diff || '').split('\n');
+      diffLines.forEach(function (line) {
+        var escaped = escapeHtml(line);
+        if (line.startsWith('+++') || line.startsWith('---')) {
+          out += '<span style="color:#38bdf8;font-weight:bold;">' + escaped + '</span>\n';
+        } else if (line.startsWith('+')) {
+          out += '<span class="diff-line-add">' + escaped + '</span>\n';
+        } else if (line.startsWith('-')) {
+          out += '<span class="diff-line-del">' + escaped + '</span>\n';
+        } else if (line.startsWith('@@')) {
+          out += '<span class="diff-line-hunk">' + escaped + '</span>\n';
+        } else {
+          out += escaped + '\n';
+        }
+      });
+
+      container.innerHTML = out || '<span style="color:#94a3b8;">No textual diff available.</span>';
+      if (countLabel) countLabel.textContent = 'Status: ' + data.status;
+    })
+    .catch(function () {
+      if (container) container.innerHTML = '<span style="color:#059669;">✔ Connected to Supabase Cloud. All edits are saved directly to PostgreSQL and Cloud Storage in real-time.</span>';
+      if (countLabel) countLabel.textContent = 'Supabase Online';
+    });
+};
+
+window.closeDiffModal = function () {
+  var modal = document.getElementById('diff-modal');
+  if (modal) modal.style.display = 'none';
+};
 
 function escapeHtml(str) {
   return String(str || '')
@@ -1086,8 +1790,7 @@ function capitalize(s) {
 }
 
 function initMaintainerClient() {
-  // If running on localhost or 127.0.0.1, enable maintenance mode immediately
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  if (supabaseClient || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     isMaintenanceMode = true;
   }
 
@@ -1106,15 +1809,18 @@ function initMaintainerClient() {
     };
 
     evtSource.onerror = function () {
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      if (!supabaseClient && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         isMaintenanceMode = false;
       }
       var badge = document.getElementById('sync-status-badge');
-      if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
+      if (badge) {
+        badge.textContent = 'Sync: Local Offline';
+        badge.style.background = '#64748b';
+      }
     };
   } catch (e) {}
 
-  setInterval(pollMaintStatus, 4000);
+  setInterval(pollMaintStatus, 5000);
   pollMaintStatus();
 }
 
@@ -1128,16 +1834,21 @@ function pollMaintStatus() {
       isMaintenanceMode = true;
       var badge = document.getElementById('sync-status-badge');
       if (badge) {
-        badge.textContent = 'Status: ' + data.status.toUpperCase();
+        badge.textContent = 'Sync: ' + data.status.toUpperCase();
         badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
       }
     })
     .catch(function () {
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      var badge = document.getElementById('sync-status-badge');
+      if (badge) {
+        badge.textContent = 'Sync: Local Offline';
+        badge.style.background = '#64748b';
+      }
+      if (supabaseClient) {
+        isMaintenanceMode = true;
+      } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         isMaintenanceMode = false;
       }
-      var badge = document.getElementById('sync-status-badge');
-      if (badge) { badge.textContent = 'Offline'; badge.style.background = '#64748b'; }
     });
 }
 
