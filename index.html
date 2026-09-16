@@ -8,7 +8,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; font-size: 14px; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-    #maintainer-panel { background: #0f172a; color: #f8fafc; padding: 6px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; z-index: 1000; border-bottom: 2px solid #3b82f6; flex-shrink: 0; }
+    #maintainer-panel { background: #0f172a; color: #f8fafc; padding: 6px 16px; display: none; align-items: center; justify-content: space-between; font-size: 12px; z-index: 1000; border-bottom: 2px solid #3b82f6; flex-shrink: 0; }
     .maint-group { display: flex; align-items: center; gap: 10px; }
     #sync-status-badge { padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 10px; text-transform: uppercase; background: #475569; color: #fff; }
     .maint-btn { color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 11px; transition: opacity 0.15s; }
@@ -78,16 +78,17 @@
       <strong>🛠️ Maint Mode</strong>
       <span id="db-status-badge" style="padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 10px; background: #059669; color: #fff;">⚡ DB: Supabase (Live)</span>
       <button id="btn-toggle-source" class="maint-btn" onclick="toggleDataSource()" style="background:#d97706;font-size:10px;padding:2px 8px;cursor:pointer;" title="Switch between Supabase Cloud and Legacy CSV">⇄ Switch to CSV</button>
-      <span id="sync-status-badge">Sync: Connecting...</span>
-      <span id="sync-step" style="color: #94a3b8;"></span>
+      <span id="sync-status-badge" class="local-only-btn">Sync: Connecting...</span>
+      <span id="sync-step" class="local-only-btn" style="color: #94a3b8;"></span>
     </div>
     <div class="maint-group">
       <button class="maint-btn btn-new" onclick="openCreateForm()">➕ New Project</button>
-      <button id="btn-sync-dry" class="maint-btn btn-dry" onclick="triggerSync(true)">Dry Run Sync</button>
-      <button id="btn-sync-live" class="maint-btn btn-sync" onclick="triggerSync(false)">Full Sync</button>
-      <button id="btn-diff" class="maint-btn btn-diff" onclick="showDiffModal()">🔍 Diff</button>
-      <button id="btn-publish" class="maint-btn btn-push" onclick="publishChanges()">Push to Git</button>
-      <button class="maint-btn btn-log" onclick="toggleLogConsole()">Logs</button>
+      <button id="btn-sync-dry" class="maint-btn btn-dry local-only-btn" onclick="triggerSync(true)">Dry Run Sync</button>
+      <button id="btn-sync-live" class="maint-btn btn-sync local-only-btn" onclick="triggerSync(false)">Full Sync</button>
+      <button id="btn-diff" class="maint-btn btn-diff local-only-btn" onclick="showDiffModal()">🔍 Diff</button>
+      <button id="btn-publish" class="maint-btn btn-push local-only-btn" onclick="publishChanges()">Push to Git</button>
+      <button class="maint-btn btn-log local-only-btn" onclick="toggleLogConsole()">Logs</button>
+      <button class="maint-btn" onclick="toggleMaintenanceMode(false)" style="background:#475569;font-size:10px;padding:2px 8px;margin-left:4px;" title="Exit maintenance mode">✕ Exit Maint</button>
     </div>
   </div>
 
@@ -115,7 +116,7 @@
     <span class="club-name">Rotary Club of Lake Atitlán — Projects</span>
     <button id="btn-overview" class="active">Overview</button>
     <button id="btn-list">Projects</button>
-    <div id="backend-status-indicator" onclick="toggleDataSource()" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:12px;background:rgba(16,185,129,0.18);border:1px solid #10b981;color:#34d399;font-weight:600;margin-left:8px;cursor:pointer;user-select:none;transition:all 0.2s;" title="Click to toggle between Supabase Cloud and Legacy CSV">
+    <div id="backend-status-indicator" onclick="handleBackendIndicatorClick(event)" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:12px;background:rgba(16,185,129,0.18);border:1px solid #10b981;color:#34d399;font-weight:600;margin-left:8px;cursor:pointer;user-select:none;transition:all 0.2s;" title="Database status (Click to toggle Maintainer Mode, or press Ctrl+Shift+M)">
       <span style="width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;"></span>
       <span id="backend-status-text">⚡ Supabase Cloud</span>
     </div>

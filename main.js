@@ -884,6 +884,9 @@ function loadMarked() {
 // EDIT PROJECT FORM & INTERACTIVE ASSET MANAGEMENT
 // ============================================================
 window.openEditForm = function (idx) {
+  if (!isMaintenanceMode) {
+    window.toggleMaintenanceMode(true);
+  }
   cancelEditCleanup();
   activeEditIdx = Number(idx);
   var p = allProjects[activeEditIdx];
@@ -1605,6 +1608,9 @@ function saveProjectEdits() {
 }
 
 window.openCreateForm = function () {
+  if (!isMaintenanceMode) {
+    window.toggleMaintenanceMode(true);
+  }
   cancelEditCleanup();
   activeEditIdx = -1;
 
@@ -1891,9 +1897,90 @@ function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
+function checkMaintenanceMode() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var maintParam = urlParams.get('maint') || urlParams.get('admin');
+  var editParam = urlParams.get('edit') || urlParams.get('mode');
+
+  if (maintParam !== null) {
+    var val = maintParam.toLowerCase();
+    if (val === 'true' || val === '1' || val === 'yes' || val === 'on') {
+      sessionStorage.setItem('rcla_maint_mode', 'true');
+      return true;
+    } else if (val === 'false' || val === '0' || val === 'no' || val === 'off') {
+      sessionStorage.setItem('rcla_maint_mode', 'false');
+      return false;
+    }
+  }
+
+  if (editParam !== null) {
+    var eVal = editParam.toLowerCase();
+    if (eVal === 'true' || eVal === '1' || eVal === 'edit') {
+      sessionStorage.setItem('rcla_maint_mode', 'true');
+      return true;
+    }
+  }
+
+  var stored = sessionStorage.getItem('rcla_maint_mode');
+  if (stored === 'true') return true;
+  if (stored === 'false') return false;
+
+  // Local development defaults to true, production (github.io) defaults to false
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+}
+
+function applyMaintenanceModeUI() {
+  var panel = document.getElementById('maintainer-panel');
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  if (panel) {
+    panel.style.display = isMaintenanceMode ? 'flex' : 'none';
+  }
+
+  var localBtns = document.querySelectorAll('.local-only-btn');
+  localBtns.forEach(function (el) {
+    el.style.display = isLocal ? '' : 'none';
+  });
+}
+
+window.toggleMaintenanceMode = function (forceState) {
+  if (forceState !== undefined) {
+    isMaintenanceMode = Boolean(forceState);
+  } else {
+    isMaintenanceMode = !isMaintenanceMode;
+  }
+  sessionStorage.setItem('rcla_maint_mode', isMaintenanceMode ? 'true' : 'false');
+  applyMaintenanceModeUI();
+
+  if (currentView === 'detail' && allProjects[currentIndex]) {
+    showDetail(currentIndex);
+  }
+};
+
+window.handleBackendIndicatorClick = function (event) {
+  if (isMaintenanceMode) {
+    toggleDataSource();
+  } else {
+    window.toggleMaintenanceMode(true);
+  }
+};
+
+// Keyboard shortcut: Ctrl+Shift+M or Cmd+Shift+M to toggle maintainer mode
+window.addEventListener('keydown', function (e) {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'M' || e.key === 'm')) {
+    e.preventDefault();
+    window.toggleMaintenanceMode();
+  }
+});
+
 function initMaintainerClient() {
-  if (supabaseClient || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    isMaintenanceMode = true;
+  isMaintenanceMode = checkMaintenanceMode();
+  applyMaintenanceModeUI();
+
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isLocal) {
+    // On production/GitHub Pages, don't poll local backend URL
+    return;
   }
 
   try {
@@ -1911,9 +1998,6 @@ function initMaintainerClient() {
     };
 
     evtSource.onerror = function () {
-      if (!supabaseClient && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        isMaintenanceMode = false;
-      }
       var badge = document.getElementById('sync-status-badge');
       if (badge) {
         badge.textContent = 'Sync: Local Offline';
@@ -1927,13 +2011,15 @@ function initMaintainerClient() {
 }
 
 function pollMaintStatus() {
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isLocal) return;
+
   fetch(BACKEND_URL + '/api/status')
     .then(function (res) {
       if (!res.ok) throw new Error();
       return res.json();
     })
     .then(function (data) {
-      isMaintenanceMode = true;
       var badge = document.getElementById('sync-status-badge');
       if (badge) {
         badge.textContent = 'Sync: ' + data.status.toUpperCase();
@@ -1945,11 +2031,6 @@ function pollMaintStatus() {
       if (badge) {
         badge.textContent = 'Sync: Local Offline';
         badge.style.background = '#64748b';
-      }
-      if (supabaseClient) {
-        isMaintenanceMode = true;
-      } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        isMaintenanceMode = false;
       }
     });
 }
