@@ -280,9 +280,48 @@ function buildMap() {
     center: { lat: 14.703454, lng: -91.191623 },
     mapTypeId: 'roadmap',
     mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+      position: google.maps.ControlPosition.TOP_LEFT,
+      mapTypeIds: [
+        'roadmap',
+        'satellite',
+        'hybrid',
+        'terrain'
+      ]
+    },
     fullscreenControl: true
   });
   rebuildMarkers();
+  initPlacesSearch();
+}
+
+function initPlacesSearch() {
+  var input = document.getElementById('map-search-input');
+  if (!input || !window.google || !google.maps || !google.maps.places) return;
+  try {
+    var autocomplete = new google.maps.places.Autocomplete(input);
+    autocomplete.bindTo('bounds', map);
+    autocomplete.addListener('place_changed', function () {
+      var place = autocomplete.getPlace();
+      if (!place || !place.geometry || !place.geometry.location) return;
+      if (searchMarker) searchMarker.setMap(null);
+      searchMarker = new google.maps.Marker({
+        map: map,
+        position: place.geometry.location,
+        title: place.name || 'Searched location',
+        icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+      });
+      if (place.geometry.viewport) {
+        map.fitBounds(place.geometry.viewport);
+      } else {
+        map.setCenter(place.geometry.location);
+        map.setZoom(15);
+      }
+    });
+  } catch (e) {
+    console.warn('Could not initialize Google Places Autocomplete:', e);
+  }
 }
 
 function rebuildMarkers() {
