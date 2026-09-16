@@ -183,38 +183,97 @@ window.initMap = function () {
     });
 };
 
+// DataSource Mode: 'auto' (Supabase if available), 'supabase', or 'csv'
+function getDataSourceMode() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var param = urlParams.get('source') || urlParams.get('datasource') || urlParams.get('data');
+  if (param) {
+    if (param.toLowerCase() === 'csv') return 'csv';
+    if (param.toLowerCase() === 'supabase' || param.toLowerCase() === 'cloud') return 'supabase';
+  }
+  var stored = sessionStorage.getItem('rcla_data_source');
+  if (stored === 'csv' || stored === 'supabase') return stored;
+  return 'supabase';
+}
+
+function setDataSourceMode(mode) {
+  sessionStorage.setItem('rcla_data_source', mode);
+}
+
+window.toggleDataSource = function () {
+  var current = getDataSourceMode();
+  var next = (current === 'csv') ? 'supabase' : 'csv';
+  setDataSourceMode(next);
+
+  var newUrl = new URL(window.location);
+  newUrl.searchParams.set('source', next);
+  window.history.replaceState({}, '', newUrl);
+
+  var rp = document.getElementById('right-pane');
+  if (rp) rp.innerHTML = '<div style="padding:20px;color:#1a3a5c;">Switching data source to ' + (next === 'csv' ? 'Legacy CSV' : 'Supabase Cloud') + '…</div>';
+
+  loadData().then(function (projects) {
+    allProjects = projects;
+    rebuildMarkers();
+    if (currentView === 'overview') showOverview();
+    else if (currentView === 'list') renderListRows();
+    else if (currentView === 'detail' && allProjects[currentIndex]) showDetail(currentIndex);
+    else showOverview();
+  });
+};
+
 function updateBackendStatus(type, count) {
   var indicator = document.getElementById('backend-status-indicator');
   var text = document.getElementById('backend-status-text');
   var dbBadge = document.getElementById('db-status-badge');
+  var toggleBtn = document.getElementById('btn-toggle-source');
+
   if (type === 'supabase') {
     if (indicator) {
       indicator.style.background = 'rgba(16, 185, 129, 0.2)';
       indicator.style.borderColor = '#10b981';
       indicator.style.color = '#34d399';
-      indicator.title = 'Live connection to Supabase Cloud Database & Storage (' + count + ' projects loaded)';
+      indicator.title = 'Live connection to Supabase Cloud (' + count + ' projects). Click to switch to Legacy CSV.';
     }
-    if (text) text.textContent = '⚡ Supabase Cloud (' + count + ')';
+    if (text) text.innerHTML = '⚡ Supabase Cloud (' + count + ') <span style="font-size:10px;text-decoration:underline;margin-left:4px;opacity:0.85;">[Switch to CSV]</span>';
     if (dbBadge) {
       dbBadge.textContent = '⚡ DB: Supabase (Live)';
       dbBadge.style.background = '#059669';
     }
+    if (toggleBtn) {
+      toggleBtn.textContent = '⇄ Switch to CSV';
+      toggleBtn.style.background = '#d97706';
+      toggleBtn.title = 'Switch active data source to legacy CSV';
+    }
   } else {
     if (indicator) {
-      indicator.style.background = 'rgba(245, 158, 11, 0.2)';
+      indicator.style.background = 'rgba(245, 158, 11, 0.25)';
       indicator.style.borderColor = '#f59e0b';
       indicator.style.color = '#fbbf24';
-      indicator.title = 'Loaded from local CSV backup';
+      indicator.title = 'Running on Legacy CSV backup (' + (count || 0) + ' projects). Click to switch to Supabase Cloud.';
     }
-    if (text) text.textContent = '📁 CSV Backup (' + (count || 0) + ')';
+    if (text) text.innerHTML = '📁 Legacy CSV (' + (count || 0) + ') <span style="font-size:10px;text-decoration:underline;margin-left:4px;opacity:0.85;">[Switch to Cloud]</span>';
     if (dbBadge) {
-      dbBadge.textContent = 'DB: CSV Fallback';
+      dbBadge.textContent = '📁 DB: Legacy CSV';
       dbBadge.style.background = '#d97706';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = '⇄ Switch to Cloud';
+      toggleBtn.style.background = '#059669';
+      toggleBtn.title = 'Switch active data source to Supabase Cloud';
     }
   }
 }
 
 function loadData() {
+  if (getDataSourceMode() === 'csv') {
+    console.log('Loading project data from Legacy CSV (requested mode: CSV)...');
+    return loadCsvFallback().then(function (data) {
+      updateBackendStatus('csv', data.length);
+      return data;
+    });
+  }
+
   if (supabaseClient) {
     return supabaseClient
       .from('projects')
@@ -676,7 +735,7 @@ function loadProjectFiles(projectId, photoContainerId, docContainerId) {
     return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
   });
 
-  if (p && (p.project_assets !== undefined || p.project_links !== undefined)) {
+  if (getDataSourceMode() !== 'csv' && p && (p.project_assets !== undefined || p.project_links !== undefined)) {
     renderFilesAndLinksFromProject(p, photoContainerId, docContainerId);
     return;
   }
@@ -942,24 +1001,26 @@ window.openEditForm = function (idx) {
   attachActiveWindowPaste(gid);
 
   var linksLoaded = false;
-  if (p.project_links && p.project_links.length > 0) {
-    p.project_links.forEach(function (l) { addLinkInput(l.label, l.url); });
-    linksLoaded = true;
-  } else if (supabaseClient) {
-    supabaseClient
-      .from('project_links')
-      .select('*')
-      .eq('project_id', gid)
-      .order('display_order', { ascending: true })
-      .then(function (res) {
-        if (!res.error && res.data && res.data.length > 0) {
-          res.data.forEach(function (l) { addLinkInput(l.label, l.url); });
-        } else {
-          addLinkInput();
-        }
-      })
-      .catch(function () { addLinkInput(); });
-    linksLoaded = true;
+  if (getDataSourceMode() !== 'csv') {
+    if (p.project_links && p.project_links.length > 0) {
+      p.project_links.forEach(function (l) { addLinkInput(l.label, l.url); });
+      linksLoaded = true;
+    } else if (supabaseClient) {
+      supabaseClient
+        .from('project_links')
+        .select('*')
+        .eq('project_id', gid)
+        .order('display_order', { ascending: true })
+        .then(function (res) {
+          if (!res.error && res.data && res.data.length > 0) {
+            res.data.forEach(function (l) { addLinkInput(l.label, l.url); });
+          } else {
+            addLinkInput();
+          }
+        })
+        .catch(function () { addLinkInput(); });
+      linksLoaded = true;
+    }
   }
 
   if (!linksLoaded) {
@@ -1038,7 +1099,7 @@ function uploadImageBlobInEdit(blob, projectId) {
     isUploadingImage = false;
   }
 
-  if (supabaseClient) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
     var storagePath = projectId + '/' + filename;
     supabaseClient.storage
       .from('project-media')
@@ -1109,27 +1170,29 @@ async function loadEditFiles(projectId) {
 
   var assets = [];
 
-  if (supabaseClient) {
-    try {
-      var dbRes = await supabaseClient
-        .from('project_assets')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true });
-      if (!dbRes.error && dbRes.data && dbRes.data.length > 0) {
-        assets = dbRes.data;
+  if (getDataSourceMode() !== 'csv') {
+    if (supabaseClient) {
+      try {
+        var dbRes = await supabaseClient
+          .from('project_assets')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: true });
+        if (!dbRes.error && dbRes.data && dbRes.data.length > 0) {
+          assets = dbRes.data;
+        }
+      } catch (e) {
+        console.warn('Could not query project_assets from Supabase:', e);
       }
-    } catch (e) {
-      console.warn('Could not query project_assets from Supabase:', e);
     }
-  }
 
-  if (assets.length === 0) {
-    var p = allProjects.find(function (item) {
-      return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
-    });
-    if (p && p.project_assets && p.project_assets.length > 0) {
-      assets = p.project_assets;
+    if (assets.length === 0) {
+      var p = allProjects.find(function (item) {
+        return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+      });
+      if (p && p.project_assets && p.project_assets.length > 0) {
+        assets = p.project_assets;
+      }
     }
   }
 
@@ -1182,7 +1245,7 @@ window.deleteProjectAsset = async function (projectId, filename, elementId) {
   if (!confirm('Are you sure you want to delete "' + filename + '"?')) return;
 
   var success = false;
-  if (supabaseClient) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
     try {
       var storagePath = projectId + '/' + filename;
       var removeRes = await supabaseClient.storage.from('project-media').remove([storagePath]);
@@ -1236,7 +1299,7 @@ function handleFileInputUpload(event, projectId) {
 
   var fileList = Array.from(files);
 
-  if (supabaseClient) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
     var uploads = fileList.map(function (file) {
       var filename = file.name;
       var storagePath = projectId + '/' + filename;
@@ -1424,7 +1487,7 @@ function saveProjectEdits() {
     }
   });
 
-  if (supabaseClient) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
     var supabasePayload = {
       id: newGid,
       title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
@@ -1668,7 +1731,7 @@ window.saveNewProject = function () {
     }
   });
 
-  if (supabaseClient) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
     var supabasePayload = {
       id: gid,
       title: title,
