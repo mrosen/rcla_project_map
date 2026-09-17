@@ -1,4 +1,16 @@
+# Existing ignores
 *.Identifier
 *:Zone.Identifier
 new_csv_rows.csv
 .env
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local debug & trace captures
+spc_trace.zip
+*.har
+index_bundle.js
+*.bak
+*.code-workspace
