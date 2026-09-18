@@ -416,8 +416,14 @@ function highlightMarker(idx) {
   if (active && map) {
     active.setIcon('https://maps.google.com/mapfiles/ms/icons/red-dot.png');
     active.setZIndex(999);
-    map.panTo(active.getPosition());
-    map.setZoom(15);
+    var pos = active.getPosition();
+    if (pos) {
+      var bounds = map.getBounds();
+      // If the marker is not currently within the visible viewport, pan to bring it into view
+      if (!bounds || !bounds.contains(pos)) {
+        map.panTo(pos);
+      }
+    }
   }
 }
 

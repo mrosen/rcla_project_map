@@ -268,9 +268,8 @@ def construct_spc_payload(p: dict) -> dict:
 
     # Status
     raw_status = (p.get("status") or "completed").lower()
-    is_completed = raw_status in ["closed", "completed", "actual"]
-    is_proposed = raw_status in ["proposed", "proposal", "draft"]
-    status_type = "Proposed" if is_proposed else "Actual"
+    is_completed = raw_status in ["closed", "completed", "actual", "approved"]
+    status_type = "Actual" if is_completed else "Proposed"
 
     # Budget
     budget_raw = p.get("amount") or p.get("budget") or "0"
@@ -310,6 +309,7 @@ def construct_spc_payload(p: dict) -> dict:
                 "relLinkType": "6",
                 "url": b64_url,
                 "caption": raw_cap,
+                "caption": link.get("label") or "Project Link",
                 "IsCoverPhoto": "0"
             })
 
@@ -328,21 +328,45 @@ def construct_spc_payload(p: dict) -> dict:
                     "NoOfVolunteer": "",
                     "year": ""
                 })
+    # Funding Sources
+    partner_club = find_partner_club(intl_club)
+    partner_club_key = partner_club.get("key") if partner_club else None
 
         # Detailed Funding Sources
         fundings = []
         if detail_profile.get("world_fund"):
+    fundings = []
+    intl_dist_raw = str(p.get("international_club_district") or p.get("internationalClub_district") or "").strip()
+    dist_digits = re.sub(r'[^0-9]', '', intl_dist_raw)
+    intl_dist = dist_digits if dist_digits else intl_dist_raw
+
+    if is_international and gid.startswith("GG"):
+        # Global Grant Breakdown
+        fundings.append({
+            "fundingSource": "Global grant",
+            "fundingAmount": str(int(num_budget * 0.45)) if num_budget else "20000",
+            "fundingClubKey": gid
+        })
+        if intl_dist:
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(detail_profile["world_fund"]),
                 "fundingClubKey": gid
+                "fundingSource": "District(Cash)",
+                "fundingAmount": str(int(num_budget * 0.35)) if num_budget else "15000",
+                "fundingClubKey": intl_dist,
+                "isImplementingPartnerFlag": False
             })
         for dc in detail_profile.get("district_contributions", []):
             dnum = str(dc.get("district", "")).strip()
+        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
             fundings.append({
                 "fundingSource": dc.get("source", "District(DDF)"),
                 "fundingAmount": str(dc.get("amount", "0")),
                 "fundingClubKey": dnum,
+                "fundingSource": "Rotary Club",
+                "fundingAmount": str(int(num_budget * 0.15)) if num_budget else "5000",
+                "fundingClubKey": partner_club_key,
                 "isImplementingPartnerFlag": False
             })
         for cc in detail_profile.get("club_contributions", []):
@@ -360,6 +384,17 @@ def construct_spc_payload(p: dict) -> dict:
                 "fundingAmount": str(ip.get("amount", "0")),
                 "fundingClubKey": ip.get("name"),
                 "isImplementingPartnerFlag": True
+                "fundingSource": "Rotary Club",
+                "fundingAmount": str(int(num_budget * 0.05)) if num_budget else "2000",
+                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+                "isImplementingPartnerFlag": False
+            })
+        else:
+            fundings.append({
+                "fundingSource": "Rotary Club",
+                "fundingAmount": str(int(num_budget * 0.20)) if num_budget else "5000",
+                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+                "isImplementingPartnerFlag": False
             })
     else:
         intl_club = str(p.get("international_club_name") or p.get("internationalClub_name") or "").strip()
@@ -373,10 +408,16 @@ def construct_spc_payload(p: dict) -> dict:
 
         if is_international and gid.startswith("GG"):
             # Global Grant Breakdown
+        # Club Direct / District Grant / Other
+        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(int(num_budget * 0.45)) if num_budget else "20000",
                 "fundingClubKey": gid
+                "fundingSource": "Rotary Club",
+                "fundingAmount": str(int(num_budget * 0.70)) if num_budget else budget_str,
+                "fundingClubKey": partner_club_key,
+                "isImplementingPartnerFlag": False
             })
             if intl_dist:
                 fundings.append({
@@ -405,6 +446,25 @@ def construct_spc_payload(p: dict) -> dict:
                     "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
                     "isImplementingPartnerFlag": False
                 })
+            fundings.append({
+                "fundingSource": "Rotary Club",
+                "fundingAmount": str(int(num_budget * 0.30)) if num_budget else "1000",
+                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+                "isImplementingPartnerFlag": False
+            })
+        elif intl_dist:
+            fundings.append({
+                "fundingSource": "District(Cash)",
+                "fundingAmount": str(int(num_budget * 0.70)) if num_budget else budget_str,
+                "fundingClubKey": intl_dist,
+                "isImplementingPartnerFlag": False
+            })
+            fundings.append({
+                "fundingSource": "Rotary Club",
+                "fundingAmount": str(int(num_budget * 0.30)) if num_budget else "1000",
+                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+                "isImplementingPartnerFlag": False
+            })
         else:
             # Club Direct / District Grant / Other
             if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
@@ -440,12 +500,30 @@ def construct_spc_payload(p: dict) -> dict:
                     "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
                     "isImplementingPartnerFlag": False
                 })
+            fundings.append({
+                "fundingSource": "Rotary Club",
+                "fundingAmount": budget_str,
+                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+                "isImplementingPartnerFlag": False
+            })
 
         # Partners
         partners = [{
             "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+    # Partners
+    partners = [{
+        "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+        "Hour": "",
+        "MoneyDonated": "",
+        "NoOfVolunteer": "",
+        "year": ""
+    }]
+    if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
+        partners.append({
+            "partnerOrganizationKey": partner_club_key,
             "Hour": "",
             "MoneyDonated": "",
+            "MoneyDonated": str(int(num_budget * 0.70)) if num_budget else "",
             "NoOfVolunteer": "",
             "year": ""
         }]
@@ -457,6 +535,7 @@ def construct_spc_payload(p: dict) -> dict:
                 "NoOfVolunteer": "",
                 "year": ""
             })
+        })
 
     payload = {
         "projectSource": "4",
@@ -468,7 +547,7 @@ def construct_spc_payload(p: dict) -> dict:
         "overview": overview,
         "description": full_desc,
         "startDate": start_date,
-        "endDate": end_date if is_completed else "",
+        "endDate": end_date,
         "countryId": ROTARY_GUATEMALA_COUNTRY_KEY,
         "tags": "",
         "communityImpact": "",
@@ -493,7 +572,7 @@ def construct_spc_payload(p: dict) -> dict:
         "optGlobalGrants": False,
         "isBasicLevel": False,
         "isIntermediateLevel": False,
-        "isAdvancedLevel": True if is_completed else False,
+        "isAdvancedLevel": True,
         "isOptGlobalGrants": False,
         "isEstimatedStartTime": False,
         "isEstimatedDuration": False,
@@ -555,6 +634,7 @@ async def main():
     force_update = "--update" in flags or "-u" in flags or "--force" in flags
 
     unmigrated = [p for p in projects if not state.get(String(p.get("id")).strip(), {}).get("spc_id")]
+    unmigrated = [p for p in projects if String(p.get("id")).strip() not in state]
     print(f"Projects unmigrated in local state: {len(unmigrated)}")
 
     # Check if a specific project ID was passed
@@ -600,6 +680,8 @@ async def main():
     force_headful = "--headful" in flags
     force_headless = "--headless" in flags
     headless_mode = not force_headful
+    has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    headless_mode = force_headless or (not force_headful and not has_display)
 
     async with async_playwright() as pw:
         print(f"\n[1/4] Launching Playwright browser (headless={headless_mode})...")
@@ -630,8 +712,14 @@ async def main():
                 await page.fill("#okta-signin-password, input[name='password']", password)
                 await page.click("#okta-signin-submit, input[type='submit']")
                 print("  Submitted login form. Waiting for authentication...", flush=True)
+                await page.wait_for_selector("#okta-signin-username", timeout=8000)
+                await page.fill("#okta-signin-username", email)
+                await page.fill("#okta-signin-password", password)
+                await page.click("#okta-signin-submit")
+                print("  Submitted login form. Waiting for authentication...")
             except Exception as e:
                 print(f"  Note on auto-fill: {e}", flush=True)
+                print(f"  Note on auto-fill: {e}")
 
         # Wait until we leave the login page
         await page.wait_for_timeout(3000)
@@ -642,6 +730,12 @@ async def main():
                 print("  Please complete any 2FA/login challenge in the browser window...")
                 await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=90000)
         print("  ✓ Successfully authenticated with My Rotary.")
+        try:
+            await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=60000)
+            print("  ✓ Successfully authenticated with My Rotary.")
+        except Exception:
+            print("  Please complete any 2FA/login challenge in the browser window...")
+            await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=120000)
 
         # Step 2: Navigate to SPC
         print("[3/4] Establishing session on spc.rotary.org...")
@@ -710,11 +804,14 @@ async def main():
                     # Match by exact/partial title or Grant ID
                     if (norm_title and (norm_title == ep_title or norm_title in ep_title or ep_title in norm_title)) or \
                        (norm_payload_title and (norm_payload_title == ep_title or norm_payload_title in ep_title or ep_title in norm_payload_title)):
+                    if norm_title and (norm_title == ep_title or norm_title in ep_title or ep_title in norm_title):
                         existing_match = ep
                         break
                     if norm_pid and len(norm_pid) > 3 and (norm_pid in ep_title or norm_pid in ep_desc or norm_pid in ep_summary):
                         existing_match = ep
                         break
+
+            payload = construct_spc_payload(p)
 
             if existing_match:
                 spc_key = existing_match.get("nfKey")
@@ -807,6 +904,7 @@ async def main():
                                     (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)) ||
                                     (f.fundingClubKey && ef.fundingOtherName === f.fundingClubKey)
                                 ));
+                                const match = existingFundings.find(ef => (!usedFundingKeys.has(ef.projectFundingSourceKey)) && (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)));
                                 if (match) {
                                     usedFundingKeys.add(match.projectFundingSourceKey);
                                     newFundings.push({
@@ -817,6 +915,7 @@ async def main():
                                     });
                                 } else {
                                     const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey) && ef.fundingSource === f.fundingSource);
+                                    const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey));
                                     if (unused) {
                                         usedFundingKeys.add(unused.projectFundingSourceKey);
                                         newFundings.push({
@@ -951,12 +1050,15 @@ async def main():
                             return { ok: false, status: res.status, error: 'Empty GUID returned (validation failed)' };
                         }
                         return { ok: true, spc_id: spcId.trim() };
+                        const data = await res.json();
+                        return { ok: true, spc_id: data };
                     } catch (e) {
                         return { ok: false, error: e.message };
                     }
                 }""", payload)
 
                 if result.get("ok") and result.get("spc_id"):
+                if result.get("ok"):
                     spc_id = result.get("spc_id")
                     print(f"  ✓ SUCCESS! Created in SPC: {spc_id}")
                     state[pid] = {
