@@ -610,6 +610,130 @@ function renderTypeChart(filteredProjects) {
   });
 }
 
+// --- Table Sorting & Marker Hover Animation ---
+var activeHoverMarker = null;
+var hoverPulseTimeout = null;
+
+window.hoverMarkerStart = function (idx) {
+  var m = markers[idx];
+  if (!m || !window.google || !google.maps) return;
+
+  // If this marker is already the active hover marker, let it continue
+  if (activeHoverMarker === m && hoverPulseTimeout) return;
+
+  window.hoverMarkerStop();
+
+  activeHoverMarker = m;
+  m.setZIndex(1000);
+  m.setAnimation(google.maps.Animation.BOUNCE);
+
+  // Stop animating after ~800ms (1-2 bounce cycles)
+  hoverPulseTimeout = setTimeout(function () {
+    if (activeHoverMarker === m) {
+      m.setAnimation(null);
+      m.setZIndex(idx === currentIndex && currentView === 'detail' ? 999 : 1);
+      activeHoverMarker = null;
+      hoverPulseTimeout = null;
+    }
+  }, 800);
+};
+
+window.hoverMarkerStop = function () {
+  if (hoverPulseTimeout) {
+    clearTimeout(hoverPulseTimeout);
+    hoverPulseTimeout = null;
+  }
+  if (activeHoverMarker) {
+    activeHoverMarker.setAnimation(null);
+    var oldIdx = markers.indexOf(activeHoverMarker);
+    activeHoverMarker.setZIndex(oldIdx === currentIndex && currentView === 'detail' ? 999 : 1);
+    activeHoverMarker = null;
+  }
+};
+
+let tableSort = {
+  column: null,
+  direction: 'asc'
+};
+
+function sortProjects(list, column, direction) {
+  if (!column) return list;
+  var factor = direction === 'desc' ? -1 : 1;
+  return list.slice().sort(function (a, b) {
+    var valA, valB;
+    switch (column) {
+      case 'id':
+        valA = String(a.id || a.grant_id || '').toLowerCase();
+        valB = String(b.id || b.grant_id || '').toLowerCase();
+        return valA.localeCompare(valB, undefined, { numeric: true }) * factor;
+      case 'title':
+        valA = String(a.title || '').toLowerCase();
+        valB = String(b.title || '').toLowerCase();
+        return valA.localeCompare(valB) * factor;
+      case 'project_type':
+        valA = String(getProjectType(a) || '').toLowerCase();
+        valB = String(getProjectType(b) || '').toLowerCase();
+        return valA.localeCompare(valB) * factor;
+      case 'category':
+        valA = String(a.category || '').toLowerCase();
+        valB = String(b.category || '').toLowerCase();
+        return valA.localeCompare(valB) * factor;
+      case 'start_year':
+        valA = Number(a.start_year) || 0;
+        valB = Number(b.start_year) || 0;
+        return (valA - valB) * factor;
+      case 'status':
+        valA = String(a.status || '').toLowerCase();
+        valB = String(b.status || '').toLowerCase();
+        return valA.localeCompare(valB) * factor;
+      case 'amount':
+        valA = Number(a.amount) || Number(a.budget) || 0;
+        valB = Number(b.amount) || Number(b.budget) || 0;
+        return (valA - valB) * factor;
+      default:
+        return 0;
+    }
+  });
+}
+
+function attachTableSortListeners() {
+  var table = document.getElementById('project-table');
+  if (!table) return;
+  var headers = table.querySelectorAll('th[data-col]');
+  headers.forEach(function (th) {
+    th.addEventListener('click', function () {
+      var col = th.getAttribute('data-col');
+      if (tableSort.column === col) {
+        tableSort.direction = (tableSort.direction === 'asc') ? 'desc' : 'asc';
+      } else {
+        tableSort.column = col;
+        tableSort.direction = (col === 'amount' || col === 'start_year') ? 'desc' : 'asc';
+      }
+      updateSortIndicators();
+      renderListRows();
+    });
+  });
+}
+
+function updateSortIndicators() {
+  var table = document.getElementById('project-table');
+  if (!table) return;
+  var headers = table.querySelectorAll('th[data-col]');
+  headers.forEach(function (th) {
+    var col = th.getAttribute('data-col');
+    var baseTitle = th.getAttribute('data-label') || th.textContent.replace(/[▲▼↕\s]+$/, '');
+    th.setAttribute('data-label', baseTitle);
+    if (tableSort.column === col) {
+      var icon = tableSort.direction === 'asc' ? ' ▲' : ' ▼';
+      th.innerHTML = baseTitle + ' <span style="font-size:10px;display:inline-block;">' + icon + '</span>';
+      th.style.background = '#0e253c';
+    } else {
+      th.innerHTML = baseTitle + ' <span style="opacity:0.35;font-size:9px;display:inline-block;">↕</span>';
+      th.style.background = '#1a3a5c';
+    }
+  });
+}
+
 function showList() {
   cancelEditCleanup();
   currentView = 'list';
@@ -628,13 +752,13 @@ function showList() {
     + '  <table id="project-table">'
     + '    <thead>'
     + '      <tr>'
-    + '        <th data-col="id">ID</th>'
-    + '        <th data-col="title">Project</th>'
-    + '        <th data-col="project_type">Type</th>'
-    + '        <th data-col="category">Category</th>'
-    + '        <th data-col="start_year">Year</th>'
-    + '        <th data-col="status">Status</th>'
-    + '        <th data-col="amount" style="text-align:right">Budget</th>'
+    + '        <th data-col="id" title="Click to sort by ID">ID</th>'
+    + '        <th data-col="title" title="Click to sort by Project Title">Project</th>'
+    + '        <th data-col="project_type" title="Click to sort by Type">Type</th>'
+    + '        <th data-col="category" title="Click to sort by Category">Category</th>'
+    + '        <th data-col="start_year" title="Click to sort by Year">Year</th>'
+    + '        <th data-col="status" title="Click to sort by Status">Status</th>'
+    + '        <th data-col="amount" style="text-align:right" title="Click to sort by Budget">Budget</th>'
     + '      </tr>'
     + '    </thead>'
     + '    <tbody id="project-tbody"></tbody>'
@@ -642,11 +766,16 @@ function showList() {
     + '</div>';
 
   attachFilterListeners();
+  attachTableSortListeners();
+  updateSortIndicators();
   renderListRows();
 }
 
 function renderListRows() {
   var filtered = getFilteredProjects();
+  if (tableSort.column) {
+    filtered = sortProjects(filtered, tableSort.column, tableSort.direction);
+  }
   syncMapMarkers(filtered);
   var tbody = document.getElementById('project-tbody');
   if (!tbody) return;
@@ -656,7 +785,7 @@ function renderListRows() {
     var idx = allProjects.indexOf(p);
     var amt = p.amount ? '$' + Number(p.amount).toLocaleString() : (p.budget ? '$' + Number(p.budget).toLocaleString() : '—');
     var pStatus = (p.status || '').toLowerCase();
-    rowsHtml += '<tr onclick="showDetail(' + idx + ')">'
+    rowsHtml += '<tr onclick="showDetail(' + idx + ')" onmouseenter="hoverMarkerStart(' + idx + ')" onmouseleave="hoverMarkerStop()">'
       + '<td style="font-size:11px;color:#888;white-space:nowrap;"><strong>' + (p.id || p.grant_id) + '</strong></td>'
       + '<td>' + (p.title || 'Untitled') + '</td>'
       + '<td><span class="badge badge-type">' + getProjectType(p) + '</span></td>'
@@ -671,6 +800,7 @@ function renderListRows() {
 
 function showDetail(idx) {
   cancelEditCleanup();
+  window.hoverMarkerStop && window.hoverMarkerStop();
   currentView = 'detail';
   currentIndex = idx;
   setActiveNav('');

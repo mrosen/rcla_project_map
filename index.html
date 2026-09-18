@@ -66,9 +66,10 @@
     .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
     .filters select, .filters input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white; }
     #list-panel table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; border: 1px solid #ddd; }
-    #list-panel th { background: #1a3a5c; color: white; text-align: left; padding: 8px 10px; cursor: pointer; user-select: none; }
+    #list-panel th { background: #1a3a5c; color: white; text-align: left; padding: 8px 10px; cursor: pointer; user-select: none; transition: background 0.15s ease; white-space: nowrap; }
+    #list-panel th:hover { background: #234b75; }
     #list-panel td { padding: 7px 10px; border-bottom: 1px solid #eee; }
-    #list-panel tr:hover td { background: #f0f4f8; cursor: pointer; }
+    #list-panel tr:hover td { background: #eef4fc; cursor: pointer; }
   </style>
 </head>
 <body>
