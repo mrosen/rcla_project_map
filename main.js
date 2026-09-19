@@ -513,7 +513,7 @@ function attachFilterListeners() {
       if (id === 'filter-year') currentFilters.year = e.target.value;
       if (id === 'filter-search') currentFilters.search = e.target.value;
 
-      if (currentView === 'overview') showOverview();
+      if (currentView === 'overview') updateOverviewContent();
       else if (currentView === 'list') renderListRows();
     });
   });
@@ -529,6 +529,44 @@ function showOverview() {
   newUrl.searchParams.delete('id');
   window.history.replaceState({}, '', newUrl);
 
+  var rp = document.getElementById('right-pane');
+  var panel = document.getElementById('overview-panel');
+
+  if (!panel) {
+    rp.innerHTML = ''
+      + '<div class="panel" id="overview-panel">'
+      + '  <h2>Club Projects Overview <span id="ov-filter-notice"></span></h2>'
+      +    renderFilterBar()
+      + '  <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:14px;line-height:1.7;margin-bottom:16px;">'
+      + '    <p>The Rotary Club of Lake Atitlán funds community development projects across Guatemala through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.</p>'
+      + '  </div>'
+      + '  <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:16px;">'
+      + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
+      + '      <div id="ov-total-count" style="font-size:22px;font-weight:bold;color:#1a3a5c;">0</div>'
+      + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Projects in View</div>'
+      + '    </div>'
+      + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
+      + '      <div id="ov-total-funding" style="font-size:22px;font-weight:bold;color:#1a3a5c;">$0.00M</div>'
+      + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Funding in View</div>'
+      + '    </div>'
+      + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
+      + '      <div id="ov-split-count" style="font-size:22px;font-weight:bold;color:#1a3a5c;">0 / 0</div>'
+      + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Global Grants / Direct & Other</div>'
+      + '    </div>'
+      + '  </div>'
+      + '  <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px;">'
+      + '    <h3 style="margin-top:0;">Project Types Breakdown</h3>'
+      + '    <div style="position:relative;height:220px;"><canvas id="chart-types"></canvas></div>'
+      + '  </div>'
+      + '</div>';
+
+    attachFilterListeners();
+  }
+
+  updateOverviewContent();
+}
+
+function updateOverviewContent() {
   var filtered = getFilteredProjects();
   syncMapMarkers(filtered);
 
@@ -537,37 +575,20 @@ function showOverview() {
   var directCount = filtered.filter(function (p) { return getProjectType(p) !== 'Global Grant'; }).length;
 
   var isFiltered = currentFilters.type || currentFilters.status || currentFilters.category || currentFilters.year || currentFilters.search;
-  var filterNotice = isFiltered ? '<span style="font-size:12px;color:#d97706;font-weight:normal;"> (Filtered: ' + filtered.length + ' of ' + allProjects.length + ')</span>' : '';
+  var noticeEl = document.getElementById('ov-filter-notice');
+  if (noticeEl) {
+    noticeEl.innerHTML = isFiltered ? '<span style="font-size:12px;color:#d97706;font-weight:normal;"> (Filtered: ' + filtered.length + ' of ' + allProjects.length + ')</span>' : '';
+  }
 
-  var rp = document.getElementById('right-pane');
-  rp.innerHTML = ''
-    + '<div class="panel" id="overview-panel">'
-    + '  <h2>Club Projects Overview ' + filterNotice + '</h2>'
-    +    renderFilterBar()
-    + '  <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:14px;line-height:1.7;margin-bottom:16px;">'
-    + '    <p>The Rotary Club of Lake Atitlán funds community development projects across Guatemala through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.</p>'
-    + '  </div>'
-    + '  <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:16px;">'
-    + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
-    + '      <div id="ov-total-count" style="font-size:22px;font-weight:bold;color:#1a3a5c;">' + filtered.length + '</div>'
-    + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Projects in View</div>'
-    + '    </div>'
-    + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
-    + '      <div id="ov-total-funding" style="font-size:22px;font-weight:bold;color:#1a3a5c;">$' + (totalFunding / 1e6).toFixed(2) + 'M</div>'
-    + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Funding in View</div>'
-    + '    </div>'
-    + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
-    + '      <div id="ov-split-count" style="font-size:22px;font-weight:bold;color:#1a3a5c;">' + ggCount + ' / ' + directCount + '</div>'
-    + '      <div style="font-size:11px;color:#888;text-transform:uppercase;">Global Grants / Direct & Other</div>'
-    + '    </div>'
-    + '  </div>'
-    + '  <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px;">'
-    + '    <h3 style="margin-top:0;">Project Types Breakdown</h3>'
-    + '    <div style="position:relative;height:220px;"><canvas id="chart-types"></canvas></div>'
-    + '  </div>'
-    + '</div>';
+  var countEl = document.getElementById('ov-total-count');
+  if (countEl) countEl.textContent = filtered.length;
 
-  attachFilterListeners();
+  var fundingEl = document.getElementById('ov-total-funding');
+  if (fundingEl) fundingEl.textContent = '$' + (totalFunding / 1e6).toFixed(2) + 'M';
+
+  var splitEl = document.getElementById('ov-split-count');
+  if (splitEl) splitEl.textContent = ggCount + ' / ' + directCount;
+
   loadChartJS().then(function () { renderTypeChart(filtered); });
 }
 
@@ -745,28 +766,32 @@ function showList() {
   window.history.replaceState({}, '', newUrl);
 
   var rp = document.getElementById('right-pane');
-  rp.innerHTML = ''
-    + '<div class="panel" id="list-panel">'
-    + '  <h2>All Projects</h2>'
-    +    renderFilterBar()
-    + '  <table id="project-table">'
-    + '    <thead>'
-    + '      <tr>'
-    + '        <th data-col="id" title="Click to sort by ID">ID</th>'
-    + '        <th data-col="title" title="Click to sort by Project Title">Project</th>'
-    + '        <th data-col="project_type" title="Click to sort by Type">Type</th>'
-    + '        <th data-col="category" title="Click to sort by Category">Category</th>'
-    + '        <th data-col="start_year" title="Click to sort by Year">Year</th>'
-    + '        <th data-col="status" title="Click to sort by Status">Status</th>'
-    + '        <th data-col="amount" style="text-align:right" title="Click to sort by Budget">Budget</th>'
-    + '      </tr>'
-    + '    </thead>'
-    + '    <tbody id="project-tbody"></tbody>'
-    + '  </table>'
-    + '</div>';
+  var panel = document.getElementById('list-panel');
+  if (!panel) {
+    rp.innerHTML = ''
+      + '<div class="panel" id="list-panel">'
+      + '  <h2>All Projects</h2>'
+      +    renderFilterBar()
+      + '  <table id="project-table">'
+      + '    <thead>'
+      + '      <tr>'
+      + '        <th data-col="id" title="Click to sort by ID">ID</th>'
+      + '        <th data-col="title" title="Click to sort by Project Title">Project</th>'
+      + '        <th data-col="project_type" title="Click to sort by Type">Type</th>'
+      + '        <th data-col="category" title="Click to sort by Category">Category</th>'
+      + '        <th data-col="start_year" title="Click to sort by Year">Year</th>'
+      + '        <th data-col="status" title="Click to sort by Status">Status</th>'
+      + '        <th data-col="amount" style="text-align:right" title="Click to sort by Budget">Budget</th>'
+      + '      </tr>'
+      + '    </thead>'
+      + '    <tbody id="project-tbody"></tbody>'
+      + '  </table>'
+      + '</div>';
 
-  attachFilterListeners();
-  attachTableSortListeners();
+    attachFilterListeners();
+    attachTableSortListeners();
+  }
+
   updateSortIndicators();
   renderListRows();
 }
