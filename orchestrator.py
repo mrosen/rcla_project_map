@@ -994,7 +994,8 @@ async def trigger_single_spc_export(
     return {"message": f"SPC export for {project_id} initiated", "dry_run": dry_run}
 
 # Static file serving
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/", StaticFiles(directory=str(BASE_DIR), html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn

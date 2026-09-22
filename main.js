@@ -873,20 +873,17 @@ function showDetail(idx) {
   var rawText = getProjectSummaryText(project);
   var pStatus = (project.status || '').toLowerCase();
 
-  var editBtn = isMaintenanceMode
-    ? '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>'
-    : '';
+  var editBtn = '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;" title="Edit project metadata, photos, documents and sync">✏️ Edit Project</button>';
 
-  // SPC Link Badge & Export Button
+  // SPC Link Badge & Export Button - ALWAYS VISIBLE
   var spcBadge = '';
   var spcUrl = getProjectSpcUrl(project);
   if (spcUrl) {
-    spcBadge = '<a href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="View on Rotary Service Project Center">🌐 View on SPC ↗</a>';
-    if (isMaintenanceMode) {
-      spcBadge += ' <button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#1d4ed8;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Re-export or update project in Rotary Service Project Center">🚀 Export to SPC</button>';
-    }
-  } else if (isMaintenanceMode) {
-    spcBadge = '<button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#2563eb;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Export this project to Rotary Service Project Center">🚀 Export to SPC</button>';
+    spcBadge = '<a href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 Open SPC View ↗</a>'
+      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#1d4ed8;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Re-export or update project in Rotary Service Project Center">🚀 Export to SPC</button>';
+  } else {
+    spcBadge = '<button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#2563eb;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Export this project to Rotary Service Project Center">🚀 Export to SPC</button>'
+      + ' <a href="https://spc.rotary.org" target="_blank" style="background:#475569;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open Rotary Service Project Center">🌐 Open SPC View ↗</a>';
   }
 
   // Lead Brief Overview
@@ -1306,7 +1303,9 @@ window.loadProjectSyncStatus = async function (projectId) {
     var sUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc && (spc.spc_url || spc.spc_project_id), spc && spc.spc_project_id);
     var html = '';
     if (sUrl) {
-      html += '<a href="' + escapeHtml(sUrl) + '" target="_blank" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 View on SPC ↗</a> ';
+      html += '<a href="' + escapeHtml(sUrl) + '" target="_blank" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 Open SPC View ↗</a> ';
+    } else {
+      html += '<a href="https://spc.rotary.org" target="_blank" style="padding:4px 8px;font-size:11px;background:#475569;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open Rotary Service Project Center">🌐 Open SPC View ↗</a> ';
     }
     html += '<button type="button" onclick="triggerProjectRiFetch(\'' + pid + '\')" style="padding:4px 8px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;">📥 Re-check RI</button>'
       + ' <button type="button" onclick="triggerProjectSpcExport(\'' + pid + '\', true)" style="padding:4px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;font-weight:600;" title="Audit and validate payload for SPC without submitting">🧪 SPC Dry Run</button>'
@@ -3176,6 +3175,21 @@ function applyMaintenanceModeUI() {
 
   if (panel) {
     panel.style.display = isMaintenanceMode ? 'flex' : 'none';
+  }
+
+  var toggleBtn = document.getElementById('btn-maint-toggle');
+  if (toggleBtn) {
+    if (isMaintenanceMode) {
+      toggleBtn.style.background = '#d97706';
+      toggleBtn.style.color = '#fff';
+      toggleBtn.style.borderColor = '#b45309';
+      toggleBtn.innerHTML = '🛠️ Maint Mode ON';
+    } else {
+      toggleBtn.style.background = '#1e293b';
+      toggleBtn.style.color = '#94a3b8';
+      toggleBtn.style.borderColor = '#334155';
+      toggleBtn.innerHTML = '🛠️ Maintainer Mode';
+    }
   }
 
   var localBtns = document.querySelectorAll('.local-only-btn');
