@@ -54,5 +54,12 @@
     "action": "updated",
     "migrated_at": "2026-09-22T14:23:56.975431",
     "spc_url": "https://spc.rotary.org/project?guid=80ec1aaa-cb0d-4735-8762-b6a3102f3291"
+  },
+  "DG_2020_SanFranChinaTown": {
+    "spc_id": "02e702ef-3dff-436f-a2cb-8baf3b183088",
+    "title": "Wallspring installation Novillero",
+    "action": "created",
+    "migrated_at": "2026-09-22T15:30:51.152940",
+    "spc_url": "https://spc.rotary.org/project?guid=02e702ef-3dff-436f-a2cb-8baf3b183088"
   }
 }

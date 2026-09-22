@@ -929,7 +929,7 @@ async def main():
         print("\n✓ Dry run complete.")
         return
 
-    force_headful = "--headful" in flags
+    force_headful = "--headful" in flags or os.getenv("HEADFUL", "").lower() in ("true", "1")
     force_headless = "--headless" in flags
     headless_mode = not force_headful
 
@@ -948,6 +948,18 @@ async def main():
 
         if email and password:
             try:
+                # 1. Dismiss any OneTrust cookie banners or modal overlays that intercept pointer events
+                try:
+                    await page.evaluate("""() => {
+                        const ot = document.getElementById('onetrust-consent-sdk');
+                        if (ot) ot.remove();
+                        const btn = document.getElementById('onetrust-accept-btn-handler');
+                        if (btn) btn.click();
+                        document.querySelectorAll('.ReactModalPortal, .ReactModal__Overlay').forEach(e => e.remove());
+                    }""")
+                except Exception:
+                    pass
+
                 user_input = None
                 for selector in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
                     try:
@@ -960,7 +972,34 @@ async def main():
                     user_input = await page.wait_for_selector("#okta-signin-username", timeout=20000)
                 await user_input.fill(email)
                 await page.fill("#okta-signin-password, input[name='password']", password)
-                await page.click("#okta-signin-submit, input[type='submit']")
+
+                # Dismiss overlays again right before submitting
+                try:
+                    await page.evaluate("""() => {
+                        const ot = document.getElementById('onetrust-consent-sdk');
+                        if (ot) ot.remove();
+                        document.querySelectorAll('.ReactModalPortal, .ReactModal__Overlay').forEach(e => e.remove());
+                    }""")
+                except Exception:
+                    pass
+
+                submitted = False
+                try:
+                    await page.click("#okta-signin-submit, input[type='submit']", force=True, timeout=5000)
+                    submitted = True
+                except Exception:
+                    pass
+
+                if not submitted:
+                    try:
+                        await page.keyboard.press("Enter")
+                        submitted = True
+                    except Exception:
+                        pass
+
+                if not submitted:
+                    await page.evaluate("() => { const b = document.querySelector('#okta-signin-submit, input[type=\\'submit\\']'); if (b) b.click(); }")
+
                 print("  Submitted login form. Waiting for authentication...", flush=True)
             except Exception as e:
                 print(f"  Note on auto-fill: {e}", flush=True)
@@ -971,8 +1010,8 @@ async def main():
             try:
                 await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=30000)
             except Exception:
-                print("  Please complete any 2FA/login challenge in the browser window...")
-                await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=90000)
+                print("  Waiting for authentication to finalize...", flush=True)
+                await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=60000)
         print("  ✓ Successfully authenticated with My Rotary.")
 
         # Step 2: Navigate to SPC

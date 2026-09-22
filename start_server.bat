@@ -4,3 +4,4 @@ wsl -d Ubuntu bash -c "cd /home/msr/rcla_project_map && pkill -9 -f orchestrator
 echo Starting Windows localhost proxy...
 start /min python %~dp0win_forwarder.py
 echo Server and proxy ready at http://localhost:8000
+
