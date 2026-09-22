@@ -58,8 +58,15 @@
   "DG_2020_SanFranChinaTown": {
     "spc_id": "02e702ef-3dff-436f-a2cb-8baf3b183088",
     "title": "Wallspring installation Novillero",
-    "action": "created",
-    "migrated_at": "2026-09-22T15:30:51.152940",
+    "action": "updated",
+    "migrated_at": "2026-09-22T15:33:53.090516",
     "spc_url": "https://spc.rotary.org/project?guid=02e702ef-3dff-436f-a2cb-8baf3b183088"
+  },
+  "GG2684872": {
+    "spc_id": "f1003a9b-fc97-498f-9b1a-325bbe8bce59",
+    "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia",
+    "action": "created",
+    "migrated_at": "2026-09-22T15:36:49.012720",
+    "spc_url": "https://spc.rotary.org/project?guid=f1003a9b-fc97-498f-9b1a-325bbe8bce59"
   }
 }

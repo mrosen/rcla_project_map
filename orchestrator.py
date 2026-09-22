@@ -325,10 +325,10 @@ async def run_spc_export(payload: SPCExportPayload):
         if proc.returncode != 0:
             raise RuntimeError(f"SPC migration script exited with code {proc.returncode}")
 
-        await emit_log("✓ SPC export task finished successfully.")
         target_pid = payload.project_ids[0] if (payload.project_ids and len(payload.project_ids) == 1) else None
         await sync_spc_state_to_supabase(target_pid)
         await emit_log("✓ Synced SPC export state and archive record links to Supabase.")
+        await emit_log("✓ SPC export task finished successfully.")
         STATE["status"] = "idle"
         STATE["task"] = None
         STATE["current_step"] = "Complete"

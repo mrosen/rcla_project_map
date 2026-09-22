@@ -132,19 +132,37 @@ function getProjectSummaryText(p) {
 }
 
 function normalizeSpcUrl(url, guid) {
+  var cleanGuid = (guid && typeof guid === 'string') ? guid.trim() : '';
+  if (/^[0-9a-fA-F-]{32,36}$/.test(cleanGuid)) {
+    return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(cleanGuid);
+  }
+
   if (url && typeof url === 'string') {
     var u = url.trim();
-    if (u.indexOf('http') === 0) {
-      return u.replace(/\/project\/detail\//g, '/project?guid=');
-    }
     if (/^[0-9a-fA-F-]{32,36}$/.test(u)) {
       return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(u);
     }
+    if (u.indexOf('http') === 0) {
+      if (u.indexOf('guid=') !== -1) {
+        return u;
+      }
+      if (u.indexOf('/project/detail/') !== -1) {
+        return u.replace(/\/project\/detail\//g, '/project?guid=');
+      }
+      var match = u.match(/([0-9a-fA-F-]{32,36})/);
+      if (match) {
+        return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(match[1]);
+      }
+      if (cleanGuid) {
+        return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(cleanGuid);
+      }
+      return '';
+    }
   }
-  if (guid && typeof guid === 'string' && guid.trim()) {
-    var g = guid.trim();
-    if (g.indexOf('http') === 0) return normalizeSpcUrl(g);
-    return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(g);
+
+  if (cleanGuid) {
+    if (cleanGuid.indexOf('http') === 0) return normalizeSpcUrl(cleanGuid);
+    return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(cleanGuid);
   }
   return '';
 }
@@ -166,6 +184,27 @@ function getProjectSpcUrl(project) {
   }
   return '';
 }
+
+function renderDetailSpcBadgeHtml(project) {
+  if (!project) return '';
+  var gid = String(project.id || project.grant_id || '').trim();
+  var spcUrl = getProjectSpcUrl(project);
+  if (spcUrl) {
+    return '<a id="detail-spc-view-btn" href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 Open SPC View ↗</a>'
+      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#1d4ed8;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Re-export or update project in Rotary Service Project Center">🚀 Export to SPC</button>';
+  } else {
+    return '<button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#2563eb;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Export this project to Rotary Service Project Center">🚀 Export to SPC</button>'
+      + ' <a id="detail-spc-view-btn" href="https://spc.rotary.org" target="_blank" style="background:#475569;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open Rotary Service Project Center">🌐 Open SPC View ↗</a>';
+  }
+}
+
+function updateDetailSpcBadge(project) {
+  var container = document.getElementById('detail-spc-badge');
+  if (container) {
+    container.innerHTML = renderDetailSpcBadgeHtml(project);
+  }
+}
+
 
 
 function getProjectCoords(project) {
@@ -876,15 +915,8 @@ function showDetail(idx) {
   var editBtn = '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;" title="Edit project metadata, photos, documents and sync">✏️ Edit Project</button>';
 
   // SPC Link Badge & Export Button - ALWAYS VISIBLE
-  var spcBadge = '';
-  var spcUrl = getProjectSpcUrl(project);
-  if (spcUrl) {
-    spcBadge = '<a href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 Open SPC View ↗</a>'
-      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#1d4ed8;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Re-export or update project in Rotary Service Project Center">🚀 Export to SPC</button>';
-  } else {
-    spcBadge = '<button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#2563eb;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Export this project to Rotary Service Project Center">🚀 Export to SPC</button>'
-      + ' <a href="https://spc.rotary.org" target="_blank" style="background:#475569;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open Rotary Service Project Center">🌐 Open SPC View ↗</a>';
-  }
+  var spcBadge = '<span id="detail-spc-badge" style="display:inline-flex;gap:6px;">' + renderDetailSpcBadgeHtml(project) + '</span>';
+
 
   // Lead Brief Overview
   var briefLead = '';
@@ -1268,50 +1300,159 @@ window.updateCompleteCharCounter = function () {
   }
 };
 
-window.loadProjectSyncStatus = async function (projectId) {
+function renderSyncChips(projectId, gc, spc) {
   var badgesEl = document.getElementById('edit-sync-badges');
-  var actionsEl = document.getElementById('edit-sync-actions');
   if (!badgesEl) return;
+  gc = gc || {};
+  spc = spc || {};
+  var p = allProjects.find(function (item) {
+    return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+  });
+
+  var isGG = projectId.toUpperCase().startsWith('GG');
+  var isDG = projectId.toUpperCase().startsWith('DG');
+  var prefix = isGG ? 'GG' : (isDG ? 'DG' : 'Grant');
+  var reportCount = gc.report_count || 0;
+  var reportTxt = reportCount > 0 ? ' (+' + reportCount + ' status report PDF' + (reportCount > 1 ? 's' : '') + ')' : '';
+
+  var gcHtml = gc.has_application_pdf
+    ? '<span class="sync-chip chip-green" title="' + escapeHtml(gc.application_pdf_name || '') + '">📄 ' + prefix + ' Appl PDF on file' + reportTxt + '</span>'
+    : '<span class="sync-chip chip-gray">📄 No ' + prefix + ' Appl PDF</span>';
+
+  var spcUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
+  var spcHtml = (spc.exported || spcUrl)
+    ? (spcUrl
+        ? '<a href="' + escapeHtml(spcUrl) + '" target="_blank" class="sync-chip chip-green" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="View on Rotary Service Project Center">✓ Synced to SPC ↗</a>'
+        : '<span class="sync-chip chip-green">✓ Synced to SPC</span>')
+    : '<span class="sync-chip chip-gray">Not exported to SPC</span>';
+
+  badgesEl.innerHTML = gcHtml + spcHtml;
+}
+
+function renderSyncActions(projectId, spc) {
+  var actionsEl = document.getElementById('edit-sync-actions');
+  if (!actionsEl) return;
+  spc = spc || {};
+  var p = allProjects.find(function (item) {
+    return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+  });
+  var sUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc && (spc.spc_url || spc.spc_project_id), spc && spc.spc_project_id);
+  var html = '';
+  if (sUrl) {
+    html += '<a href="' + escapeHtml(sUrl) + '" target="_blank" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 Open SPC View ↗</a> ';
+  } else {
+    html += '<a href="https://spc.rotary.org" target="_blank" style="padding:4px 8px;font-size:11px;background:#475569;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open Rotary Service Project Center">🌐 Open SPC View ↗</a> ';
+  }
+  html += '<button type="button" onclick="triggerProjectRiFetch(\'' + projectId + '\')" style="padding:4px 8px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;">📥 Re-check RI</button>'
+    + ' <button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', true)" style="padding:4px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;font-weight:600;" title="Audit and validate payload for SPC without submitting">🧪 SPC Dry Run</button>'
+    + ' <button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', false)" style="padding:4px 8px;font-size:11px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Authenticate with My Rotary and create project in SPC">🚀 ' + (sUrl ? 'Re-export to SPC' : 'Export to SPC') + '</button>';
+  actionsEl.innerHTML = html;
+}
+
+window.applyExportedSpcGuid = function (projectId, guid) {
+  if (!projectId || !guid) return;
+  var liveSpcUrl = 'https://spc.rotary.org/project?guid=' + encodeURIComponent(guid);
 
   var p = allProjects.find(function (item) {
     return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
   });
 
-  function renderSyncChips(gc, spc) {
-    var isGG = projectId.toUpperCase().startsWith('GG');
-    var isDG = projectId.toUpperCase().startsWith('DG');
-    var prefix = isGG ? 'GG' : (isDG ? 'DG' : 'Grant');
-    var reportCount = gc.report_count || 0;
-    var reportTxt = reportCount > 0 ? ' (+' + reportCount + ' status report PDF' + (reportCount > 1 ? 's' : '') + ')' : '';
+  if (p) {
+    if (!p.sync_status) p.sync_status = {};
+    if (!p.sync_status.spc) p.sync_status.spc = {};
+    p.sync_status.spc.exported = true;
+    p.sync_status.spc.in_sync = true;
+    p.sync_status.spc.spc_project_id = guid;
+    p.sync_status.spc.spc_url = liveSpcUrl;
+    p.spc_url = liveSpcUrl;
+    p.spc_id = guid;
 
-    var gcHtml = gc.has_application_pdf
-      ? '<span class="sync-chip chip-green" title="' + escapeHtml(gc.application_pdf_name || '') + '">📄 ' + prefix + ' Appl PDF on file' + reportTxt + '</span>'
-      : '<span class="sync-chip chip-gray">📄 No ' + prefix + ' Appl PDF</span>';
-
-    var spcUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
-    var spcHtml = (spc.exported || spcUrl)
-      ? (spcUrl
-          ? '<a href="' + escapeHtml(spcUrl) + '" target="_blank" class="sync-chip chip-green" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="View on Rotary Service Project Center">✓ Synced to SPC ↗</a>'
-          : '<span class="sync-chip chip-green">✓ Synced to SPC</span>')
-      : '<span class="sync-chip chip-gray">Not exported to SPC</span>';
-
-    badgesEl.innerHTML = gcHtml + spcHtml;
-  }
-
-  function renderSyncActions(pid, spc) {
-    if (!actionsEl) return;
-    var sUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc && (spc.spc_url || spc.spc_project_id), spc && spc.spc_project_id);
-    var html = '';
-    if (sUrl) {
-      html += '<a href="' + escapeHtml(sUrl) + '" target="_blank" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 Open SPC View ↗</a> ';
+    if (!p.project_links) p.project_links = [];
+    var existingSpcLink = p.project_links.find(function (l) {
+      return (l.url && l.url.indexOf('spc.rotary.org') !== -1) || l.label === 'Rotary Service Project Center (SPC)';
+    });
+    if (existingSpcLink) {
+      existingSpcLink.url = liveSpcUrl;
     } else {
-      html += '<a href="https://spc.rotary.org" target="_blank" style="padding:4px 8px;font-size:11px;background:#475569;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open Rotary Service Project Center">🌐 Open SPC View ↗</a> ';
+      p.project_links.push({
+        project_id: projectId,
+        label: 'Rotary Service Project Center (SPC)',
+        url: liveSpcUrl,
+        display_order: p.project_links.length
+      });
     }
-    html += '<button type="button" onclick="triggerProjectRiFetch(\'' + pid + '\')" style="padding:4px 8px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;">📥 Re-check RI</button>'
-      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + pid + '\', true)" style="padding:4px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;font-weight:600;" title="Audit and validate payload for SPC without submitting">🧪 SPC Dry Run</button>'
-      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + pid + '\', false)" style="padding:4px 8px;font-size:11px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Authenticate with My Rotary and create project in SPC">🚀 ' + (sUrl ? 'Re-export to SPC' : 'Export to SPC') + '</button>';
-    actionsEl.innerHTML = html;
   }
+
+  // 1. If currently on Detail View for this project, update immediately!
+  if (currentView === 'detail' && allProjects[currentIndex]) {
+    var cur = allProjects[currentIndex];
+    var curGid = String(cur.id || cur.grant_id || '').trim().toLowerCase();
+    if (curGid === projectId.toLowerCase()) {
+      updateDetailSpcBadge(p || cur);
+      if (typeof loadProjectFiles === 'function') {
+        loadProjectFiles(curGid, 'photo-area', 'files-area');
+      }
+    }
+  }
+
+  // 2. If currently in Edit Drawer, update sync chips & actions
+  var badgesEl = document.getElementById('edit-sync-badges');
+  var actionsEl = document.getElementById('edit-sync-actions');
+  if (badgesEl || actionsEl) {
+    var gc = (p && p.sync_status && p.sync_status.grant_center) || {};
+    var spc = (p && p.sync_status && p.sync_status.spc) || { exported: true, spc_project_id: guid, spc_url: liveSpcUrl };
+    renderSyncChips(projectId, gc, spc);
+    renderSyncActions(projectId, spc);
+  }
+
+  // 3. Update Edit Drawer link inputs if present
+  var linksContainer = document.getElementById('modal-links-list');
+  if (linksContainer) {
+    var rows = linksContainer.querySelectorAll('.link-row');
+    var foundSpcRow = false;
+    rows.forEach(function (row) {
+      var inputs = row.querySelectorAll('input');
+      if (inputs.length >= 2) {
+        var labelVal = (inputs[0].value || '').toLowerCase();
+        var urlVal = inputs[1].value || '';
+        if (urlVal.indexOf('spc.rotary.org') !== -1 || labelVal.indexOf('service project center') !== -1 || labelVal === 'spc') {
+          inputs[0].value = 'Rotary Service Project Center (SPC)';
+          inputs[1].value = liveSpcUrl;
+          foundSpcRow = true;
+        }
+      }
+    });
+    if (!foundSpcRow) {
+      var emptyInputs = null;
+      rows.forEach(function (row) {
+        var inputs = row.querySelectorAll('input');
+        if (inputs.length >= 2 && !inputs[0].value.trim() && !inputs[1].value.trim()) {
+          emptyInputs = inputs;
+        }
+      });
+      if (emptyInputs) {
+        emptyInputs[0].value = 'Rotary Service Project Center (SPC)';
+        emptyInputs[1].value = liveSpcUrl;
+      } else if (typeof window.addLinkInput === 'function') {
+        window.addLinkInput('Rotary Service Project Center (SPC)', liveSpcUrl);
+      }
+    }
+  }
+
+  // 4. Update Edit Drawer files list if present
+  if (document.getElementById('modal-existing-files') && typeof loadEditFiles === 'function') {
+    loadEditFiles(projectId);
+  }
+};
+
+window.loadProjectSyncStatus = async function (projectId) {
+  if (!projectId) return;
+  var badgesEl = document.getElementById('edit-sync-badges');
+  var actionsEl = document.getElementById('edit-sync-actions');
+
+  var p = allProjects.find(function (item) {
+    return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+  });
 
   // 1. Initial optimistic render from local / Supabase project memory
   var localGc = (p && p.sync_status && p.sync_status.grant_center) ? Object.assign({}, p.sync_status.grant_center) : {};
@@ -1332,7 +1473,7 @@ window.loadProjectSyncStatus = async function (projectId) {
   }
 
   // Render initial state immediately so badges and actions appear without delay
-  renderSyncChips(localGc, localSpc);
+  renderSyncChips(projectId, localGc, localSpc);
   renderSyncActions(projectId, localSpc);
 
   // 2. Query live backend daemon if available
@@ -1343,10 +1484,7 @@ window.loadProjectSyncStatus = async function (projectId) {
     var gc = data.grant_center || {};
     var spc = data.spc || {};
 
-    renderSyncChips(gc, spc);
-    renderSyncActions(projectId, spc);
-
-    // Update in-memory project so detail view and links list have the SPC link immediately!
+    // Update in-memory project FIRST so helpers and renders have the latest data
     if (p) {
       if (!p.sync_status) p.sync_status = {};
       p.sync_status.grant_center = gc;
@@ -1354,6 +1492,8 @@ window.loadProjectSyncStatus = async function (projectId) {
       var liveSpcUrl = normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
       if (spc.exported && liveSpcUrl) {
         p.sync_status.spc.spc_url = liveSpcUrl;
+        p.spc_url = liveSpcUrl;
+        p.spc_id = spc.spc_project_id;
         if (!p.project_links) p.project_links = [];
         var existingSpcLink = p.project_links.find(function (l) {
           return (l.url && l.url.indexOf('spc.rotary.org') !== -1) || l.label === 'Rotary Service Project Center (SPC)';
@@ -1370,9 +1510,30 @@ window.loadProjectSyncStatus = async function (projectId) {
         }
       }
     }
+
+    // Now render with updated in-memory project state
+    renderSyncChips(projectId, gc, spc);
+    renderSyncActions(projectId, spc);
+
+    // Update Edit files/links list if open
+    if (document.getElementById('modal-existing-files') && typeof loadEditFiles === 'function') {
+      loadEditFiles(projectId);
+    }
+
+    // Update Detail View if active
+    if (currentView === 'detail' && allProjects[currentIndex]) {
+      var cur = allProjects[currentIndex];
+      var curGid = String(cur.id || cur.grant_id || '').trim().toLowerCase();
+      if (curGid === projectId.toLowerCase()) {
+        updateDetailSpcBadge(p || cur);
+        if (typeof loadProjectFiles === 'function') {
+          loadProjectFiles(curGid, 'photo-area', 'files-area');
+        }
+      }
+    }
   } catch (err) {
     // If backend daemon is offline (e.g. static hosting on GitHub Pages), retain the local sync chips and action buttons!
-    renderSyncChips(localGc, localSpc);
+    renderSyncChips(projectId, localGc, localSpc);
     renderSyncActions(projectId, localSpc);
   }
 };
@@ -3240,14 +3401,22 @@ function initMaintainerClient() {
   try {
     var evtSource = new EventSource(BACKEND_URL + '/api/logs');
     evtSource.onmessage = function (event) {
+      var line = event.data || '';
       var logDiv = document.getElementById('log-output');
       var drawer = document.getElementById('log-drawer');
       if (logDiv) {
         var newLine = document.createElement('div');
         newLine.className = 'log-line';
-        newLine.textContent = event.data;
+        newLine.textContent = line;
         logDiv.appendChild(newLine);
         if (drawer) drawer.scrollTop = drawer.scrollHeight;
+      }
+      var m = line.match(/(?:Created|Updated) in SPC:\s*([0-9a-fA-F-]{32,36})/i);
+      if (m && m[1] && window.currentActiveProjectId) {
+        window.applyExportedSpcGuid(window.currentActiveProjectId, m[1].trim());
+      }
+      if ((line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1) && window.currentActiveProjectId) {
+        window.loadProjectSyncStatus(window.currentActiveProjectId);
       }
       pollMaintStatus();
     };
@@ -3275,18 +3444,32 @@ window.fetchLogHistory = async function () {
       if (logDiv && data.logs && data.logs.length > 0) {
         logDiv.innerHTML = '';
         var hasFinished = false;
+        var detectedGuid = null;
+        var detectedPid = window.currentActiveProjectId || null;
+
         data.logs.forEach(function (line) {
           var div = document.createElement('div');
           div.className = 'log-line';
           div.textContent = line;
           logDiv.appendChild(div);
+
+          var m = line.match(/(?:Created|Updated) in SPC:\s*([0-9a-fA-F-]{32,36})/i);
+          if (m && m[1]) {
+            detectedGuid = m[1].trim();
+          }
+
           if (line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1 || line.indexOf('Synced to Supabase') !== -1) {
             hasFinished = true;
           }
         });
         if (drawer) drawer.scrollTop = drawer.scrollHeight;
-        if (hasFinished && window.currentActiveProjectId) {
-          window.loadProjectSyncStatus(window.currentActiveProjectId);
+
+        if (detectedGuid && detectedPid) {
+          window.applyExportedSpcGuid(detectedPid, detectedGuid);
+        }
+
+        if (hasFinished && detectedPid) {
+          window.loadProjectSyncStatus(detectedPid);
         }
       }
     }
