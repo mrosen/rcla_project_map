@@ -312,6 +312,33 @@ def construct_spc_payload(p: dict) -> dict:
     narrative = p.get("narrative") or ""
     description = p.get("description") or ""
 
+    details = p.get("details") or {}
+    if isinstance(details, str):
+        try:
+            details = json.loads(details)
+        except Exception:
+            details = {}
+
+    detail_profile = DETAILED_PROJECT_PROFILES.get(gid)
+    partner_name = (p.get("partner") or "").strip()
+
+    # Collect cooperating organizations / implementing partners
+    cooperating_orgs = []
+    if detail_profile:
+        for ip in detail_profile.get("implementing_partners", []):
+            name = ip.get("name")
+            if name and name not in cooperating_orgs:
+                cooperating_orgs.append(name)
+    for org in (details.get("cooperating_organizations") or []):
+        o_clean = str(org).strip()
+        if o_clean and o_clean not in cooperating_orgs:
+            cooperating_orgs.append(o_clean)
+    if partner_name:
+        for sub_p in partner_name.split(","):
+            sub_clean = sub_p.strip()
+            if sub_clean and not any(sub_clean.lower() in existing.lower() or existing.lower() in sub_clean.lower() for existing in cooperating_orgs):
+                cooperating_orgs.append(sub_clean)
+
     full_desc = description.strip()
     if narrative.strip() and narrative.strip() != description.strip():
         if full_desc:
@@ -325,6 +352,15 @@ def construct_spc_payload(p: dict) -> dict:
         full_desc = clean_text(complete)
     elif not full_desc:
         full_desc = f"{title}. Project facilitated by the Rotary Club of Lake Atitlán."
+
+    # Highlight cooperating organizations if not already mentioned
+    if cooperating_orgs:
+        org_names = [o for o in cooperating_orgs if "rotary" not in o.lower()]
+        if org_names and not any("cooperating" in full_desc.lower() or "partnering with" in full_desc.lower() for _ in [1]):
+            callout = "Cooperating Partner(s): " + ", ".join(org_names) + "."
+            if len(full_desc) + len(callout) + 2 <= 1000:
+                full_desc = full_desc.rstrip() + "\n\n" + callout
+
 
     # Prioritize brief_overview if available
     brief = (p.get("brief_overview") or "").strip()
@@ -437,51 +473,68 @@ def construct_spc_payload(p: dict) -> dict:
     has_custom_details = bool(details.get("world_fund") or details.get("district_ddf") or details.get("club_contributions") or details.get("partner_clubs") or details.get("partner_districts") or details.get("cooperating_organizations"))
 
     if detail_profile:
-        # Detailed Partner Clubs
+        # Detailed Partner Clubs & NGOs
         partners = []
+        # Ensure Lake Atitlan host club is included in partners
+        partners.append({
+            "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+            "Hour": "",
+            "MoneyDonated": "",
+            "NoOfVolunteer": "",
+            "year": ""
+        })
+
         for cc in detail_profile.get("club_contributions", []):
             ckey = cc.get("club_key") or (find_partner_club(cc.get("name")) or {}).get("key")
-            if ckey:
+            amt = str(cc.get("amount", "")).strip()
+            if ckey and ckey != ROTARY_LAKE_ATITLAN_CLUB_KEY:
                 partners.append({
                     "partnerOrganizationKey": ckey,
                     "Hour": "",
-                    "MoneyDonated": str(cc.get("amount", "")),
+                    "MoneyDonated": amt if amt != "0" else "",
                     "NoOfVolunteer": "",
                     "year": ""
                 })
 
-        # Detailed Funding Sources
+        # Detailed Funding Sources (ONLY include sources with amount > 0)
         fundings = []
         if detail_profile.get("world_fund"):
-            fundings.append({
-                "fundingSource": "Global grant",
-                "fundingAmount": str(detail_profile["world_fund"]),
-                "fundingClubKey": gid
-            })
+            wf = str(detail_profile["world_fund"]).strip()
+            if wf and wf != "0":
+                fundings.append({
+                    "fundingSource": "Global grant",
+                    "fundingAmount": wf,
+                    "fundingClubKey": gid
+                })
         for dc in detail_profile.get("district_contributions", []):
             dnum = str(dc.get("district", "")).strip()
-            fundings.append({
-                "fundingSource": dc.get("source", "District(DDF)"),
-                "fundingAmount": str(dc.get("amount", "0")),
-                "fundingClubKey": dnum,
-                "isImplementingPartnerFlag": False
-            })
+            amt = str(dc.get("amount", "0")).strip()
+            if dnum and amt and amt != "0":
+                fundings.append({
+                    "fundingSource": dc.get("source", "District(DDF)"),
+                    "fundingAmount": amt,
+                    "fundingClubKey": dnum,
+                    "isImplementingPartnerFlag": False
+                })
         for cc in detail_profile.get("club_contributions", []):
             ckey = cc.get("club_key") or (find_partner_club(cc.get("name")) or {}).get("key")
-            if ckey:
+            amt = str(cc.get("amount", "0")).strip()
+            if ckey and amt and amt != "0":
                 fundings.append({
                     "fundingSource": "Rotary Club",
-                    "fundingAmount": str(cc.get("amount", "0")),
+                    "fundingAmount": amt,
                     "fundingClubKey": ckey,
                     "isImplementingPartnerFlag": False
                 })
         for ip in detail_profile.get("implementing_partners", []):
-            fundings.append({
-                "fundingSource": ip.get("source", "NonGovernmentalOrganization"),
-                "fundingAmount": str(ip.get("amount", "0")),
-                "fundingClubKey": ip.get("name"),
-                "isImplementingPartnerFlag": True
-            })
+            amt = str(ip.get("amount", "0")).strip()
+            if amt and amt != "0":
+                fundings.append({
+                    "fundingSource": ip.get("source", "Other - Community Group"),
+                    "fundingAmount": amt,
+                    "fundingClubKey": ip.get("name"),
+                    "isImplementingPartnerFlag": True
+                })
     elif has_custom_details:
         partners = []
         fundings = []
@@ -557,13 +610,14 @@ def construct_spc_payload(p: dict) -> dict:
                         "NoOfVolunteer": "",
                         "year": ""
                     })
-                    fundings.append({
-                        "fundingSource": "Rotary Club",
-                        "fundingAmount": amt,
-                        "fundingClubKey": ckey,
-                        "isImplementingPartnerFlag": False
-                    })
-                else:
+                    if amt != "0":
+                        fundings.append({
+                            "fundingSource": "Rotary Club",
+                            "fundingAmount": amt,
+                            "fundingClubKey": ckey,
+                            "isImplementingPartnerFlag": False
+                        })
+                elif amt != "0":
                     fundings.append({
                         "fundingSource": "Rotary Club",
                         "fundingAmount": amt,
@@ -594,13 +648,14 @@ def construct_spc_payload(p: dict) -> dict:
                         "NoOfVolunteer": "",
                         "year": ""
                     })
-                    fundings.append({
-                        "fundingSource": "Rotary Club",
-                        "fundingAmount": amt,
-                        "fundingClubKey": ckey,
-                        "isImplementingPartnerFlag": False
-                    })
-                else:
+                    if amt != "0":
+                        fundings.append({
+                            "fundingSource": "Rotary Club",
+                            "fundingAmount": amt,
+                            "fundingClubKey": ckey,
+                            "isImplementingPartnerFlag": False
+                        })
+                elif amt != "0":
                     fundings.append({
                         "fundingSource": "Rotary Club",
                         "fundingAmount": amt,
@@ -608,34 +663,21 @@ def construct_spc_payload(p: dict) -> dict:
                         "isImplementingPartnerFlag": False
                     })
 
-        # Ensure Lake Atitlan host club is included
-        has_atitlan = any("atitlan" in str(f.get("fundingClubKey", "")).lower() for f in fundings)
-        if not has_atitlan:
-            fundings.append({
-                "fundingSource": "Rotary Club",
-                "fundingAmount": "0",
-                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                "isImplementingPartnerFlag": False
+        # Ensure Lake Atitlan host club is included in partners
+        has_atitlan_partner = any(ROTARY_LAKE_ATITLAN_CLUB_KEY in str(p.get("partnerOrganizationKey", "")) for p in partners)
+        if not has_atitlan_partner:
+            partners.insert(0, {
+                "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+                "Hour": "",
+                "MoneyDonated": "",
+                "NoOfVolunteer": "",
+                "year": ""
             })
 
         # 4. Cooperating Partner Organizations / NGOs
-        raw_orgs = details.get("cooperating_organizations") or []
-        if isinstance(raw_orgs, str):
-            raw_orgs = [o.strip() for o in raw_orgs.split(",") if o.strip()]
-        if not raw_orgs and partner_name:
-            raw_orgs.append(partner_name)
+        # Non-Rotary NGOs cannot be placed in projectPartnerClubMembers (which requires Rotary Organization UUIDs).
+        # Any financial donations from NGOs belong in projectFundings if amount > 0.
 
-        seen_orgs = set()
-        for org_name in raw_orgs:
-            o_clean = str(org_name).strip()
-            if o_clean and o_clean.lower() not in seen_orgs:
-                seen_orgs.add(o_clean.lower())
-                fundings.append({
-                    "fundingSource": "Other - NGO" if "namaste" in o_clean.lower() else "Other - Community Group",
-                    "fundingAmount": "0",
-                    "fundingClubKey": o_clean,
-                    "isImplementingPartnerFlag": True
-                })
     else:
         intl_club = str(p.get("international_club_name") or p.get("internationalClub_name") or "").strip()
         partner_club = find_partner_club(intl_club)
@@ -733,6 +775,17 @@ def construct_spc_payload(p: dict) -> dict:
                 "year": ""
             })
 
+    # Project search tags (semicolon-delimited for Rotary SPC)
+    tag_list = []
+    for org in cooperating_orgs:
+        if org and org not in tag_list and "rotary" not in org.lower():
+            tag_list.append(org)
+    if aof_name and aof_name not in tag_list:
+        tag_list.append(aof_name)
+    tag_list.append("Guatemala")
+    tag_list.append("Lake Atitlan")
+    tags_str = ";".join(tag_list[:6])
+
     payload = {
         "projectSource": "4",
         "individualEmail": MEMBER_EMAIL,
@@ -745,7 +798,7 @@ def construct_spc_payload(p: dict) -> dict:
         "startDate": start_date,
         "endDate": end_date if is_completed else "",
         "countryId": ROTARY_GUATEMALA_COUNTRY_KEY,
-        "tags": "",
+        "tags": tags_str,
         "communityImpact": "",
         "projectImpact": "",
         "sustainImpact": "",
