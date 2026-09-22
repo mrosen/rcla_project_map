@@ -65,6 +65,11 @@ KNOWN_PARTNER_CLUBS = {
     "lake shore": {"key": "e819dd35-8c87-4002-a80d-a985d75a94c9", "name": "Lake Shore-Severna Park", "id": "5878", "district": "7620"},
     "lake shore-severna park": {"key": "e819dd35-8c87-4002-a80d-a985d75a94c9", "name": "Lake Shore-Severna Park", "id": "5878", "district": "7620"},
     "dupont circle": {"key": "fa68604c-4068-498f-a701-7b623b92ba50", "name": "Dupont Circle Washington", "id": "84311", "district": "7620"},
+    "pacifica": {"key": "fa9079c0-a0c0-4d98-8939-c47b5c1a2ecd", "name": "Pacifica", "id": "398", "district": "5150"},
+    "mill valley": {"key": "96521569-a11b-4602-93b6-c928a2a07bf5", "name": "Mill Valley", "id": "393", "district": "5150"},
+    "marin evening": {"key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "id": "85885", "district": "5150"},
+    "san rafael marin evening": {"key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "id": "85885", "district": "5150"},
+    "peninsula starlight": {"key": "5d8ac492-7950-4a28-95d8-a0272158d2cd", "name": "Peninsula Starlight-San Mateo County", "id": "90074", "district": "5150"},
 }
 
 KNOWN_DISTRICTS = {
@@ -73,6 +78,22 @@ KNOWN_DISTRICTS = {
 
 # Detailed financial profiles for complex grants with multi-club and NGO partners
 DETAILED_PROJECT_PROFILES = {
+    "GG1633934": {
+        "club_contributions": [
+            {"club_key": "96521569-a11b-4602-93b6-c928a2a07bf5", "name": "Mill Valley", "amount": "3500"},
+            {"club_key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "amount": "1500"},
+            {"club_key": "fa9079c0-a0c0-4d98-8939-c47b5c1a2ecd", "name": "Pacifica", "amount": "1000"},
+            {"club_key": "c575902e-aae0-4b82-9aba-54947c09f4fe", "name": "Lake Atitlan", "amount": "0"}
+        ],
+        "district_contributions": [
+            {"district": "5150", "source": "District(DDF)", "amount": "28024"}
+        ],
+        "world_fund": "31024",
+        "implementing_partners": [
+            {"source": "Other - NGO", "name": "Fundacion Namaste Guatemaya", "amount": "0"},
+            {"source": "Other - Community Group", "name": "St. Aidan's Episcopal Church, San Francisco", "amount": "980"}
+        ]
+    },
     "GG2578692": {
         "club_contributions": [
             {"club_key": "2d768063-d1d0-4573-a094-a7ace36588d0", "name": "Annapolis", "amount": "8450"},
@@ -477,63 +498,115 @@ def construct_spc_payload(p: dict) -> dict:
             })
 
         # 2. Districts (DDF)
-        raw_pdist = details.get("partner_districts") or []
-        if isinstance(raw_pdist, str):
-            raw_pdist = [d.strip() for d in raw_pdist.split(",") if d.strip()]
-        intl_dist_raw = str(details.get("international_district") or p.get("international_club_district") or "").strip()
-        intl_clean_d = re.sub(r'[^0-9]', '', intl_dist_raw) or intl_dist_raw
-        if intl_clean_d and intl_clean_d not in raw_pdist:
-            raw_pdist.append(intl_clean_d)
+        explicit_dist_contribs = details.get("district_contributions")
+        if explicit_dist_contribs and isinstance(explicit_dist_contribs, list):
+            for dc in explicit_dist_contribs:
+                dnum = re.sub(r'[^0-9]', '', str(dc.get("district", ""))) or str(dc.get("district", "")).strip()
+                amt = str(int(float(dc.get("amount", 0))))
+                if dnum and (amt != "0" or str(dnum) != "4250"):
+                    fundings.append({
+                        "fundingSource": dc.get("source", "District(DDF)"),
+                        "fundingAmount": amt,
+                        "fundingClubKey": dnum,
+                        "isImplementingPartnerFlag": False
+                    })
+        else:
+            raw_pdist = details.get("partner_districts") or []
+            if isinstance(raw_pdist, str):
+                raw_pdist = [d.strip() for d in raw_pdist.split(",") if d.strip()]
+            intl_dist_raw = str(details.get("international_district") or p.get("international_club_district") or "").strip()
+            intl_clean_d = re.sub(r'[^0-9]', '', intl_dist_raw) or intl_dist_raw
+            if intl_clean_d and intl_clean_d not in raw_pdist:
+                raw_pdist.append(intl_clean_d)
 
-        total_ddf = details.get("district_ddf") or 0
-        for idx, d_val in enumerate(raw_pdist):
-            clean_d = re.sub(r'[^0-9]', '', str(d_val)) or str(d_val).strip()
-            if clean_d:
-                amt = str(int(float(total_ddf))) if (idx == 0 and total_ddf) else ("0")
-                fundings.append({
-                    "fundingSource": "District(DDF)",
-                    "fundingAmount": amt,
-                    "fundingClubKey": clean_d,
-                    "isImplementingPartnerFlag": False
-                })
+            total_ddf = details.get("district_ddf") or 0
+            # Target the international partner district first, never default to host district 4250
+            target_d = intl_clean_d if (intl_clean_d and intl_clean_d != "4250") else None
+            if not target_d:
+                non_host = [re.sub(r'[^0-9]', '', str(d)) for d in raw_pdist if re.sub(r'[^0-9]', '', str(d)) and re.sub(r'[^0-9]', '', str(d)) != "4250"]
+                target_d = non_host[0] if non_host else (raw_pdist[0] if raw_pdist else None)
+
+            for d_val in raw_pdist:
+                clean_d = re.sub(r'[^0-9]', '', str(d_val)) or str(d_val).strip()
+                if clean_d:
+                    is_target = (clean_d == target_d)
+                    amt = str(int(float(total_ddf))) if (is_target and total_ddf) else "0"
+                    if amt != "0" or clean_d != "4250":
+                        fundings.append({
+                            "fundingSource": "District(DDF)",
+                            "fundingAmount": amt,
+                            "fundingClubKey": clean_d,
+                            "isImplementingPartnerFlag": False
+                        })
 
         # 3. Contributing / Partner Clubs
-        raw_pclubs = details.get("partner_clubs") or []
-        if isinstance(raw_pclubs, str):
-            raw_pclubs = [c.strip() for c in raw_pclubs.split(",") if c.strip()]
-        intl_club_raw = str(details.get("international_club") or p.get("international_club_name") or "").strip()
-        if intl_club_raw and intl_club_raw not in raw_pclubs:
-            raw_pclubs.insert(0, intl_club_raw)
+        explicit_club_contribs = details.get("club_contributions_list")
+        if explicit_club_contribs and isinstance(explicit_club_contribs, list):
+            for cc in explicit_club_contribs:
+                c_name = str(cc.get("name", "")).strip()
+                if not c_name:
+                    continue
+                matched_club = find_partner_club(c_name)
+                ckey = cc.get("club_key") or (matched_club.get("key") if matched_club else None)
+                amt = str(int(float(cc.get("amount", 0))))
+                if ckey:
+                    partners.append({
+                        "partnerOrganizationKey": ckey,
+                        "Hour": "",
+                        "MoneyDonated": amt if amt != "0" else "",
+                        "NoOfVolunteer": "",
+                        "year": ""
+                    })
+                    fundings.append({
+                        "fundingSource": "Rotary Club",
+                        "fundingAmount": amt,
+                        "fundingClubKey": ckey,
+                        "isImplementingPartnerFlag": False
+                    })
+                else:
+                    fundings.append({
+                        "fundingSource": "Rotary Club",
+                        "fundingAmount": amt,
+                        "fundingClubKey": c_name,
+                        "isImplementingPartnerFlag": False
+                    })
+        else:
+            raw_pclubs = details.get("partner_clubs") or []
+            if isinstance(raw_pclubs, str):
+                raw_pclubs = [c.strip() for c in raw_pclubs.split(",") if c.strip()]
+            intl_club_raw = str(details.get("international_club") or p.get("international_club_name") or "").strip()
+            if intl_club_raw and intl_club_raw not in raw_pclubs:
+                raw_pclubs.insert(0, intl_club_raw)
 
-        total_cash = details.get("club_contributions") or 0
-        for idx, c_name in enumerate(raw_pclubs):
-            c_str = str(c_name).strip()
-            if not c_str:
-                continue
-            matched_club = find_partner_club(c_str)
-            ckey = matched_club.get("key") if matched_club else None
-            amt = str(int(float(total_cash))) if (idx == 0 and total_cash) else "0"
-            if ckey:
-                partners.append({
-                    "partnerOrganizationKey": ckey,
-                    "Hour": "",
-                    "MoneyDonated": amt if amt != "0" else "",
-                    "NoOfVolunteer": "",
-                    "year": ""
-                })
-                fundings.append({
-                    "fundingSource": "Rotary Club",
-                    "fundingAmount": amt,
-                    "fundingClubKey": ckey,
-                    "isImplementingPartnerFlag": False
-                })
-            else:
-                fundings.append({
-                    "fundingSource": "Rotary Club",
-                    "fundingAmount": amt,
-                    "fundingClubKey": c_str,
-                    "isImplementingPartnerFlag": False
-                })
+            total_cash = details.get("club_contributions") or 0
+            for idx, c_name in enumerate(raw_pclubs):
+                c_str = str(c_name).strip()
+                if not c_str:
+                    continue
+                matched_club = find_partner_club(c_str)
+                ckey = matched_club.get("key") if matched_club else None
+                amt = str(int(float(total_cash))) if (idx == 0 and total_cash) else "0"
+                if ckey:
+                    partners.append({
+                        "partnerOrganizationKey": ckey,
+                        "Hour": "",
+                        "MoneyDonated": amt if amt != "0" else "",
+                        "NoOfVolunteer": "",
+                        "year": ""
+                    })
+                    fundings.append({
+                        "fundingSource": "Rotary Club",
+                        "fundingAmount": amt,
+                        "fundingClubKey": ckey,
+                        "isImplementingPartnerFlag": False
+                    })
+                else:
+                    fundings.append({
+                        "fundingSource": "Rotary Club",
+                        "fundingAmount": amt,
+                        "fundingClubKey": c_str,
+                        "isImplementingPartnerFlag": False
+                    })
 
         # Ensure Lake Atitlan host club is included
         has_atitlan = any("atitlan" in str(f.get("fundingClubKey", "")).lower() for f in fundings)
@@ -552,11 +625,13 @@ def construct_spc_payload(p: dict) -> dict:
         if not raw_orgs and partner_name:
             raw_orgs.append(partner_name)
 
+        seen_orgs = set()
         for org_name in raw_orgs:
             o_clean = str(org_name).strip()
-            if o_clean:
+            if o_clean and o_clean.lower() not in seen_orgs:
+                seen_orgs.add(o_clean.lower())
                 fundings.append({
-                    "fundingSource": "NonGovernmentalOrganization",
+                    "fundingSource": "Other - NGO" if "namaste" in o_clean.lower() else "Other - Community Group",
                     "fundingAmount": "0",
                     "fundingClubKey": o_clean,
                     "isImplementingPartnerFlag": True
