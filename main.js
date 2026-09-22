@@ -1249,13 +1249,11 @@ window.loadProjectSyncStatus = async function (projectId) {
   var actionsEl = document.getElementById('edit-sync-actions');
   if (!badgesEl) return;
 
-  try {
-    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/sync-status');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
-    var gc = data.grant_center || {};
-    var spc = data.spc || {};
+  var p = allProjects.find(function (item) {
+    return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+  });
 
+  function renderSyncChips(gc, spc) {
     var isGG = projectId.toUpperCase().startsWith('GG');
     var isDG = projectId.toUpperCase().startsWith('DG');
     var prefix = isGG ? 'GG' : (isDG ? 'DG' : 'Grant');
@@ -1274,28 +1272,58 @@ window.loadProjectSyncStatus = async function (projectId) {
       : '<span class="sync-chip chip-gray">Not exported to SPC</span>';
 
     badgesEl.innerHTML = gcHtml + spcHtml;
+  }
+
+  // 1. Initial optimistic render from local / Supabase project memory
+  var localGc = (p && p.sync_status && p.sync_status.grant_center) ? Object.assign({}, p.sync_status.grant_center) : {};
+  var localSpc = (p && p.sync_status && p.sync_status.spc) ? Object.assign({}, p.sync_status.spc) : {};
+
+  if (p && p.project_assets && p.project_assets.length > 0) {
+    var hasApp = p.project_assets.some(function (a) { return /application.*\.pdf$/i.test(a.filename || ''); });
+    var repCount = p.project_assets.filter(function (a) { return /report.*\.pdf$/i.test(a.filename || ''); }).length;
+    if (hasApp) localGc.has_application_pdf = true;
+    if (repCount > 0 && !localGc.report_count) localGc.report_count = repCount;
+  }
+  if (p && p.project_links && !localSpc.exported) {
+    var spcLink = p.project_links.find(function (l) { return l.url && l.url.indexOf('spc.rotary.org') !== -1; });
+    if (spcLink) {
+      localSpc.exported = true;
+      localSpc.spc_url = normalizeSpcUrl(spcLink.url);
+    }
+  }
+
+  // Render initial state immediately so badges appear without delay
+  renderSyncChips(localGc, localSpc);
+
+  // 2. Query live backend daemon if available
+  try {
+    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/sync-status');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var gc = data.grant_center || {};
+    var spc = data.spc || {};
+
+    renderSyncChips(gc, spc);
 
     // Update in-memory project so detail view and links list have the SPC link immediately!
-    var p = allProjects.find(function (item) {
-      return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
-    });
     if (p) {
       if (!p.sync_status) p.sync_status = {};
       p.sync_status.grant_center = gc;
       p.sync_status.spc = spc;
-      if (spc.exported && spcUrl) {
-        p.sync_status.spc.spc_url = spcUrl;
+      var liveSpcUrl = normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
+      if (spc.exported && liveSpcUrl) {
+        p.sync_status.spc.spc_url = liveSpcUrl;
         if (!p.project_links) p.project_links = [];
         var existingSpcLink = p.project_links.find(function (l) {
           return (l.url && l.url.indexOf('spc.rotary.org') !== -1) || l.label === 'Rotary Service Project Center (SPC)';
         });
         if (existingSpcLink) {
-          existingSpcLink.url = spcUrl;
+          existingSpcLink.url = liveSpcUrl;
         } else {
           p.project_links.push({
             project_id: projectId,
             label: 'Rotary Service Project Center (SPC)',
-            url: spcUrl,
+            url: liveSpcUrl,
             display_order: p.project_links.length
           });
         }
@@ -1308,7 +1336,8 @@ window.loadProjectSyncStatus = async function (projectId) {
       + '<button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', false)" style="padding:4px 8px;font-size:11px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Authenticate with My Rotary and create project in SPC">🚀 SPC Live Export</button>';
     if (actionsEl) actionsEl.innerHTML = actionsHtml;
   } catch (err) {
-    badgesEl.innerHTML = '<span class="sync-chip chip-gray">Sync status offline</span>';
+    // If backend daemon is offline (e.g. static hosting on GitHub Pages), retain the local sync chips!
+    if (actionsEl) actionsEl.innerHTML = '';
   }
 };
 
@@ -2163,7 +2192,8 @@ async function loadEditFiles(projectId) {
     var isImg = a.file_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fn);
     var isVid = a.file_type === 'video' || /\.(mp4|mov|webm)$/i.test(fn);
     var isAppPdf = /application.*\.pdf$/i.test(fn);
-    var isCover = a.display_order === 0;
+    var isReportPdf = /report.*\.pdf$/i.test(fn);
+    var isCover = isImg && a.display_order === 0;
     var elemId = 'file-thumb-' + i;
     var src = a.public_url || ('projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(fn));
     var caption = a.caption || '';
@@ -2172,7 +2202,7 @@ async function loadEditFiles(projectId) {
       ? '<img src="' + src + '" onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" style="width:100%;height:80px;object-fit:cover;border-radius:4px;cursor:pointer;" onclick="window.open(\'' + src + '\', \'_blank\')">'
       : isVid
         ? '<div style="font-size:32px;line-height:80px;text-align:center;background:#f1f5f9;border-radius:4px;">🎬</div>'
-        : '<div style="font-size:32px;line-height:80px;text-align:center;background:#f1f5f9;border-radius:4px;cursor:pointer;" onclick="window.open(\'' + src + '\', \'_blank\')">' + (isAppPdf ? '📋' : '📄') + '</div>';
+        : '<div style="font-size:32px;line-height:80px;text-align:center;background:#f1f5f9;border-radius:4px;cursor:pointer;" onclick="window.open(\'' + src + '\', \'_blank\')">' + (isAppPdf ? '📋' : (isReportPdf ? '📊' : '📄')) + '</div>';
 
     var coverTag = '';
     if (isCover) {
@@ -2181,14 +2211,24 @@ async function loadEditFiles(projectId) {
       coverTag = '<button type="button" onclick="setCoverPhoto(\'' + projectId + '\', \'' + escapeHtml(fn) + '\')" style="font-size:10px;padding:2px 6px;margin-top:3px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:3px;cursor:pointer;color:#475569;width:100%;">☆ Set Cover</button>';
     }
 
-    var appBadge = '';
+    var docBadge = '';
     if (isAppPdf) {
       var isGG = projectId.toUpperCase().startsWith('GG');
       var isDG = projectId.toUpperCase().startsWith('DG');
       var appLabel = isGG ? 'GG Application' : (isDG ? 'DG Application' : 'Grant Application');
-      appBadge = '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;align-items:stretch;">'
+      docBadge = '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;align-items:stretch;">'
                + '  <span style="font-size:9px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:3px;padding:2px 4px;font-weight:bold;text-align:center;">📋 ' + appLabel + '</span>'
                + '  <button type="button" onclick="synthesizeFromAi(\'' + projectId + '\', \'pdf\')" style="font-size:9px;background:#8b5cf6;color:white;border:none;border-radius:3px;padding:3px 6px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:3px;" title="Use Gemini AI to extract project details and auto-fill form fields from this PDF">✨ AI Auto-fill</button>'
+               + '</div>';
+    } else if (isReportPdf) {
+      var repNumMatch = fn.match(/report_?(\d+)/i);
+      var repLabel = repNumMatch ? ('Status Report #' + parseInt(repNumMatch[1], 10)) : 'Status Report';
+      docBadge = '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;align-items:stretch;">'
+               + '  <span style="font-size:9px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:3px;padding:2px 4px;font-weight:bold;text-align:center;">📊 ' + repLabel + '</span>'
+               + '</div>';
+    } else if (!isImg && !isVid) {
+      docBadge = '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;align-items:stretch;">'
+               + '  <span style="font-size:9px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;font-weight:bold;text-align:center;">📄 Attachment</span>'
                + '</div>';
     }
 
@@ -2196,7 +2236,7 @@ async function loadEditFiles(projectId) {
           + mediaTag
           + '<div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;" title="' + escapeHtml(fn) + '">' + escapeHtml(fn) + '</div>'
           + coverTag
-          + appBadge
+          + docBadge
           + '<input type="text" class="asset-caption-input" data-filename="' + escapeHtml(fn) + '" value="' + escapeHtml(caption) + '" onchange="saveAssetCaption(\'' + projectId + '\', \'' + escapeHtml(fn) + '\', this.value)" placeholder="Caption / description" style="width:100%;font-size:10px;padding:3px 4px;margin-top:4px;border:1px solid #e2e8f0;border-radius:3px;box-sizing:border-box;" title="File caption (auto-saved or saved with project)">'
           + '<button type="button" onclick="deleteProjectAsset(\'' + projectId + '\', \'' + escapeHtml(fn) + '\', \'' + elemId + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;z-index:2;" title="Delete file">✕</button>'
           + '</div>';
