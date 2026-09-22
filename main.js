@@ -1522,6 +1522,7 @@ window.synthesizeFromAi = async function (projectId, source, notesText, customAp
     if (customApiKey) {
       payload.api_key = customApiKey.trim();
       sessionStorage.setItem('gemini_api_key', customApiKey.trim());
+      localStorage.setItem('gemini_api_key', customApiKey.trim());
     }
 
     var data = null;
@@ -1598,6 +1599,7 @@ window.synthesizeWithGeminiDirect = async function (projectId, source, notesText
     }
     apiKey = userKey.trim();
     sessionStorage.setItem('gemini_api_key', apiKey);
+    localStorage.setItem('gemini_api_key', apiKey);
   }
 
   var isGlobalGrant = projectId.toUpperCase().startsWith('GG');
@@ -1762,6 +1764,7 @@ window.promptChangeGeminiKey = function (projectId, source) {
   var newKey = prompt('Enter your Google Gemini API key (obtain at https://aistudio.google.com/app/apikey):');
   if (newKey && newKey.trim()) {
     sessionStorage.setItem('gemini_api_key', newKey.trim());
+    localStorage.setItem('gemini_api_key', newKey.trim());
     synthesizeFromAi(projectId, source, null, newKey.trim());
   }
 };
