@@ -1383,12 +1383,20 @@ window.applyExportedSpcGuid = function (projectId, guid) {
     }
   }
 
-  // 1. If currently on Detail View for this project, update immediately!
+  // 1. If currently on Detail View or badge is in DOM, update immediately!
+  var detailBadge = document.getElementById('detail-spc-badge');
+  if (detailBadge && (p || allProjects[currentIndex])) {
+    detailBadge.innerHTML = renderDetailSpcBadgeHtml(p || allProjects[currentIndex]);
+  }
+  var detailBtn = document.getElementById('detail-spc-view-btn');
+  if (detailBtn) {
+    detailBtn.href = liveSpcUrl;
+    detailBtn.style.background = '#2563eb';
+  }
   if (currentView === 'detail' && allProjects[currentIndex]) {
     var cur = allProjects[currentIndex];
     var curGid = String(cur.id || cur.grant_id || '').trim().toLowerCase();
     if (curGid === projectId.toLowerCase()) {
-      updateDetailSpcBadge(p || cur);
       if (typeof loadProjectFiles === 'function') {
         loadProjectFiles(curGid, 'photo-area', 'files-area');
       }
@@ -1520,12 +1528,22 @@ window.loadProjectSyncStatus = async function (projectId) {
       loadEditFiles(projectId);
     }
 
-    // Update Detail View if active
+    // Update Detail View badge and button if in DOM
+    var detailBadge = document.getElementById('detail-spc-badge');
+    if (detailBadge && (p || allProjects[currentIndex])) {
+      detailBadge.innerHTML = renderDetailSpcBadgeHtml(p || allProjects[currentIndex]);
+    }
+    if (liveSpcUrl) {
+      var detailBtn = document.getElementById('detail-spc-view-btn');
+      if (detailBtn) {
+        detailBtn.href = liveSpcUrl;
+        detailBtn.style.background = '#2563eb';
+      }
+    }
     if (currentView === 'detail' && allProjects[currentIndex]) {
       var cur = allProjects[currentIndex];
       var curGid = String(cur.id || cur.grant_id || '').trim().toLowerCase();
       if (curGid === projectId.toLowerCase()) {
-        updateDetailSpcBadge(p || cur);
         if (typeof loadProjectFiles === 'function') {
           loadProjectFiles(curGid, 'photo-area', 'files-area');
         }
@@ -1735,10 +1753,13 @@ window.synthesizeFromAi = async function (projectId, source, notesText, customAp
       notes_text: notesText || '',
       project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || ''
     };
-    if (customApiKey) {
-      payload.api_key = customApiKey.trim();
-      sessionStorage.setItem('gemini_api_key', customApiKey.trim());
-      localStorage.setItem('gemini_api_key', customApiKey.trim());
+    var effectiveApiKey = (customApiKey && customApiKey.trim()) ||
+                          localStorage.getItem('gemini_api_key') ||
+                          sessionStorage.getItem('gemini_api_key') || '';
+    if (effectiveApiKey) {
+      payload.api_key = effectiveApiKey;
+      sessionStorage.setItem('gemini_api_key', effectiveApiKey);
+      localStorage.setItem('gemini_api_key', effectiveApiKey);
     }
 
     var data = null;
@@ -1764,8 +1785,17 @@ window.synthesizeFromAi = async function (projectId, source, notesText, customAp
             if (errType === 'GEMINI_API_KEY_REQUIRED' || errType === 'INVALID_API_KEY') {
               var userKey = prompt('Please enter your Google Gemini API key (obtain a free key at https://aistudio.google.com/app/apikey):');
               if (userKey && userKey.trim()) {
-                sessionStorage.setItem('gemini_api_key', userKey.trim());
-                return window.synthesizeFromAi(projectId, source, notesText, userKey.trim());
+                var trimmed = userKey.trim();
+                sessionStorage.setItem('gemini_api_key', trimmed);
+                localStorage.setItem('gemini_api_key', trimmed);
+                if (isLocalOrConfigured) {
+                  fetch((BACKEND_URL || '') + '/api/config/gemini-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: trimmed })
+                  }).catch(function (e) { console.warn('Failed to persist key:', e); });
+                }
+                return window.synthesizeFromAi(projectId, source, notesText, trimmed);
               }
               return;
             }
@@ -1914,10 +1944,12 @@ window.synthesizeWithGeminiDirect = async function (projectId, source, notesText
   parts.push({ text: promptText });
 
   var candidateModels = [
-    'gemini-3.1-flash-lite-preview',
-    'gemini-flash-latest',
+    'gemini-3-flash-preview',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
     'gemini-3.5-flash',
-    'gemini-2.5-flash-lite'
+    'gemini-3.1-pro-preview',
+    'gemini-flash-latest'
   ];
 
   var lastError = null;
@@ -1944,6 +1976,7 @@ window.synthesizeWithGeminiDirect = async function (projectId, source, notesText
         var msg = (errBody.error && errBody.error.message) || ('HTTP ' + gRes.status);
         if (gRes.status === 400 && msg.includes('API_KEY_INVALID')) {
           sessionStorage.removeItem('gemini_api_key');
+          localStorage.removeItem('gemini_api_key');
           throw new Error('The Gemini API key is invalid. Please click "Change API Key" and enter a valid key from Google AI Studio.');
         }
         if (gRes.status === 429) {
@@ -1953,11 +1986,19 @@ window.synthesizeWithGeminiDirect = async function (projectId, source, notesText
         continue;
       }
 
-      var gData = await gRes.json();
+      var gData;
+      try {
+        gData = await gRes.json();
+      } catch (jsonErr) {
+        var rawErr = await gRes.text().catch(function () { return ''; });
+        throw new Error('Gemini returned unexpected response: ' + rawErr.slice(0, 100));
+      }
       var candidate = gData.candidates && gData.candidates[0];
       if (candidate && candidate.content && candidate.content.parts && candidate.content.parts[0]) {
         var rawText = candidate.content.parts[0].text;
+        rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
         draft = JSON.parse(rawText);
+        if (Array.isArray(draft) && draft.length > 0) draft = draft[0];
         usedModel = modelName;
         break;
       }
@@ -1979,14 +2020,24 @@ window.synthesizeWithGeminiDirect = async function (projectId, source, notesText
 window.promptChangeGeminiKey = function (projectId, source) {
   var newKey = prompt('Enter your Google Gemini API key (obtain at https://aistudio.google.com/app/apikey):');
   if (newKey && newKey.trim()) {
-    sessionStorage.setItem('gemini_api_key', newKey.trim());
-    localStorage.setItem('gemini_api_key', newKey.trim());
-    synthesizeFromAi(projectId, source, null, newKey.trim());
+    var trimmed = newKey.trim();
+    sessionStorage.setItem('gemini_api_key', trimmed);
+    localStorage.setItem('gemini_api_key', trimmed);
+    var isLocalOrConfigured = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || (BACKEND_URL && !BACKEND_URL.includes('github.io')));
+    if (isLocalOrConfigured) {
+      fetch((BACKEND_URL || '') + '/api/config/gemini-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: trimmed })
+      }).catch(function (e) { console.warn('Failed to persist gemini key to backend:', e); });
+    }
+    synthesizeFromAi(projectId, source, null, trimmed);
   }
 };
 
 window.applyAiDraftToForm = function (draft) {
   if (!draft) return;
+  if (Array.isArray(draft) && draft.length > 0) draft = draft[0];
 
   if (draft.brief_overview) {
     var bInp = document.getElementById('edit-brief-overview');

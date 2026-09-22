@@ -437,6 +437,42 @@ class SynthesizePayload(BaseModel):
     project_type: Optional[str] = None
     model: Optional[str] = None
 
+class GeminiKeyPayload(BaseModel):
+    api_key: str
+
+def persist_gemini_key_to_env(key: str):
+    """Persists GEMINI_API_KEY into .env and os.environ."""
+    clean_key = key.strip()
+    if not clean_key:
+        return
+    os.environ["GEMINI_API_KEY"] = clean_key
+    try:
+        env_path = Path(".env")
+        lines = []
+        replaced = False
+        if env_path.exists():
+            for eline in env_path.read_text(encoding="utf-8").splitlines():
+                if eline.startswith("GEMINI_API_KEY="):
+                    lines.append(f"GEMINI_API_KEY={clean_key}")
+                    replaced = True
+                else:
+                    lines.append(eline)
+        if not replaced:
+            lines.append(f"GEMINI_API_KEY={clean_key}")
+        env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except Exception as e:
+        print(f"Failed to persist GEMINI_API_KEY to .env: {e}")
+
+@app.post("/api/config/gemini-key")
+async def set_gemini_key(payload: GeminiKeyPayload):
+    """Endpoint for web UI to persist Google Gemini API key directly to .env."""
+    key = payload.api_key.strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="Gemini API key cannot be empty.")
+    persist_gemini_key_to_env(key)
+    await emit_log("✓ Gemini API key saved to .env and updated in runtime environment.")
+    return {"success": True, "message": "Gemini API key saved to .env."}
+
 @app.get("/api/projects/{project_id}/sync-status")
 async def get_project_sync_status(project_id: str):
     """Retrieves RI file presence and SPC export status for a given project."""
@@ -585,6 +621,8 @@ async def synthesize_project_data(project_id: str, payload: SynthesizePayload):
                 "message": "Gemini API key is required. Obtain a free key at https://aistudio.google.com/app/apikey and add GEMINI_API_KEY to .env or supply it in the dialog."
             }
         )
+    if payload.api_key:
+        persist_gemini_key_to_env(payload.api_key)
 
     if genai is None:
         raise HTTPException(status_code=500, detail="google-genai library is not installed on the server.")
@@ -717,17 +755,18 @@ Return ONLY valid JSON matching this schema.
 """
 
     try:
-        target_model = payload.model or os.getenv("GEMINI_MODEL") or "gemini-3.1-flash-lite-preview"
+        target_model = payload.model or os.getenv("GEMINI_MODEL") or "gemini-3-flash-preview"
         
         # Candidate models verified available on current key
         candidate_models = []
         for candidate in [
             target_model,
-            "gemini-3.1-flash-lite-preview",
             "gemini-3-flash-preview",
-            "gemini-3.6-flash",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
             "gemini-3.5-flash",
-            "gemini-3.5-flash-lite"
+            "gemini-3.1-pro-preview",
+            "gemini-flash-latest"
         ]:
             if candidate and candidate not in candidate_models:
                 candidate_models.append(candidate)
@@ -805,32 +844,19 @@ Return ONLY valid JSON matching this schema.
             )
 
         # If custom key was provided and succeeded, persist it to .env
-        if payload.api_key and payload.api_key != os.getenv("GEMINI_API_KEY"):
-            try:
-                env_path = Path(".env")
-                if env_path.exists():
-                    lines = []
-                    replaced = False
-                    for eline in env_path.read_text().splitlines():
-                        if eline.startswith("GEMINI_API_KEY="):
-                            lines.append(f"GEMINI_API_KEY={payload.api_key}")
-                            replaced = True
-                        else:
-                            lines.append(eline)
-                    if not replaced:
-                        lines.append(f"GEMINI_API_KEY={payload.api_key}")
-                    env_path.write_text("\n".join(lines) + "\n")
-                    os.environ["GEMINI_API_KEY"] = payload.api_key
-            except Exception:
-                pass
+        if payload.api_key:
+            persist_gemini_key_to_env(payload.api_key)
 
         parsed = json.loads(response_text)
+        if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
+            parsed = parsed[0]
 
         # Enforce character limits strictly as safety net
-        if "brief_overview" in parsed and len(parsed["brief_overview"]) > 100:
-            parsed["brief_overview"] = parsed["brief_overview"][:97].rsplit(' ', 1)[0] + "..."
-        if "complete_overview" in parsed and len(parsed["complete_overview"]) > 1000:
-            parsed["complete_overview"] = parsed["complete_overview"][:997].rsplit(' ', 1)[0] + "..."
+        if isinstance(parsed, dict):
+            if "brief_overview" in parsed and parsed["brief_overview"] and len(str(parsed["brief_overview"])) > 100:
+                parsed["brief_overview"] = str(parsed["brief_overview"])[:97].rsplit(' ', 1)[0] + "..."
+            if "complete_overview" in parsed and parsed["complete_overview"] and len(str(parsed["complete_overview"])) > 1000:
+                parsed["complete_overview"] = str(parsed["complete_overview"])[:997].rsplit(' ', 1)[0] + "..."
 
         return {
             "success": True,

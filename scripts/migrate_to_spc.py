@@ -1116,12 +1116,45 @@ async def main():
                             // Non-fatal
                         }
 
+                        let redux = null;
+                        for (const k in window) {
+                            try {
+                                if (window[k] && typeof window[k].getState === 'function') {
+                                    redux = window[k].getState();
+                                    break;
+                                }
+                            } catch(e){}
+                        }
+                        const user = redux?.user?.userDeatils;
+                        if (user) {
+                            if (user.individualkey) payload.currentSignedInIndividualKey = user.individualkey;
+                            if (user.memberId) payload.currentSignedInMemberId = user.memberId;
+                            if (user.userName) payload.currentSignedInMemberName = user.userName;
+                            if (user.userLoginEmail) payload.individualEmail = user.userLoginEmail;
+                        }
+
                         payload.isChangedProjectDetail = true;
                         if (payload.projectCategoryFund) {
-                            payload.projectCategoryFund.isChangedProjectCategoryFund = true;
                             if (existingDetail && existingDetail.categories && existingDetail.categories.length > 0) {
                                 payload.projectCategoryFund.projectCategoryFundKey = existingDetail.categories[0].projectCategoryFundKey;
+                                payload.projectCategoryFund.isChangedProjectCategoryFund = false;
+                            } else {
+                                payload.projectCategoryFund.isChangedProjectCategoryFund = true;
                             }
+                            payload.projectCategoryFund.rotaryFoundationGrantFlag = !!payload.projectCategoryFund.rotaryFoundationGrantFlag;
+                        }
+
+                        if (existingDetail && existingDetail.profile) {
+                            if (existingDetail.profile.locationName) payload.location = existingDetail.profile.locationName;
+                            if (existingDetail.profile.tags && existingDetail.profile.tags.length > 0) {
+                                payload.tags = existingDetail.profile.tags.join(';');
+                            }
+                        }
+                        if (payload.location && payload.location.length > 50) {
+                            payload.location = payload.location.slice(0, 50);
+                        }
+                        if (payload.tags && payload.tags.length > 100) {
+                            payload.tags = payload.tags.slice(0, 100);
                         }
 
                         // Reconcile Medias / RelLinks (prevents duplicate links)
@@ -1211,9 +1244,9 @@ async def main():
                                 if (!usedFundingKeys.has(ef.projectFundingSourceKey)) {
                                     newFundings.push({
                                         projectFundingSourceKey: ef.projectFundingSourceKey,
-                                        fundingSource: ef.fundingSource || "Rotary Club",
-                                        fundingAmount: ef.fundingAmount || "0",
-                                        fundingClubKey: ef.fundingSourceKey || ef.fundingOtherName || "",
+                                        fundingSource: ef.fundingSource || "",
+                                        fundingAmount: ef.fundingAmount || "",
+                                        fundingClubKey: "",
                                         isDeleted: true,
                                         isChangedProjectFundingSource: true
                                     });
@@ -1261,6 +1294,22 @@ async def main():
                             payload.projectPartnerClubMembers = newPartners;
                         }
 
+                        // Reconcile Contacts / Joiners (preserves existing contacts and prevents duplicate/deletion errors)
+                        if (existingDetail && existingDetail.joiners && existingDetail.joiners.length > 0) {
+                            const existingContacts = existingDetail.joiners.map(j => j.contacts).filter(Boolean);
+                            const newContacts = [];
+                            for (const ec of existingContacts) {
+                                newContacts.push({
+                                    projectContactKey: ec.key,
+                                    individualContactKey: ec.individualId,
+                                    individualContactId: ec.memberId,
+                                    isChangedProjectContact: false,
+                                    isDeleted: false
+                                });
+                            }
+                            payload.projectContacts = newContacts;
+                        }
+
                         const res = await fetch('https://spc.rotary.org/api/Project/UpdateProject', {
                             method: 'PUT',
                             headers: {
@@ -1274,7 +1323,12 @@ async def main():
                             const errTxt = await res.text();
                             return { ok: false, status: res.status, error: errTxt };
                         }
-                        const data = await res.json();
+                        const resText = await res.text();
+                        let data = null;
+                        try { data = JSON.parse(resText); } catch (e) { data = resText; }
+                        if (data === false || data === "false") {
+                            return { ok: false, status: 200, error: "Rotary SPC backend rejected project update payload (returned false)", sentPayload: payload };
+                        }
                         return { ok: true, spc_id: payload.currentProjectKey, res_data: data };
                     } catch (e) {
                         return { ok: false, error: e.message };
@@ -1293,6 +1347,9 @@ async def main():
                     save_state(state, pid)
                 else:
                     print(f"  ✗ UPDATE FAILED: Status {result.get('status')} — {result.get('error')}")
+                    if result.get("sentPayload"):
+                        Path('/tmp/failed_payload.json').write_text(json.dumps(result.get("sentPayload"), indent=2))
+                        print("  [DEBUG] Dumped sent payload to /tmp/failed_payload.json")
 
             else:
                 print(f"  ✓ Duplicate Check: Clean (no existing project found in SPC).")
