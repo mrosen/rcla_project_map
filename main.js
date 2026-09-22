@@ -1521,43 +1521,47 @@ window.synthesizeFromAi = async function (projectId, source, notesText, customAp
     };
     if (customApiKey) {
       payload.api_key = customApiKey.trim();
+      sessionStorage.setItem('gemini_api_key', customApiKey.trim());
     }
 
-    var res = await fetch('/api/projects/' + encodeURIComponent(projectId) + '/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    var data = null;
 
-    var data = await res.json();
-    if (!res.ok) {
-      var errDetail = data && data.detail;
-      var errType = (errDetail && errDetail.error) || '';
-      if (errType === 'GEMINI_API_KEY_REQUIRED' || errType === 'QUOTA_EXCEEDED' || errType === 'GEMINI_CAPACITY_LIMIT' || errType === 'INVALID_API_KEY') {
-        var promptMsg = (errType === 'GEMINI_API_KEY_REQUIRED')
-          ? 'Please enter your Google Gemini API key (obtain a free key at https://aistudio.google.com/app/apikey):'
-          : (errType === 'INVALID_API_KEY')
-          ? 'The Gemini API key was rejected as invalid. Please enter a valid Gemini API key from https://aistudio.google.com/app/apikey:'
-          : 'Google Gemini Free-Tier Quota / Demand Limit Reached.\n\nFree tier has a 20 requests/day per model cap, and preview models experience high-demand spikes.\n\nPlease enter a new or Pay-As-You-Go Gemini API key (get one at https://aistudio.google.com/app/apikey):';
-        var userKey = prompt(promptMsg);
-        if (userKey && userKey.trim()) {
-          return window.synthesizeFromAi(projectId, source, notesText, userKey.trim());
-        } else {
-          if (banner) {
-            banner.style.display = 'block';
-            banner.style.background = '#fee2e2';
-            banner.style.borderColor = '#fca5a5';
-            banner.style.color = '#991b1b';
-            banner.innerHTML = '⚠️ <strong>Gemini Draft Paused:</strong> Free-tier quota reached (20 req/day). '
-              + '<button type="button" onclick="promptChangeGeminiKey(\'' + projectId + '\',\'' + (source || 'pdf') + '\')" style="margin-left:8px;padding:3px 8px;font-size:11px;font-weight:600;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">🔑 Enter API Key</button> '
-              + 'or enable Pay-As-You-Go at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="text-decoration:underline;color:#991b1b;font-weight:600;">Google AI Studio</a> ($0.0003/draft).';
+    // 1. If running locally or BACKEND_URL is available, try local orchestrator backend first
+    var isLocalOrConfigured = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || (BACKEND_URL && !BACKEND_URL.includes('github.io')));
+    if (isLocalOrConfigured) {
+      try {
+        var backendUrl = (BACKEND_URL || '') + '/api/projects/' + encodeURIComponent(projectId) + '/synthesize';
+        var res = await fetch(backendUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          var jsonRes = await res.json();
+          if (res.ok) {
+            data = jsonRes;
+          } else {
+            var errDetail = jsonRes && jsonRes.detail;
+            var errType = (errDetail && errDetail.error) || '';
+            if (errType === 'GEMINI_API_KEY_REQUIRED' || errType === 'INVALID_API_KEY') {
+              var userKey = prompt('Please enter your Google Gemini API key (obtain a free key at https://aistudio.google.com/app/apikey):');
+              if (userKey && userKey.trim()) {
+                sessionStorage.setItem('gemini_api_key', userKey.trim());
+                return window.synthesizeFromAi(projectId, source, notesText, userKey.trim());
+              }
+              return;
+            }
           }
-          return;
         }
-      } else {
-        var rawMsg = (errDetail && (errDetail.message || errDetail.raw_error || errDetail)) || 'Gemini error';
-        throw new Error(typeof rawMsg === 'object' ? JSON.stringify(rawMsg) : rawMsg);
+      } catch (backendErr) {
+        console.warn('Backend orchestrator call failed, falling back to direct client-side synthesis:', backendErr);
       }
+    }
+
+    // 2. Direct client-side Gemini fallback (works on GitHub Pages or standalone static host)
+    if (!data) {
+      data = await synthesizeWithGeminiDirect(projectId, source, notesText, customApiKey);
     }
 
     if (data && data.draft) {
@@ -1585,9 +1589,179 @@ window.synthesizeFromAi = async function (projectId, source, notesText, customAp
   }
 };
 
+window.synthesizeWithGeminiDirect = async function (projectId, source, notesText, customApiKey) {
+  var apiKey = customApiKey || sessionStorage.getItem('gemini_api_key') || localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    var userKey = prompt('Please enter your Google Gemini API key (obtain a free key at https://aistudio.google.com/app/apikey):');
+    if (!userKey || !userKey.trim()) {
+      throw new Error('Gemini API key is required. Obtain a free key at https://aistudio.google.com/app/apikey');
+    }
+    apiKey = userKey.trim();
+    sessionStorage.setItem('gemini_api_key', apiKey);
+  }
+
+  var isGlobalGrant = projectId.toUpperCase().startsWith('GG');
+  var promptText = 'You are an expert archivist and project manager for the Rotary Club of Lake Atitlán (RCLA) in Guatemala.\n'
+    + 'Analyze the following ' + (source === 'pdf' ? 'Rotary Foundation Grant Application' : 'project notes') + ' for project \'' + projectId + '\'.\n\n'
+    + 'Extract and generate a clean, strictly formatted JSON response meeting these EXACT criteria:\n\n'
+    + 'CRITICAL CONSTRAINTS:\n'
+    + '1. "brief_overview": A punchy, compelling summary of what the project accomplished.\n'
+    + '   STRICT MAXIMUM LENGTH: 100 CHARACTERS. Count every character carefully. Do not exceed 100 characters.\n'
+    + '2. "complete_overview": A comprehensive description of the project purpose, community need, activities, and lasting impact.\n'
+    + '   STRICT MAXIMUM LENGTH: 1,000 CHARACTERS. Count every character carefully. Do not exceed 1,000 characters.\n'
+    + '3. "start_date": ISO date format (YYYY-MM-DD or YYYY-MM) for when the project was initiated or planned.\n'
+    + '4. "end_date": ISO date format (YYYY-MM-DD or YYYY-MM) for when the project was completed (or null if ongoing).\n'
+    + '5. "timeline":\n'
+    + '   - "backstory": 1-2 paragraphs detailing the background, community relationship, and how the initiative started.\n'
+    + '   - "milestones": A chronological list of milestones. Each milestone object must have:\n'
+    + '     - "name": Milestone name\n'
+    + '     - "date": ISO date (YYYY-MM-DD or YYYY-MM)\n'
+    + '     - "notes": Brief note or context\n'
+    + (isGlobalGrant ? '     CRITICAL: Since this is a Global Grant, you MUST include a milestone named "Submitted" and a milestone named "Approved", using dates extracted from the document.\n' : '     Include natural milestones such as Initiated, Fundraising, Distribution, Completed. Do NOT include formal RI approval steps unless stated.\n')
+    + '6. "details":\n'
+    + '   - "budget": Total numeric project budget in USD (numeric)\n'
+    + '   - "world_fund": Rotary Foundation World Fund match in USD (numeric or 0)\n'
+    + '   - "district_ddf": District Designated Fund (DDF) in USD (numeric or 0)\n'
+    + '   - "club_contributions": Total club cash contributions in USD (numeric or 0)\n'
+    + '   - "host_club": Name of the host Rotary club (e.g., "Club Rotario de Lake Atitlán")\n'
+    + '   - "host_district": Host district number (e.g., "4250")\n'
+    + '   - "international_club": International sponsor Rotary club name\n'
+    + '   - "international_district": International district number\n'
+    + '   - "partner_clubs": Array of strings of ALL contributing/partner Rotary clubs mentioned anywhere in the application or funding lists.\n'
+    + '   - "partner_districts": Array of strings of ALL contributing/partner districts.\n'
+    + '   - "cooperating_organizations": Array of strings of ALL partner NGOs, cooperating organizations, government entities, and community groups.\n'
+    + '   - "key_personnel": Array of objects: [{"name": "...", "role": "..."}]\n\n'
+    + 'Return ONLY valid JSON matching this schema.';
+
+  var parts = [];
+
+  if (source === 'pdf') {
+    var pdfUrl = null;
+    if (window.currentEditAssets && Array.isArray(window.currentEditAssets)) {
+      var appAsset = window.currentEditAssets.find(function (a) {
+        var fn = (a.filename || '').toLowerCase();
+        return fn.includes('application') && fn.endsWith('.pdf');
+      }) || window.currentEditAssets.find(function (a) {
+        return (a.filename || '').toLowerCase().endsWith('.pdf');
+      });
+      if (appAsset) {
+        pdfUrl = appAsset.public_url || (SUPABASE_URL + '/storage/v1/object/public/project-media/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(appAsset.filename));
+      }
+    }
+
+    if (!pdfUrl) {
+      pdfUrl = SUPABASE_URL + '/storage/v1/object/public/project-media/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(projectId) + '_Application.pdf';
+    }
+
+    var pdfRes = await fetch(pdfUrl);
+    if (!pdfRes.ok && supabaseClient) {
+      try {
+        var sbRes = await supabaseClient.from('project_assets').select('*').eq('project_id', projectId).ilike('filename', '%application%.pdf');
+        if (sbRes.data && sbRes.data.length > 0) {
+          var matched = sbRes.data[0];
+          var candidateUrl = matched.public_url || (SUPABASE_URL + '/storage/v1/object/public/project-media/' + matched.storage_path);
+          pdfRes = await fetch(candidateUrl);
+        }
+      } catch (sbErr) {
+        console.warn('Supabase asset query error:', sbErr);
+      }
+    }
+
+    if (!pdfRes.ok) {
+      throw new Error('Application PDF not found in storage for ' + projectId + '. Use "Draft from Notes" or upload the Application PDF.');
+    }
+
+    var pdfBuf = await pdfRes.arrayBuffer();
+    var binary = '';
+    var bytes = new Uint8Array(pdfBuf);
+    var chunkSize = 8192;
+    for (var i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    var base64Pdf = window.btoa(binary);
+
+    parts.push({
+      inline_data: {
+        mime_type: 'application/pdf',
+        data: base64Pdf
+      }
+    });
+  } else if (source === 'notes') {
+    if (!notesText || !notesText.trim()) {
+      throw new Error('Please enter some project notes to synthesize.');
+    }
+    promptText += '\n\nPROJECT NOTES:\n"""\n' + notesText.trim() + '\n"""';
+  }
+
+  parts.push({ text: promptText });
+
+  var candidateModels = [
+    'gemini-3.1-flash-lite-preview',
+    'gemini-flash-latest',
+    'gemini-3.5-flash',
+    'gemini-2.5-flash-lite'
+  ];
+
+  var lastError = null;
+  var draft = null;
+  var usedModel = null;
+
+  for (var m = 0; m < candidateModels.length; m++) {
+    var modelName = candidateModels[m];
+    try {
+      var gRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(apiKey), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: parts }],
+          generationConfig: {
+            response_mime_type: 'application/json',
+            temperature: 0.2
+          }
+        })
+      });
+
+      if (!gRes.ok) {
+        var errBody = await gRes.json().catch(function () { return {}; });
+        var msg = (errBody.error && errBody.error.message) || ('HTTP ' + gRes.status);
+        if (gRes.status === 400 && msg.includes('API_KEY_INVALID')) {
+          sessionStorage.removeItem('gemini_api_key');
+          throw new Error('The Gemini API key is invalid. Please click "Change API Key" and enter a valid key from Google AI Studio.');
+        }
+        if (gRes.status === 429) {
+          throw new Error('Gemini API quota exceeded. Please wait a moment or use a Pay-As-You-Go key.');
+        }
+        lastError = new Error(msg);
+        continue;
+      }
+
+      var gData = await gRes.json();
+      var candidate = gData.candidates && gData.candidates[0];
+      if (candidate && candidate.content && candidate.content.parts && candidate.content.parts[0]) {
+        var rawText = candidate.content.parts[0].text;
+        draft = JSON.parse(rawText);
+        usedModel = modelName;
+        break;
+      }
+    } catch (modelErr) {
+      if (modelErr.message && (modelErr.message.includes('API key') || modelErr.message.includes('quota'))) {
+        throw modelErr;
+      }
+      lastError = modelErr;
+    }
+  }
+
+  if (!draft) {
+    throw lastError || new Error('Failed to generate draft with Gemini.');
+  }
+
+  return { draft: draft, model_used: usedModel };
+};
+
 window.promptChangeGeminiKey = function (projectId, source) {
   var newKey = prompt('Enter your Google Gemini API key (obtain at https://aistudio.google.com/app/apikey):');
   if (newKey && newKey.trim()) {
+    sessionStorage.setItem('gemini_api_key', newKey.trim());
     synthesizeFromAi(projectId, source, null, newKey.trim());
   }
 };
