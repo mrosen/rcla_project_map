@@ -4,27 +4,55 @@
     "title": "SANIK-YA/\u00a0CHITULUL\u00a0GUATEMALA\u00a0WATER\u00a0PROJECT",
     "action": "updated",
     "migrated_at": "2026-09-16T17:29:31.059865",
-    "spc_url": "https://spc.rotary.org/project/detail/ba58cdaf-e167-47da-8b79-68b322ce8df0"
+    "spc_url": "https://spc.rotary.org/project?guid=ba58cdaf-e167-47da-8b79-68b322ce8df0"
   },
   "BarAlto": {
     "spc_id": "7df85ac4-5afa-40ba-bacf-a337bdc56073",
     "title": "Bar Alto",
     "action": "updated",
     "migrated_at": "2026-09-16T22:13:40.309062",
-    "spc_url": "https://spc.rotary.org/project/detail/7df85ac4-5afa-40ba-bacf-a337bdc56073"
+    "spc_url": "https://spc.rotary.org/project?guid=7df85ac4-5afa-40ba-bacf-a337bdc56073"
   },
   "GG2578692": {
     "spc_id": "0c101fff-43ee-41ea-97bc-22fd018d4cff",
     "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II",
     "action": "updated",
     "migrated_at": "2026-09-17T14:55:43.927542",
-    "spc_url": "https://spc.rotary.org/project/detail/0c101fff-43ee-41ea-97bc-22fd018d4cff"
+    "spc_url": "https://spc.rotary.org/project?guid=0c101fff-43ee-41ea-97bc-22fd018d4cff"
   },
   "CLUB_2026_BasketballCourtPanab": {
     "spc_id": "e18c9b82-aa0f-4003-90f1-f399fa241eaf",
     "title": "Basketball Court, Panabaj",
     "action": "updated",
     "migrated_at": "2026-09-17T14:55:11.786769",
-    "spc_url": "https://spc.rotary.org/project/detail/e18c9b82-aa0f-4003-90f1-f399fa241eaf"
+    "spc_url": "https://spc.rotary.org/project?guid=e18c9b82-aa0f-4003-90f1-f399fa241eaf"
+  },
+  "CLUB_2026_SchoolPlaygroundJust": {
+    "spc_id": "2148468e-8b5f-4e58-9a4b-40129da0653c",
+    "title": "School Playground:  Justo Ruffino, Sololoa",
+    "action": "created",
+    "migrated_at": "2026-09-20T16:00:23.326424",
+    "spc_url": "https://spc.rotary.org/project?guid=2148468e-8b5f-4e58-9a4b-40129da0653c"
+  },
+  "Covid2020": {
+    "spc_id": "0409e29e-a9e1-488e-9d6f-aa8633164a19",
+    "title": "COVID Response - Emergency Food Kits, Santiago Atitlan",
+    "action": "created",
+    "migrated_at": "2026-09-22T11:15:30.221226",
+    "spc_url": "https://spc.rotary.org/project?guid=0409e29e-a9e1-488e-9d6f-aa8633164a19"
+  },
+  "GG2574529": {
+    "spc_id": "3bc03b3f-a2f3-4743-a373-27f9150dc40c",
+    "title": "Reforesting Santiago",
+    "action": "created",
+    "migrated_at": "2026-09-22T11:20:50.458395",
+    "spc_url": "https://spc.rotary.org/project?guid=3bc03b3f-a2f3-4743-a373-27f9150dc40c"
+  },
+  "GG1633934": {
+    "spc_id": "80ec1aaa-cb0d-4735-8762-b6a3102f3291",
+    "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa",
+    "action": "created",
+    "migrated_at": "2026-09-22T12:15:34.998967",
+    "spc_url": "https://spc.rotary.org/project?guid=80ec1aaa-cb0d-4735-8762-b6a3102f3291"
   }
 }

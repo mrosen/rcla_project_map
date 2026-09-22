@@ -70,6 +70,38 @@
     #list-panel th:hover { background: #234b75; }
     #list-panel td { padding: 7px 10px; border-bottom: 1px solid #eee; }
     #list-panel tr:hover td { background: #eef4fc; cursor: pointer; }
+
+    /* Character Counter & SPC Badges */
+    .char-counter { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; transition: all 0.15s ease; }
+    .counter-normal { background: #e2e8f0; color: #475569; }
+    .counter-warn { background: #fef3c7; color: #b45309; border: 1px solid #fde047; }
+    .counter-limit { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-weight: bold; }
+
+    /* AI Drafting Toolbar & Action Buttons */
+    .btn-ai { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
+    .btn-ai:hover { opacity: 0.9; }
+
+    /* Sync Chips */
+    .sync-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .chip-green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .chip-orange { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .chip-gray { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+    /* Milestone Builder */
+    .milestone-row { display: grid; grid-template-columns: 140px 110px 1fr 60px; gap: 6px; align-items: center; margin-bottom: 6px; padding: 6px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
+    .milestone-row input { padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; }
+
+    /* Timeline presentation in Public Detail View */
+    .timeline-container { border-left: 2px solid #3b82f6; margin-left: 10px; padding-left: 18px; margin-top: 10px; margin-bottom: 16px; }
+    .timeline-step { position: relative; margin-bottom: 14px; }
+    .timeline-step::before { content: ''; position: absolute; left: -24px; top: 4px; width: 9px; height: 9px; border-radius: 50%; background: #3b82f6; border: 2px solid #fff; box-shadow: 0 0 0 2px #3b82f6; }
+    .timeline-date { font-size: 11px; font-weight: 700; color: #2563eb; text-transform: uppercase; }
+    .timeline-title { font-weight: 600; font-size: 13px; color: #1e293b; margin-top: 1px; }
+    .timeline-notes { font-size: 12px; color: #475569; margin-top: 2px; }
+
+    /* AI Notes Modal */
+    #ai-notes-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 999999; align-items: center; justify-content: center; }
+    .ai-modal-content { background: #fff; width: 640px; max-width: 95vw; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; }
   </style>
 </head>
 <body>
@@ -78,40 +110,21 @@
     <div class="maint-group">
       <strong>🛠️ Maint Mode</strong>
       <span id="db-status-badge" style="padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 10px; background: #059669; color: #fff;">⚡ DB: Supabase (Live)</span>
-      <button id="btn-toggle-source" class="maint-btn" onclick="toggleDataSource()" style="background:#d97706;font-size:10px;padding:2px 8px;cursor:pointer;" title="Switch between Supabase Cloud and Legacy CSV">⇄ Switch to CSV</button>
       <span id="sync-status-badge" class="local-only-btn">Sync: Connecting...</span>
       <span id="sync-step" class="local-only-btn" style="color: #94a3b8;"></span>
     </div>
     <div class="maint-group">
       <button class="maint-btn btn-new" onclick="openCreateForm()">➕ New Project</button>
-      <button id="btn-sync-dry" class="maint-btn btn-dry local-only-btn" onclick="triggerSync(true)">Dry Run Sync</button>
-      <button id="btn-sync-live" class="maint-btn btn-sync local-only-btn" onclick="triggerSync(false)">Full Sync</button>
-      <button id="btn-diff" class="maint-btn btn-diff local-only-btn" onclick="showDiffModal()">🔍 Diff</button>
-      <button id="btn-publish" class="maint-btn btn-push local-only-btn" onclick="publishChanges()">Push to Git</button>
+      <button id="btn-sync-dry" class="maint-btn btn-dry local-only-btn" onclick="triggerSync(true)" title="Audit and check Grant Center against catalog">Grant Sync (Dry)</button>
+      <button id="btn-sync-live" class="maint-btn btn-sync local-only-btn" onclick="triggerSync(false)" title="Full import and sync from Grant Center">Grant Sync (Live)</button>
+      <button id="btn-spc-dry" class="maint-btn local-only-btn" onclick="triggerSpcExport(true)" style="background:#2563eb;" title="Dry run export of projects to Rotary Service Project Center">SPC Export (Dry)</button>
+      <button id="btn-spc-live" class="maint-btn local-only-btn" onclick="triggerSpcExport(false)" style="background:#1d4ed8;" title="Export projects to Rotary Service Project Center">SPC Export (Live)</button>
       <button class="maint-btn btn-log local-only-btn" onclick="toggleLogConsole()">Logs</button>
       <button class="maint-btn" onclick="toggleMaintenanceMode(false)" style="background:#475569;font-size:10px;padding:2px 8px;margin-left:4px;" title="Exit maintenance mode">✕ Exit Maint</button>
     </div>
   </div>
 
   <div id="log-drawer"><div id="log-output">-- Orchestrator log stream initialized --</div></div>
-
-  <!-- Diff Modal -->
-  <div id="diff-modal">
-    <div class="diff-content">
-      <div style="background:#1a3a5c;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
-        <h3 style="margin:0;font-size:15px;">🔍 Git Workspace Diff (Pending Changes)</h3>
-        <button onclick="closeDiffModal()" style="background:transparent;border:none;color:white;font-size:18px;cursor:pointer;">✕</button>
-      </div>
-      <div class="diff-body" id="diff-output-container">Loading diff...</div>
-      <div style="padding:12px 16px;background:#f1f5f9;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;">
-        <span id="diff-file-count" style="font-size:12px;color:#475569;"></span>
-        <div style="display:flex;gap:10px;">
-          <button onclick="closeDiffModal()" style="background:#94a3b8;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;">Close</button>
-          <button onclick="closeDiffModal(); publishChanges();" style="background:#d97706;color:white;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold;">Proceed to Push</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div id="nav">
     <span class="club-name">Rotary Club of Lake Atitlán — Projects</span>
@@ -129,6 +142,26 @@
     </div>
     <div id="divider"></div>
     <div id="right-pane"><div id="loading">Loading project data…</div></div>
+  </div>
+
+  <div id="ai-notes-modal">
+    <div class="ai-modal-content">
+      <div style="background:#4f46e5;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:14px;color:white;">✨ Gemini AI: Draft Project from Notes / Text</h3>
+        <button type="button" onclick="closeAiNotesModal()" style="background:none;border:none;color:white;font-size:16px;cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:16px;">
+        <p style="font-size:12px;color:#475569;margin-bottom:8px;">
+          Paste unformatted notes, emails, project minutes, or flyers below. Gemini will structure them into a 100-char Brief Overview, 1,000-char Complete Overview, Milestones, and Partner/Financial details for your review.
+        </p>
+        <textarea id="ai-notes-input" rows="8" placeholder="Paste project proposal, email correspondence, or bullet points here..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;font-family:monospace;font-size:12px;box-sizing:border-box;resize:vertical;"></textarea>
+        <div id="ai-notes-error" style="display:none;color:#dc2626;font-size:12px;margin-top:6px;"></div>
+      </div>
+      <div style="background:#f8fafc;padding:10px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #e2e8f0;">
+        <button type="button" onclick="closeAiNotesModal()" style="padding:6px 14px;background:#94a3b8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>
+        <button type="button" id="btn-run-ai-notes" onclick="executeAiDraftFromNotes()" style="padding:6px 16px;background:#4f46e5;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✨ Generate Draft</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>

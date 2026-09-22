@@ -132,8 +132,83 @@ def load_state() -> dict:
         }
     }
 
-def save_state(state: dict):
+def sync_spc_state_to_supabase(pid: str, spc_id: str, spc_url: str, migrated_at: str):
+    """Updates Supabase projects.sync_status and project_links for a migrated project."""
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or SUPABASE_ANON_KEY
+    headers = {
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
+        "Content-Type": "application/json"
+    }
+    try:
+        # 1. Update projects.sync_status
+        req = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/projects?id=eq.{pid}&select=id,sync_status", headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data:
+                row = data[0]
+                sync_status = row.get("sync_status") or {}
+                spc_status = sync_status.get("spc") or {}
+                spc_status.update({
+                    "exported": True,
+                    "in_sync": True,
+                    "spc_project_id": spc_id,
+                    "spc_url": spc_url,
+                    "last_exported": migrated_at
+                })
+                sync_status["spc"] = spc_status
+
+                patch_req = urllib.request.Request(
+                    f"{SUPABASE_URL}/rest/v1/projects?id=eq.{pid}",
+                    data=json.dumps({"sync_status": sync_status}).encode("utf-8"),
+                    headers=headers,
+                    method="PATCH"
+                )
+                urllib.request.urlopen(patch_req, timeout=10)
+                print(f"  ✓ Synced SPC export status to Supabase projects ({pid})")
+
+        # 2. Add or update link in project_links
+        links_req = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/project_links?project_id=eq.{pid}", headers=headers)
+        with urllib.request.urlopen(links_req, timeout=10) as resp:
+            existing_links = json.loads(resp.read().decode())
+            spc_link = next((l for l in existing_links if "spc.rotary.org" in (l.get("url") or "") or l.get("label") == "Rotary Service Project Center (SPC)"), None)
+            if spc_link:
+                l_id = spc_link["id"]
+                up_req = urllib.request.Request(
+                    f"{SUPABASE_URL}/rest/v1/project_links?id=eq.{l_id}",
+                    data=json.dumps({"url": spc_url, "label": "Rotary Service Project Center (SPC)"}).encode("utf-8"),
+                    headers=headers,
+                    method="PATCH"
+                )
+                urllib.request.urlopen(up_req, timeout=10)
+            else:
+                new_order = len(existing_links)
+                ins_req = urllib.request.Request(
+                    f"{SUPABASE_URL}/rest/v1/project_links",
+                    data=json.dumps({
+                        "project_id": pid,
+                        "label": "Rotary Service Project Center (SPC)",
+                        "url": spc_url,
+                        "display_order": new_order
+                    }).encode("utf-8"),
+                    headers=headers,
+                    method="POST"
+                )
+                urllib.request.urlopen(ins_req, timeout=10)
+            print(f"  ✓ Recorded SPC link in project_links ({pid})")
+    except Exception as e:
+        print(f"  [Warning] Could not sync SPC state to Supabase for {pid}: {e}")
+
+def save_state(state: dict, updated_pid: str = None):
     STATE_PATH.write_text(json.dumps(state, indent=2))
+    if updated_pid and updated_pid in state:
+        info = state[updated_pid]
+        sync_spc_state_to_supabase(
+            updated_pid,
+            info.get("spc_id"),
+            info.get("spc_url"),
+            info.get("migrated_at")
+        )
 
 # --- Fetch Projects from Supabase & CSV ---
 def fetch_supabase_projects() -> list:
@@ -223,10 +298,16 @@ def construct_spc_payload(p: dict) -> dict:
         else:
             full_desc = clean_text(narrative)
 
-    if not full_desc:
+    # Prioritize complete_overview if available
+    complete = (p.get("complete_overview") or "").strip()
+    if complete:
+        full_desc = clean_text(complete)
+    elif not full_desc:
         full_desc = f"{title}. Project facilitated by the Rotary Club of Lake Atitlán."
 
-    overview = build_overview(description, narrative)
+    # Prioritize brief_overview if available
+    brief = (p.get("brief_overview") or "").strip()
+    overview = clean_text(brief) if brief else build_overview(description, narrative)
 
     # --- Rotary SPC Character Length Validation Constraints ---
     # 1. prjTitle: max 50 characters
@@ -250,15 +331,25 @@ def construct_spc_payload(p: dict) -> dict:
         full_desc = full_desc[:1000]
 
     # Dates
+    def to_spc_date(dt_str, fallback_m, fallback_d, fallback_y):
+        if not dt_str:
+            return f"{fallback_m}/{fallback_d}/{fallback_y}"
+        parts = str(dt_str).strip().split("-")
+        if len(parts) == 3:
+            return f"{parts[1].zfill(2)}/{parts[2].zfill(2)}/{parts[0]}"
+        elif len(parts) == 2:
+            return f"{parts[1].zfill(2)}/15/{parts[0]}"
+        elif len(parts) == 1 and parts[0].isdigit():
+            return f"01/15/{parts[0]}"
+        return f"{fallback_m}/{fallback_d}/{fallback_y}"
+
     start_y = str(p.get("start_year") or "2020").strip()
     end_y = str(p.get("end_year") or start_y).strip()
-    if not start_y.isdigit():
-        start_y = "2020"
-    if not end_y.isdigit():
-        end_y = start_y
+    if not start_y.isdigit(): start_y = "2020"
+    if not end_y.isdigit(): end_y = start_y
 
-    start_date = f"01/15/{start_y}"
-    end_date = f"12/15/{end_y}"
+    start_date = to_spc_date(p.get("start_date"), "01", "15", start_y)
+    end_date = to_spc_date(p.get("end_date"), "12", "15", end_y)
 
     # Coordinates & Location
     lat = str(p.get("position_lat") or "14.703454")
@@ -268,8 +359,9 @@ def construct_spc_payload(p: dict) -> dict:
 
     # Status
     raw_status = (p.get("status") or "completed").lower()
-    is_completed = raw_status in ["closed", "completed", "actual", "approved"]
-    status_type = "Actual" if is_completed else "Proposed"
+    is_completed = raw_status in ["closed", "completed", "actual"]
+    is_proposed = raw_status in ["proposed", "proposal", "draft"]
+    status_type = "Proposed" if is_proposed else "Actual"
 
     # Budget
     budget_raw = p.get("amount") or p.get("budget") or "0"
@@ -295,26 +387,34 @@ def construct_spc_payload(p: dict) -> dict:
     rel_links.append({
         "relLinkType": "5",
         "url": b64_map_url,
-        "caption": "RCLA Project Map Archive Entry",
+        "caption": "RCLA Project Map Archive Record",
         "IsCoverPhoto": "0"
     })
 
-    # Add external links if present
+    # Add external links if present (skipping existing SPC links)
     for link in p.get("project_links") or []:
         url_raw = link.get("url")
-        if url_raw:
+        if url_raw and "spc.rotary.org" not in url_raw:
             b64_url = base64.b64encode(url_raw.encode()).decode()
             raw_cap = (link.get("label") or "Project Link")[:50]
             rel_links.append({
                 "relLinkType": "6",
                 "url": b64_url,
                 "caption": raw_cap,
-                "caption": link.get("label") or "Project Link",
                 "IsCoverPhoto": "0"
             })
 
     # Funding Sources & Partners
+    details = p.get("details") or {}
+    if isinstance(details, str):
+        try:
+            details = json.loads(details)
+        except Exception:
+            details = {}
+
     detail_profile = DETAILED_PROJECT_PROFILES.get(gid)
+    has_custom_details = bool(details.get("world_fund") or details.get("district_ddf") or details.get("club_contributions") or details.get("partner_clubs") or details.get("partner_districts") or details.get("cooperating_organizations"))
+
     if detail_profile:
         # Detailed Partner Clubs
         partners = []
@@ -328,45 +428,21 @@ def construct_spc_payload(p: dict) -> dict:
                     "NoOfVolunteer": "",
                     "year": ""
                 })
-    # Funding Sources
-    partner_club = find_partner_club(intl_club)
-    partner_club_key = partner_club.get("key") if partner_club else None
 
         # Detailed Funding Sources
         fundings = []
         if detail_profile.get("world_fund"):
-    fundings = []
-    intl_dist_raw = str(p.get("international_club_district") or p.get("internationalClub_district") or "").strip()
-    dist_digits = re.sub(r'[^0-9]', '', intl_dist_raw)
-    intl_dist = dist_digits if dist_digits else intl_dist_raw
-
-    if is_international and gid.startswith("GG"):
-        # Global Grant Breakdown
-        fundings.append({
-            "fundingSource": "Global grant",
-            "fundingAmount": str(int(num_budget * 0.45)) if num_budget else "20000",
-            "fundingClubKey": gid
-        })
-        if intl_dist:
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(detail_profile["world_fund"]),
                 "fundingClubKey": gid
-                "fundingSource": "District(Cash)",
-                "fundingAmount": str(int(num_budget * 0.35)) if num_budget else "15000",
-                "fundingClubKey": intl_dist,
-                "isImplementingPartnerFlag": False
             })
         for dc in detail_profile.get("district_contributions", []):
             dnum = str(dc.get("district", "")).strip()
-        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
             fundings.append({
                 "fundingSource": dc.get("source", "District(DDF)"),
                 "fundingAmount": str(dc.get("amount", "0")),
                 "fundingClubKey": dnum,
-                "fundingSource": "Rotary Club",
-                "fundingAmount": str(int(num_budget * 0.15)) if num_budget else "5000",
-                "fundingClubKey": partner_club_key,
                 "isImplementingPartnerFlag": False
             })
         for cc in detail_profile.get("club_contributions", []):
@@ -384,18 +460,107 @@ def construct_spc_payload(p: dict) -> dict:
                 "fundingAmount": str(ip.get("amount", "0")),
                 "fundingClubKey": ip.get("name"),
                 "isImplementingPartnerFlag": True
-                "fundingSource": "Rotary Club",
-                "fundingAmount": str(int(num_budget * 0.05)) if num_budget else "2000",
-                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                "isImplementingPartnerFlag": False
             })
-        else:
+    elif has_custom_details:
+        partners = []
+        fundings = []
+
+        # 1. World Fund
+        wf_amt = details.get("world_fund") or 0
+        if not wf_amt and is_international and gid.startswith("GG") and num_budget:
+            wf_amt = int(num_budget * 0.45)
+        if wf_amt:
+            fundings.append({
+                "fundingSource": "Global grant",
+                "fundingAmount": str(int(float(wf_amt))),
+                "fundingClubKey": gid
+            })
+
+        # 2. Districts (DDF)
+        raw_pdist = details.get("partner_districts") or []
+        if isinstance(raw_pdist, str):
+            raw_pdist = [d.strip() for d in raw_pdist.split(",") if d.strip()]
+        intl_dist_raw = str(details.get("international_district") or p.get("international_club_district") or "").strip()
+        intl_clean_d = re.sub(r'[^0-9]', '', intl_dist_raw) or intl_dist_raw
+        if intl_clean_d and intl_clean_d not in raw_pdist:
+            raw_pdist.append(intl_clean_d)
+
+        total_ddf = details.get("district_ddf") or 0
+        for idx, d_val in enumerate(raw_pdist):
+            clean_d = re.sub(r'[^0-9]', '', str(d_val)) or str(d_val).strip()
+            if clean_d:
+                amt = str(int(float(total_ddf))) if (idx == 0 and total_ddf) else ("0")
+                fundings.append({
+                    "fundingSource": "District(DDF)",
+                    "fundingAmount": amt,
+                    "fundingClubKey": clean_d,
+                    "isImplementingPartnerFlag": False
+                })
+
+        # 3. Contributing / Partner Clubs
+        raw_pclubs = details.get("partner_clubs") or []
+        if isinstance(raw_pclubs, str):
+            raw_pclubs = [c.strip() for c in raw_pclubs.split(",") if c.strip()]
+        intl_club_raw = str(details.get("international_club") or p.get("international_club_name") or "").strip()
+        if intl_club_raw and intl_club_raw not in raw_pclubs:
+            raw_pclubs.insert(0, intl_club_raw)
+
+        total_cash = details.get("club_contributions") or 0
+        for idx, c_name in enumerate(raw_pclubs):
+            c_str = str(c_name).strip()
+            if not c_str:
+                continue
+            matched_club = find_partner_club(c_str)
+            ckey = matched_club.get("key") if matched_club else None
+            amt = str(int(float(total_cash))) if (idx == 0 and total_cash) else "0"
+            if ckey:
+                partners.append({
+                    "partnerOrganizationKey": ckey,
+                    "Hour": "",
+                    "MoneyDonated": amt if amt != "0" else "",
+                    "NoOfVolunteer": "",
+                    "year": ""
+                })
+                fundings.append({
+                    "fundingSource": "Rotary Club",
+                    "fundingAmount": amt,
+                    "fundingClubKey": ckey,
+                    "isImplementingPartnerFlag": False
+                })
+            else:
+                fundings.append({
+                    "fundingSource": "Rotary Club",
+                    "fundingAmount": amt,
+                    "fundingClubKey": c_str,
+                    "isImplementingPartnerFlag": False
+                })
+
+        # Ensure Lake Atitlan host club is included
+        has_atitlan = any("atitlan" in str(f.get("fundingClubKey", "")).lower() for f in fundings)
+        if not has_atitlan:
             fundings.append({
                 "fundingSource": "Rotary Club",
-                "fundingAmount": str(int(num_budget * 0.20)) if num_budget else "5000",
+                "fundingAmount": "0",
                 "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
                 "isImplementingPartnerFlag": False
             })
+
+        # 4. Cooperating Partner Organizations / NGOs
+        raw_orgs = details.get("cooperating_organizations") or []
+        if isinstance(raw_orgs, str):
+            raw_orgs = [o.strip() for o in raw_orgs.split(",") if o.strip()]
+        if not raw_orgs and partner_name:
+            raw_orgs.append(partner_name)
+
+        for org_name in raw_orgs:
+            o_clean = str(org_name).strip()
+            if o_clean:
+                fundings.append({
+                    "fundingSource": "NonGovernmentalOrganization",
+                    "fundingAmount": "0",
+                    "fundingClubKey": o_clean,
+                    "isImplementingPartnerFlag": True
+                })
     else:
         intl_club = str(p.get("international_club_name") or p.get("internationalClub_name") or "").strip()
         partner_club = find_partner_club(intl_club)
@@ -408,16 +573,10 @@ def construct_spc_payload(p: dict) -> dict:
 
         if is_international and gid.startswith("GG"):
             # Global Grant Breakdown
-        # Club Direct / District Grant / Other
-        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(int(num_budget * 0.45)) if num_budget else "20000",
                 "fundingClubKey": gid
-                "fundingSource": "Rotary Club",
-                "fundingAmount": str(int(num_budget * 0.70)) if num_budget else budget_str,
-                "fundingClubKey": partner_club_key,
-                "isImplementingPartnerFlag": False
             })
             if intl_dist:
                 fundings.append({
@@ -446,25 +605,6 @@ def construct_spc_payload(p: dict) -> dict:
                     "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
                     "isImplementingPartnerFlag": False
                 })
-            fundings.append({
-                "fundingSource": "Rotary Club",
-                "fundingAmount": str(int(num_budget * 0.30)) if num_budget else "1000",
-                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                "isImplementingPartnerFlag": False
-            })
-        elif intl_dist:
-            fundings.append({
-                "fundingSource": "District(Cash)",
-                "fundingAmount": str(int(num_budget * 0.70)) if num_budget else budget_str,
-                "fundingClubKey": intl_dist,
-                "isImplementingPartnerFlag": False
-            })
-            fundings.append({
-                "fundingSource": "Rotary Club",
-                "fundingAmount": str(int(num_budget * 0.30)) if num_budget else "1000",
-                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                "isImplementingPartnerFlag": False
-            })
         else:
             # Club Direct / District Grant / Other
             if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
@@ -500,30 +640,12 @@ def construct_spc_payload(p: dict) -> dict:
                     "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
                     "isImplementingPartnerFlag": False
                 })
-            fundings.append({
-                "fundingSource": "Rotary Club",
-                "fundingAmount": budget_str,
-                "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                "isImplementingPartnerFlag": False
-            })
 
         # Partners
         partners = [{
             "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-    # Partners
-    partners = [{
-        "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-        "Hour": "",
-        "MoneyDonated": "",
-        "NoOfVolunteer": "",
-        "year": ""
-    }]
-    if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
-        partners.append({
-            "partnerOrganizationKey": partner_club_key,
             "Hour": "",
             "MoneyDonated": "",
-            "MoneyDonated": str(int(num_budget * 0.70)) if num_budget else "",
             "NoOfVolunteer": "",
             "year": ""
         }]
@@ -535,7 +657,6 @@ def construct_spc_payload(p: dict) -> dict:
                 "NoOfVolunteer": "",
                 "year": ""
             })
-        })
 
     payload = {
         "projectSource": "4",
@@ -547,7 +668,7 @@ def construct_spc_payload(p: dict) -> dict:
         "overview": overview,
         "description": full_desc,
         "startDate": start_date,
-        "endDate": end_date,
+        "endDate": end_date if is_completed else "",
         "countryId": ROTARY_GUATEMALA_COUNTRY_KEY,
         "tags": "",
         "communityImpact": "",
@@ -572,7 +693,7 @@ def construct_spc_payload(p: dict) -> dict:
         "optGlobalGrants": False,
         "isBasicLevel": False,
         "isIntermediateLevel": False,
-        "isAdvancedLevel": True,
+        "isAdvancedLevel": True if is_completed else False,
         "isOptGlobalGrants": False,
         "isEstimatedStartTime": False,
         "isEstimatedDuration": False,
@@ -629,12 +750,15 @@ async def main():
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     flags = [a.lower() for a in sys.argv[1:] if a.startswith("-")]
 
-    is_dry_run = "--dry-run" in flags or "-d" in flags
+    is_dry_run = (
+        "--dry-run" in flags
+        or "-d" in flags
+        or os.environ.get("SPC_DRY_RUN", "").lower() in ("true", "1", "yes")
+    )
     migrate_all = "--all" in flags or "-a" in flags
     force_update = "--update" in flags or "-u" in flags or "--force" in flags
 
     unmigrated = [p for p in projects if not state.get(String(p.get("id")).strip(), {}).get("spc_id")]
-    unmigrated = [p for p in projects if String(p.get("id")).strip() not in state]
     print(f"Projects unmigrated in local state: {len(unmigrated)}")
 
     # Check if a specific project ID was passed
@@ -680,8 +804,6 @@ async def main():
     force_headful = "--headful" in flags
     force_headless = "--headless" in flags
     headless_mode = not force_headful
-    has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
-    headless_mode = force_headless or (not force_headful and not has_display)
 
     async with async_playwright() as pw:
         print(f"\n[1/4] Launching Playwright browser (headless={headless_mode})...")
@@ -712,14 +834,8 @@ async def main():
                 await page.fill("#okta-signin-password, input[name='password']", password)
                 await page.click("#okta-signin-submit, input[type='submit']")
                 print("  Submitted login form. Waiting for authentication...", flush=True)
-                await page.wait_for_selector("#okta-signin-username", timeout=8000)
-                await page.fill("#okta-signin-username", email)
-                await page.fill("#okta-signin-password", password)
-                await page.click("#okta-signin-submit")
-                print("  Submitted login form. Waiting for authentication...")
             except Exception as e:
                 print(f"  Note on auto-fill: {e}", flush=True)
-                print(f"  Note on auto-fill: {e}")
 
         # Wait until we leave the login page
         await page.wait_for_timeout(3000)
@@ -730,12 +846,6 @@ async def main():
                 print("  Please complete any 2FA/login challenge in the browser window...")
                 await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=90000)
         print("  ✓ Successfully authenticated with My Rotary.")
-        try:
-            await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=60000)
-            print("  ✓ Successfully authenticated with My Rotary.")
-        except Exception:
-            print("  Please complete any 2FA/login challenge in the browser window...")
-            await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=120000)
 
         # Step 2: Navigate to SPC
         print("[3/4] Establishing session on spc.rotary.org...")
@@ -804,14 +914,11 @@ async def main():
                     # Match by exact/partial title or Grant ID
                     if (norm_title and (norm_title == ep_title or norm_title in ep_title or ep_title in norm_title)) or \
                        (norm_payload_title and (norm_payload_title == ep_title or norm_payload_title in ep_title or ep_title in norm_payload_title)):
-                    if norm_title and (norm_title == ep_title or norm_title in ep_title or ep_title in norm_title):
                         existing_match = ep
                         break
                     if norm_pid and len(norm_pid) > 3 and (norm_pid in ep_title or norm_pid in ep_desc or norm_pid in ep_summary):
                         existing_match = ep
                         break
-
-            payload = construct_spc_payload(p)
 
             if existing_match:
                 spc_key = existing_match.get("nfKey")
@@ -904,7 +1011,6 @@ async def main():
                                     (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)) ||
                                     (f.fundingClubKey && ef.fundingOtherName === f.fundingClubKey)
                                 ));
-                                const match = existingFundings.find(ef => (!usedFundingKeys.has(ef.projectFundingSourceKey)) && (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)));
                                 if (match) {
                                     usedFundingKeys.add(match.projectFundingSourceKey);
                                     newFundings.push({
@@ -915,7 +1021,6 @@ async def main():
                                     });
                                 } else {
                                     const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey) && ef.fundingSource === f.fundingSource);
-                                    const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey));
                                     if (unused) {
                                         usedFundingKeys.add(unused.projectFundingSourceKey);
                                         newFundings.push({
@@ -1016,9 +1121,9 @@ async def main():
                         "title": title,
                         "action": "updated",
                         "migrated_at": datetime.now().isoformat(),
-                        "spc_url": f"https://spc.rotary.org/project/detail/{spc_key}"
+                        "spc_url": f"https://spc.rotary.org/project?guid={spc_key}"
                     }
-                    save_state(state)
+                    save_state(state, pid)
                 else:
                     print(f"  ✗ UPDATE FAILED: Status {result.get('status')} — {result.get('error')}")
 
@@ -1050,15 +1155,12 @@ async def main():
                             return { ok: false, status: res.status, error: 'Empty GUID returned (validation failed)' };
                         }
                         return { ok: true, spc_id: spcId.trim() };
-                        const data = await res.json();
-                        return { ok: true, spc_id: data };
                     } catch (e) {
                         return { ok: false, error: e.message };
                     }
                 }""", payload)
 
                 if result.get("ok") and result.get("spc_id"):
-                if result.get("ok"):
                     spc_id = result.get("spc_id")
                     print(f"  ✓ SUCCESS! Created in SPC: {spc_id}")
                     state[pid] = {
@@ -1066,9 +1168,9 @@ async def main():
                         "title": title,
                         "action": "created",
                         "migrated_at": datetime.now().isoformat(),
-                        "spc_url": f"https://spc.rotary.org/project/detail/{spc_id}"
+                        "spc_url": f"https://spc.rotary.org/project?guid={spc_id}"
                     }
-                    save_state(state)
+                    save_state(state, pid)
                 else:
                     print(f"  ✗ CREATE FAILED: Status {result.get('status')} — {result.get('error')}")
 

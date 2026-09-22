@@ -3,9 +3,11 @@
 // Stable State: Deep-Linking (REST URLs) + Maintainer Mode
 // ============================================================
 
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8000'
-  : window.location.origin;
+const BACKEND_URL = (window.location.port === '8000')
+  ? ''
+  : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000'
+    : window.location.origin;
 const CSV_PATH = 'RCLA_Projects_v2.csv';
 
 // Supabase Cloud Configuration
@@ -129,6 +131,16 @@ function getProjectSummaryText(p) {
   return p.narrative || p.description || p.notes || '';
 }
 
+function normalizeSpcUrl(url, guid) {
+  if (url && typeof url === 'string') {
+    return url.replace(/\/project\/detail\//g, '/project?guid=').trim();
+  }
+  if (guid) {
+    return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(guid);
+  }
+  return '';
+}
+
 function getProjectCoords(project) {
   if (!project) return null;
   var latVal = project.position_lat !== undefined ? project.position_lat : project.lat;
@@ -191,8 +203,6 @@ function getDataSourceMode() {
     if (param.toLowerCase() === 'csv') return 'csv';
     if (param.toLowerCase() === 'supabase' || param.toLowerCase() === 'cloud') return 'supabase';
   }
-  var stored = sessionStorage.getItem('rcla_data_source');
-  if (stored === 'csv' || stored === 'supabase') return stored;
   return 'supabase';
 }
 
@@ -226,41 +236,30 @@ function updateBackendStatus(type, count) {
   var indicator = document.getElementById('backend-status-indicator');
   var text = document.getElementById('backend-status-text');
   var dbBadge = document.getElementById('db-status-badge');
-  var toggleBtn = document.getElementById('btn-toggle-source');
 
   if (type === 'supabase') {
     if (indicator) {
       indicator.style.background = 'rgba(16, 185, 129, 0.2)';
       indicator.style.borderColor = '#10b981';
       indicator.style.color = '#34d399';
-      indicator.title = 'Live connection to Supabase Cloud (' + count + ' projects). Click to switch to Legacy CSV.';
+      indicator.title = 'Live connection to Supabase Cloud (' + count + ' projects). Click to toggle Maintainer Mode.';
     }
-    if (text) text.innerHTML = '⚡ Supabase Cloud (' + count + ') <span style="font-size:10px;text-decoration:underline;margin-left:4px;opacity:0.85;">[Switch to CSV]</span>';
+    if (text) text.textContent = '⚡ Supabase Cloud (' + count + ')';
     if (dbBadge) {
       dbBadge.textContent = '⚡ DB: Supabase (Live)';
       dbBadge.style.background = '#059669';
-    }
-    if (toggleBtn) {
-      toggleBtn.textContent = '⇄ Switch to CSV';
-      toggleBtn.style.background = '#d97706';
-      toggleBtn.title = 'Switch active data source to legacy CSV';
     }
   } else {
     if (indicator) {
       indicator.style.background = 'rgba(245, 158, 11, 0.25)';
       indicator.style.borderColor = '#f59e0b';
       indicator.style.color = '#fbbf24';
-      indicator.title = 'Running on Legacy CSV backup (' + (count || 0) + ' projects). Click to switch to Supabase Cloud.';
+      indicator.title = 'Running on Legacy CSV backup (' + (count || 0) + ' projects). Click to toggle Maintainer Mode.';
     }
-    if (text) text.innerHTML = '📁 Legacy CSV (' + (count || 0) + ') <span style="font-size:10px;text-decoration:underline;margin-left:4px;opacity:0.85;">[Switch to Cloud]</span>';
+    if (text) text.textContent = '📁 Legacy CSV (' + (count || 0) + ')';
     if (dbBadge) {
       dbBadge.textContent = '📁 DB: Legacy CSV';
       dbBadge.style.background = '#d97706';
-    }
-    if (toggleBtn) {
-      toggleBtn.textContent = '⇄ Switch to Cloud';
-      toggleBtn.style.background = '#059669';
-      toggleBtn.title = 'Switch active data source to Supabase Cloud';
     }
   }
 }
@@ -851,6 +850,122 @@ function showDetail(idx) {
     ? '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>'
     : '';
 
+  // SPC Link Badge
+  var spcBadge = '';
+  var spcData = project.sync_status && project.sync_status.spc;
+  var spcUrl = normalizeSpcUrl(spcData && (spcData.spc_url || spcData.spc_project_id), spcData && spcData.spc_project_id);
+  if (!spcUrl && project.project_links) {
+    var sLink = project.project_links.find(function (l) { return l.url && l.url.indexOf('spc.rotary.org') !== -1; });
+    if (sLink) spcUrl = normalizeSpcUrl(sLink.url);
+  }
+  if (spcUrl) {
+    spcBadge = '<a href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="View on Rotary Service Project Center">🌐 View on SPC</a>';
+  }
+
+  // Lead Brief Overview
+  var briefLead = '';
+  if (project.brief_overview && project.brief_overview.trim()) {
+    briefLead = '<div style="font-size:14px;color:#1e3a8a;background:#eff6ff;border-left:4px solid #3b82f6;padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:14px;line-height:1.5;font-weight:500;">'
+      + escapeHtml(project.brief_overview.trim())
+      + '</div>';
+  }
+
+  // Timeline & Milestones section
+  var timelineHtml = '';
+  var tObj = project.timeline;
+  if (tObj && (tObj.backstory || (tObj.milestones && tObj.milestones.length > 0))) {
+    timelineHtml += '<h3>⏱️ Project Timeline & Milestones</h3>';
+    if (tObj.backstory && tObj.backstory.trim()) {
+      timelineHtml += '<div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:12px;line-height:1.6;font-size:13px;color:#334155;">'
+        + '<div style="font-weight:bold;font-size:11px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Backstory & Origins</div>'
+        + escapeHtml(tObj.backstory.trim())
+        + '</div>';
+    }
+    if (tObj.milestones && tObj.milestones.length > 0) {
+      timelineHtml += '<div class="timeline-container">';
+      tObj.milestones.forEach(function (m) {
+        timelineHtml += '<div class="timeline-step">'
+          + (m.date ? '<div class="timeline-date">' + escapeHtml(m.date) + '</div>' : '')
+          + '<div class="timeline-title">' + escapeHtml(m.name || '') + '</div>'
+          + (m.notes ? '<div class="timeline-notes">' + escapeHtml(m.notes) + '</div>' : '')
+          + '</div>';
+      });
+      timelineHtml += '</div>';
+    }
+  }
+
+  // Details Breakdown section
+  var detailsHtml = '';
+  var dObj = project.details;
+  if (dObj && (dObj.world_fund || dObj.district_ddf || dObj.club_contributions || dObj.host_club || dObj.international_club || (dObj.partner_clubs && dObj.partner_clubs.length) || (dObj.partner_districts && dObj.partner_districts.length) || (dObj.cooperating_organizations && dObj.cooperating_organizations.length))) {
+    detailsHtml += '<h3>💰 Funding, Clubs & Partners</h3>'
+      + '<div class="meta-grid" style="margin-bottom:10px;">';
+    if (dObj.world_fund) {
+      detailsHtml += '<div class="meta-item"><label>TRF World Fund</label><span>$' + Number(dObj.world_fund).toLocaleString() + '</span></div>';
+    }
+    if (dObj.district_ddf) {
+      detailsHtml += '<div class="meta-item"><label>District DDF</label><span>$' + Number(dObj.district_ddf).toLocaleString() + '</span></div>';
+    }
+    if (dObj.club_contributions) {
+      detailsHtml += '<div class="meta-item"><label>Club Contributions</label><span>$' + Number(dObj.club_contributions).toLocaleString() + '</span></div>';
+    }
+    if (dObj.host_club) {
+      var hLabel = escapeHtml(dObj.host_club) + (dObj.host_district ? ' (D' + escapeHtml(dObj.host_district) + ')' : '');
+      detailsHtml += '<div class="meta-item"><label>Host Club</label><span>' + hLabel + '</span></div>';
+    }
+    if (dObj.international_club) {
+      var iLabel = escapeHtml(dObj.international_club) + (dObj.international_district ? ' (D' + escapeHtml(dObj.international_district) + ')' : '');
+      detailsHtml += '<div class="meta-item"><label>International Sponsor</label><span>' + iLabel + '</span></div>';
+    }
+    detailsHtml += '</div>';
+
+    // Partner Clubs
+    var pClubs = dObj.partner_clubs || [];
+    if (typeof pClubs === 'string') pClubs = pClubs.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (pClubs.length > 0) {
+      detailsHtml += '<div style="margin-bottom:8px;font-size:12px;">'
+        + '<strong style="color:#475569;">Contributing / Partner Clubs:</strong> '
+        + pClubs.map(function (c) {
+            return '<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:11px;margin:2px 3px;display:inline-block;">' + escapeHtml(c) + '</span>';
+          }).join('')
+        + '</div>';
+    }
+
+    // Partner Districts
+    var pDists = dObj.partner_districts || [];
+    if (typeof pDists === 'string') pDists = pDists.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (pDists.length > 0) {
+      detailsHtml += '<div style="margin-bottom:8px;font-size:12px;">'
+        + '<strong style="color:#475569;">Partner Districts:</strong> '
+        + pDists.map(function (d) {
+            var label = d.toString().toLowerCase().indexOf('d') === 0 || d.toString().toLowerCase().indexOf('district') === 0 ? d : 'District ' + d;
+            return '<span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:11px;margin:2px 3px;display:inline-block;">' + escapeHtml(label) + '</span>';
+          }).join('')
+        + '</div>';
+    }
+
+    // Cooperating Organizations / NGOs
+    var pOrgs = dObj.cooperating_organizations || [];
+    if (typeof pOrgs === 'string') pOrgs = pOrgs.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (pOrgs.length > 0) {
+      detailsHtml += '<div style="margin-bottom:12px;font-size:12px;">'
+        + '<strong style="color:#475569;">Partner Organizations / NGOs:</strong> '
+        + pOrgs.map(function (o) {
+            return '<span class="badge" style="background:#fef3c7;color:#92400e;font-size:11px;margin:2px 3px;display:inline-block;">' + escapeHtml(o) + '</span>';
+          }).join('')
+        + '</div>';
+    }
+  }
+
+  // Complete Overview (if set and distinct from narrative)
+  var completeOverviewHtml = '';
+  if (project.complete_overview && project.complete_overview.trim() && project.complete_overview.trim() !== rawText.trim()) {
+    completeOverviewHtml = '<div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px;line-height:1.6;color:#334155;margin-bottom:12px;">'
+      + '<div style="font-weight:bold;font-size:11px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Complete Overview (SPC)</div>'
+      + escapeHtml(project.complete_overview.trim())
+      + '</div>';
+  }
+
   rp.innerHTML = ''
     + '<div class="panel" id="detail-panel" tabindex="0" style="outline:none;">'
     + '  <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'
@@ -860,20 +975,25 @@ function showDetail(idx) {
     + '        <span class="badge badge-type">' + pType + '</span>'
     + '        <span class="badge badge-' + pStatus + '">' + (project.status || '—') + '</span>'
     + '        <span style="color:#888;font-size:12px;">' + gid + '</span>'
-    + '        <span style="color:#888;font-size:12px;">' + (project.start_year || '') + '</span>'
+    + '        <span style="color:#888;font-size:12px;">' + (project.start_date || project.start_year || '') + (project.end_date ? ' → ' + project.end_date : '') + '</span>'
     + '      </div>'
     + '    </div>'
     + '    <div style="display:flex;gap:6px;">'
+    +        spcBadge
     +        editBtn
     + '      <button type="button" onclick="showList()" style="background:#1a3a5c;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;">← All Projects</button>'
     + '    </div>'
     + '  </div>'
+    +    briefLead
     + '  <div id="photo-area"></div>'
+    +    completeOverviewHtml
     + '  <h3 style="margin-top:16px;margin-bottom:6px;">Summary & Narrative</h3>'
     + '  <div class="narrative" id="narrative-body" data-raw="' + encodeURIComponent(rawText) + '" style="padding:10px;background:#fff;border:1px solid #ddd;border-radius:6px;line-height:1.6;">'
     +      (rawText || 'No narrative available yet.')
     + '  </div>'
-    + '  <h3>Project Details & Financials</h3>'
+    +    timelineHtml
+    +    detailsHtml
+    + '  <h3>Project Details & Meta</h3>'
     + '  <div class="meta-grid">'
     + '    <div class="meta-item"><label>Budget / Amount</label><span>' + amt + '</span></div>'
     + '    <div class="meta-item"><label>Project Type</label><span>' + pType + '</span></div>'
@@ -913,11 +1033,37 @@ function loadProjectFiles(projectId, photoContainerId, docContainerId) {
 }
 
 function renderFilesAndLinksFromProject(project, photoContainerId, docContainerId) {
-  var assets = project.project_assets || [];
-  var links = project.project_links || [];
+  var rawAssets = project.project_assets || [];
+  var rawLinks = project.project_links || [];
+
+  // Deduplicate assets by filename
+  var seenAssets = new Set();
+  var assets = [];
+  rawAssets.forEach(function (a) {
+    var fn = (a.filename || '').trim();
+    if (fn && !seenAssets.has(fn.toLowerCase())) {
+      seenAssets.add(fn.toLowerCase());
+      assets.push(a);
+    }
+  });
+
+  // Deduplicate links by url
+  var seenLinks = new Set();
+  var links = [];
+  rawLinks.forEach(function (l) {
+    var u = (l.url || '').trim();
+    if (u && !seenLinks.has(u.toLowerCase())) {
+      seenLinks.add(u.toLowerCase());
+      links.push(l);
+    }
+  });
 
   var images = assets.filter(function (a) {
     return a.file_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(a.filename);
+  }).sort(function (a, b) {
+    var da = (a.display_order !== undefined && a.display_order !== null) ? a.display_order : 99;
+    var db = (b.display_order !== undefined && b.display_order !== null) ? b.display_order : 99;
+    return da - db;
   });
   var docs = assets.filter(function (a) {
     return a.file_type !== 'image' && !/\.(jpg|jpeg|png|gif|webp)$/i.test(a.filename);
@@ -931,8 +1077,11 @@ function renderFilesAndLinksFromProject(project, photoContainerId, docContainerI
       photoArea.innerHTML = '<div class="photo-carousel">' +
         images.map(function (a) {
           var src = a.public_url || ('projects/' + encodeURIComponent(project.id) + '/' + encodeURIComponent(a.filename));
-          return '<img src="' + src + '" alt="' + escapeHtml(a.filename) + '" '
-               + 'onclick="window.open(this.src,\'_blank\')">';
+          var cap = a.caption || a.filename;
+          return '<div style="display:flex;flex-direction:column;flex-shrink:0;align-items:center;">'
+               + '  <img src="' + src + '" alt="' + escapeHtml(cap) + '" title="' + escapeHtml(cap) + '" onclick="window.open(this.src,\'_blank\')">'
+               + (a.caption ? '<span style="font-size:11px;color:#64748b;margin-top:3px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + escapeHtml(a.caption) + '">' + escapeHtml(a.caption) + '</span>' : '')
+               + '</div>';
         }).join('') +
         '</div>';
     } else {
@@ -949,14 +1098,19 @@ function renderFilesAndLinksFromProject(project, photoContainerId, docContainerI
         link.href = a.public_url || ('projects/' + encodeURIComponent(project.id) + '/' + encodeURIComponent(a.filename));
         link.target = '_blank';
         var icon = a.file_type === 'video' ? '🎬' : '📄';
-        link.innerHTML = '<span class="file-icon">' + icon + '</span> ' + escapeHtml(a.filename);
+        var label = escapeHtml(a.caption || a.filename);
+        if (a.caption && a.caption !== a.filename) {
+          label += ' <span style="font-size:11px;color:#888;">(' + escapeHtml(a.filename) + ')</span>';
+        }
+        link.innerHTML = '<span class="file-icon">' + icon + '</span> ' + label;
         list.appendChild(link);
       });
       links.forEach(function (l) {
         var a = document.createElement('a');
-        a.href = l.url;
+        var linkUrl = (l.url && l.url.indexOf('spc.rotary.org') !== -1) ? normalizeSpcUrl(l.url) : (l.url || '');
+        a.href = linkUrl;
         a.target = '_blank';
-        a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || l.url);
+        a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || linkUrl);
         list.appendChild(a);
       });
     } else {
@@ -1042,8 +1196,522 @@ function loadMarked() {
 }
 
 // ============================================================
-// EDIT PROJECT FORM & INTERACTIVE ASSET MANAGEMENT
+// EDIT PROJECT FORM, TIMELINE, AI SYNTHESIS & ASSET MANAGEMENT
 // ============================================================
+
+window.updateTitleCharCounter = function () {
+  var inp = document.getElementById('edit-title');
+  var badge = document.getElementById('counter-title');
+  if (!inp || !badge) return;
+  var len = inp.value.length;
+  badge.textContent = len + ' / 50';
+  if (len > 50) {
+    badge.className = 'char-counter counter-limit';
+  } else if (len >= 45) {
+    badge.className = 'char-counter counter-warn';
+  } else {
+    badge.className = 'char-counter counter-normal';
+  }
+};
+
+window.updateBriefCharCounter = function () {
+  var inp = document.getElementById('edit-brief-overview');
+  var badge = document.getElementById('counter-brief');
+  if (!inp || !badge) return;
+  var len = inp.value.length;
+  badge.textContent = len + ' / 100 characters';
+  if (len > 100) {
+    badge.className = 'char-counter counter-limit';
+  } else if (len >= 85) {
+    badge.className = 'char-counter counter-warn';
+  } else {
+    badge.className = 'char-counter counter-normal';
+  }
+};
+
+window.updateCompleteCharCounter = function () {
+  var inp = document.getElementById('edit-complete-overview');
+  var badge = document.getElementById('counter-complete');
+  if (!inp || !badge) return;
+  var len = inp.value.length;
+  badge.textContent = len.toLocaleString() + ' / 1,000 characters';
+  if (len > 1000) {
+    badge.className = 'char-counter counter-limit';
+  } else if (len >= 900) {
+    badge.className = 'char-counter counter-warn';
+  } else {
+    badge.className = 'char-counter counter-normal';
+  }
+};
+
+window.loadProjectSyncStatus = async function (projectId) {
+  var badgesEl = document.getElementById('edit-sync-badges');
+  var actionsEl = document.getElementById('edit-sync-actions');
+  if (!badgesEl) return;
+
+  try {
+    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/sync-status');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var gc = data.grant_center || {};
+    var spc = data.spc || {};
+
+    var isGG = projectId.toUpperCase().startsWith('GG');
+    var isDG = projectId.toUpperCase().startsWith('DG');
+    var prefix = isGG ? 'GG' : (isDG ? 'DG' : 'Grant');
+    var reportCount = gc.report_count || 0;
+    var reportTxt = reportCount > 0 ? ' (+' + reportCount + ' status report PDF' + (reportCount > 1 ? 's' : '') + ')' : '';
+
+    var gcHtml = gc.has_application_pdf
+      ? '<span class="sync-chip chip-green" title="' + escapeHtml(gc.application_pdf_name || '') + '">📄 ' + prefix + ' Appl PDF on file' + reportTxt + '</span>'
+      : '<span class="sync-chip chip-gray">📄 No ' + prefix + ' Appl PDF</span>';
+
+    var spcUrl = normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
+    var spcHtml = spc.exported
+      ? (spcUrl
+          ? '<a href="' + escapeHtml(spcUrl) + '" target="_blank" class="sync-chip chip-green" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="View on Rotary Service Project Center">✓ Synced to SPC ↗</a>'
+          : '<span class="sync-chip chip-green">✓ Synced to SPC</span>')
+      : '<span class="sync-chip chip-gray">Not exported to SPC</span>';
+
+    badgesEl.innerHTML = gcHtml + spcHtml;
+
+    // Update in-memory project so detail view and links list have the SPC link immediately!
+    var p = allProjects.find(function (item) {
+      return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+    });
+    if (p) {
+      if (!p.sync_status) p.sync_status = {};
+      p.sync_status.grant_center = gc;
+      p.sync_status.spc = spc;
+      if (spc.exported && spcUrl) {
+        p.sync_status.spc.spc_url = spcUrl;
+        if (!p.project_links) p.project_links = [];
+        var existingSpcLink = p.project_links.find(function (l) {
+          return (l.url && l.url.indexOf('spc.rotary.org') !== -1) || l.label === 'Rotary Service Project Center (SPC)';
+        });
+        if (existingSpcLink) {
+          existingSpcLink.url = spcUrl;
+        } else {
+          p.project_links.push({
+            project_id: projectId,
+            label: 'Rotary Service Project Center (SPC)',
+            url: spcUrl,
+            display_order: p.project_links.length
+          });
+        }
+      }
+    }
+
+    var actionsHtml = ''
+      + '<button type="button" onclick="triggerProjectRiFetch(\'' + projectId + '\')" style="padding:4px 8px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;">📥 Re-check RI</button>'
+      + '<button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', true)" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Audit and validate payload for SPC without submitting">🧪 SPC Dry Run</button>'
+      + '<button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', false)" style="padding:4px 8px;font-size:11px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Authenticate with My Rotary and create project in SPC">🚀 SPC Live Export</button>';
+    if (actionsEl) actionsEl.innerHTML = actionsHtml;
+  } catch (err) {
+    badgesEl.innerHTML = '<span class="sync-chip chip-gray">Sync status offline</span>';
+  }
+};
+
+window.triggerProjectRiFetch = async function (projectId) {
+  window.currentActiveProjectId = projectId;
+  if (!confirm('Fetch files and reconcile attachments from Rotary Grant Center for ' + projectId + '?')) return;
+  if (window.toggleLogConsole) window.toggleLogConsole(true);
+  if (window.startLogPolling) window.startLogPolling(20000);
+  try {
+    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/fetch-ri-files', { method: 'POST' });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Fetch failed');
+  } catch (e) {
+    alert('Error triggering RI fetch: ' + e.message);
+  }
+};
+
+window.triggerProjectSpcExport = async function (projectId, dryRun) {
+  window.currentActiveProjectId = projectId;
+  if (dryRun === undefined) dryRun = true;
+  if (!dryRun) {
+    if (!confirm('Proceed with LIVE export to Rotary Service Project Center (SPC) for project ' + projectId + '?\n\nThis will launch the SPC automation, authenticate with My Rotary, and create the project entry in Rotary International.')) {
+      return;
+    }
+  }
+
+  // Immediately open the log console and print an instant status line
+  if (window.toggleLogConsole) window.toggleLogConsole(true);
+  var logDiv = document.getElementById('log-output');
+  if (logDiv) {
+    var startLine = document.createElement('div');
+    startLine.className = 'log-line';
+    startLine.style.color = '#38bdf8';
+    startLine.textContent = '[' + new Date().toLocaleTimeString() + '] Initiating SPC export for ' + projectId + ' (' + (dryRun ? 'Dry Run' : 'Live') + ')...';
+    logDiv.appendChild(startLine);
+    var drawer = document.getElementById('log-drawer');
+    if (drawer) drawer.scrollTop = drawer.scrollHeight;
+  }
+
+  // Start polling log history so the output appears in real-time
+  if (window.startLogPolling) window.startLogPolling(20000);
+
+  try {
+    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/export-spc?dry_run=' + (dryRun ? 'true' : 'false'), { method: 'POST' });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Export failed');
+  } catch (e) {
+    if (logDiv) {
+      var errLine = document.createElement('div');
+      errLine.className = 'log-line';
+      errLine.style.color = '#f87171';
+      errLine.textContent = '❌ Error triggering SPC export: ' + e.message;
+      logDiv.appendChild(errLine);
+    }
+  }
+};
+
+window.renderMilestonesBuilder = function (milestones, isGlobalGrant) {
+  var container = document.getElementById('milestones-builder-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var list = milestones && Array.isArray(milestones) ? milestones.slice() : [];
+  if (list.length === 0) {
+    if (isGlobalGrant) {
+      list = [
+        { name: 'Submitted', date: '', notes: 'Formal grant submission' },
+        { name: 'Approved', date: '', notes: 'Approved by The Rotary Foundation (TRF)' }
+      ];
+    } else {
+      list = [
+        { name: 'Project Initiated', date: '', notes: '' }
+      ];
+    }
+  }
+
+  list.forEach(function (m) {
+    addMilestoneRow(m.name, m.date, m.notes);
+  });
+};
+
+window.addMilestoneRow = function (name, date, notes) {
+  var container = document.getElementById('milestones-builder-container');
+  if (!container) return;
+  var row = document.createElement('div');
+  row.className = 'milestone-row';
+  row.innerHTML = ''
+    + '<input type="text" class="milestone-name" placeholder="Milestone (e.g. Submitted)" value="' + escapeHtml(name || '') + '">'
+    + '<input type="text" class="milestone-date" placeholder="YYYY-MM-DD" value="' + escapeHtml(date || '') + '">'
+    + '<input type="text" class="milestone-notes" placeholder="Notes or context..." value="' + escapeHtml(notes || '') + '">'
+    + '<div style="display:flex;gap:2px;justify-content:flex-end;">'
+    + '  <button type="button" onclick="moveMilestoneRow(this, -1)" style="border:none;background:#e2e8f0;padding:2px 5px;border-radius:2px;cursor:pointer;font-size:10px;">↑</button>'
+    + '  <button type="button" onclick="moveMilestoneRow(this, 1)" style="border:none;background:#e2e8f0;padding:2px 5px;border-radius:2px;cursor:pointer;font-size:10px;">↓</button>'
+    + '  <button type="button" onclick="this.closest(\'.milestone-row\').remove()" style="border:none;background:#fee2e2;color:#ef4444;padding:2px 5px;border-radius:2px;cursor:pointer;font-size:10px;">✕</button>'
+    + '</div>';
+  container.appendChild(row);
+};
+
+window.moveMilestoneRow = function (btn, dir) {
+  var row = btn.closest('.milestone-row');
+  if (!row) return;
+  if (dir === -1 && row.previousElementSibling) {
+    row.parentNode.insertBefore(row, row.previousElementSibling);
+  } else if (dir === 1 && row.nextElementSibling) {
+    row.parentNode.insertBefore(row.nextElementSibling, row);
+  }
+};
+
+window.getTimelinePayload = function () {
+  var backstory = (document.getElementById('edit-timeline-backstory') && document.getElementById('edit-timeline-backstory').value.trim()) || '';
+  var milestones = [];
+  document.querySelectorAll('#milestones-builder-container .milestone-row').forEach(function (r, idx) {
+    var nameInp = r.querySelector('.milestone-name');
+    var dateInp = r.querySelector('.milestone-date');
+    var notesInp = r.querySelector('.milestone-notes');
+    if (nameInp && nameInp.value.trim()) {
+      milestones.push({
+        id: 'm_' + (idx + 1),
+        name: nameInp.value.trim(),
+        date: dateInp ? dateInp.value.trim() : '',
+        notes: notesInp ? notesInp.value.trim() : ''
+      });
+    }
+  });
+  return { backstory: backstory, milestones: milestones };
+};
+
+window.getDetailsPayload = function () {
+  var wf = parseFloat((document.getElementById('edit-detail-world-fund') && document.getElementById('edit-detail-world-fund').value) || 0) || 0;
+  var ddf = parseFloat((document.getElementById('edit-detail-ddf') && document.getElementById('edit-detail-ddf').value) || 0) || 0;
+  var cash = parseFloat((document.getElementById('edit-detail-club-cash') && document.getElementById('edit-detail-club-cash').value) || 0) || 0;
+  var host = (document.getElementById('edit-detail-host') && document.getElementById('edit-detail-host').value.trim()) || '';
+  var intl = (document.getElementById('edit-detail-intl') && document.getElementById('edit-detail-intl').value.trim()) || '';
+  var shep = (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value.trim()) || '';
+
+  // Parse comma or newline separated partner clubs
+  var rawClubs = (document.getElementById('edit-detail-partner-clubs') && document.getElementById('edit-detail-partner-clubs').value) || '';
+  var partnerClubs = rawClubs.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+
+  // Parse comma or newline separated partner districts
+  var rawDists = (document.getElementById('edit-detail-partner-districts') && document.getElementById('edit-detail-partner-districts').value) || '';
+  var partnerDists = rawDists.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+
+  // Parse comma or newline separated cooperating organizations
+  var rawOrgs = (document.getElementById('edit-detail-coop-orgs') && document.getElementById('edit-detail-coop-orgs').value) || '';
+  var coopOrgs = rawOrgs.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+
+  var legacyPartner = (document.getElementById('edit-partner') && document.getElementById('edit-partner').value.trim()) || '';
+  if (legacyPartner && coopOrgs.indexOf(legacyPartner) === -1) {
+    coopOrgs.unshift(legacyPartner);
+  }
+
+  return {
+    world_fund: wf,
+    district_ddf: ddf,
+    club_contributions: cash,
+    host_club: host,
+    international_club: intl,
+    shepherd: shep,
+    partner_clubs: partnerClubs,
+    partner_districts: partnerDists,
+    cooperating_organizations: coopOrgs
+  };
+};
+
+window.synthesizeFromAi = async function (projectId, source, notesText, customApiKey) {
+  var banner = document.getElementById('ai-status-banner');
+  if (banner) {
+    banner.style.display = 'block';
+    banner.style.background = '#fef3c7';
+    banner.style.borderColor = '#fde047';
+    banner.style.color = '#854d0e';
+    banner.textContent = '⏳ Google Gemini is analyzing project data and drafting structured fields...';
+  }
+
+  try {
+    var payload = {
+      source: source || 'pdf',
+      notes_text: notesText || '',
+      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || ''
+    };
+    if (customApiKey) {
+      payload.api_key = customApiKey.trim();
+    }
+
+    var res = await fetch('/api/projects/' + encodeURIComponent(projectId) + '/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    var data = await res.json();
+    if (!res.ok) {
+      var errDetail = data && data.detail;
+      var errType = (errDetail && errDetail.error) || '';
+      if (errType === 'GEMINI_API_KEY_REQUIRED' || errType === 'QUOTA_EXCEEDED' || errType === 'GEMINI_CAPACITY_LIMIT' || errType === 'INVALID_API_KEY') {
+        var promptMsg = (errType === 'GEMINI_API_KEY_REQUIRED')
+          ? 'Please enter your Google Gemini API key (obtain a free key at https://aistudio.google.com/app/apikey):'
+          : (errType === 'INVALID_API_KEY')
+          ? 'The Gemini API key was rejected as invalid. Please enter a valid Gemini API key from https://aistudio.google.com/app/apikey:'
+          : 'Google Gemini Free-Tier Quota / Demand Limit Reached.\n\nFree tier has a 20 requests/day per model cap, and preview models experience high-demand spikes.\n\nPlease enter a new or Pay-As-You-Go Gemini API key (get one at https://aistudio.google.com/app/apikey):';
+        var userKey = prompt(promptMsg);
+        if (userKey && userKey.trim()) {
+          return window.synthesizeFromAi(projectId, source, notesText, userKey.trim());
+        } else {
+          if (banner) {
+            banner.style.display = 'block';
+            banner.style.background = '#fee2e2';
+            banner.style.borderColor = '#fca5a5';
+            banner.style.color = '#991b1b';
+            banner.innerHTML = '⚠️ <strong>Gemini Draft Paused:</strong> Free-tier quota reached (20 req/day). '
+              + '<button type="button" onclick="promptChangeGeminiKey(\'' + projectId + '\',\'' + (source || 'pdf') + '\')" style="margin-left:8px;padding:3px 8px;font-size:11px;font-weight:600;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">🔑 Enter API Key</button> '
+              + 'or enable Pay-As-You-Go at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="text-decoration:underline;color:#991b1b;font-weight:600;">Google AI Studio</a> ($0.0003/draft).';
+          }
+          return;
+        }
+      } else {
+        var rawMsg = (errDetail && (errDetail.message || errDetail.raw_error || errDetail)) || 'Gemini error';
+        throw new Error(typeof rawMsg === 'object' ? JSON.stringify(rawMsg) : rawMsg);
+      }
+    }
+
+    if (data && data.draft) {
+      applyAiDraftToForm(data.draft);
+      if (banner) {
+        banner.style.display = 'block';
+        banner.style.background = '#dcfce7';
+        banner.style.borderColor = '#86efac';
+        banner.style.color = '#166534';
+        banner.innerHTML = '✨ <strong>Gemini drafted project fields!</strong>'
+          + (data.model_used ? ' <span style="font-size:11px;opacity:0.85;">(via ' + data.model_used + ')</span>' : '')
+          + ' Review the overviews, timeline milestones, and details below before saving.';
+      }
+    }
+  } catch (err) {
+    if (banner) {
+      banner.style.display = 'block';
+      banner.style.background = '#fee2e2';
+      banner.style.borderColor = '#fca5a5';
+      banner.style.color = '#991b1b';
+      banner.innerHTML = '❌ <strong>Gemini Error:</strong> ' + (err.message || err)
+        + ' <button type="button" onclick="promptChangeGeminiKey(\'' + projectId + '\',\'' + (source || 'pdf') + '\')" style="margin-left:8px;padding:3px 8px;font-size:11px;font-weight:600;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">🔑 Change API Key</button>'
+        + ' <a href="https://aistudio.google.com/app/apikey" target="_blank" style="margin-left:6px;font-size:11px;text-decoration:underline;color:#991b1b;font-weight:600;">Get Key / Enable Billing</a>';
+    }
+  }
+};
+
+window.promptChangeGeminiKey = function (projectId, source) {
+  var newKey = prompt('Enter your Google Gemini API key (obtain at https://aistudio.google.com/app/apikey):');
+  if (newKey && newKey.trim()) {
+    synthesizeFromAi(projectId, source, null, newKey.trim());
+  }
+};
+
+window.applyAiDraftToForm = function (draft) {
+  if (!draft) return;
+
+  if (draft.brief_overview) {
+    var bInp = document.getElementById('edit-brief-overview');
+    if (bInp) { bInp.value = draft.brief_overview; updateBriefCharCounter(); }
+  }
+  if (draft.complete_overview) {
+    var cInp = document.getElementById('edit-complete-overview');
+    if (cInp) { cInp.value = draft.complete_overview; updateCompleteCharCounter(); }
+  }
+  if (draft.start_date) {
+    var sInp = document.getElementById('edit-start-date');
+    if (sInp) sInp.value = draft.start_date;
+  }
+  if (draft.end_date) {
+    var eInp = document.getElementById('edit-end-date');
+    if (eInp) eInp.value = draft.end_date;
+  }
+  if (draft.timeline) {
+    if (draft.timeline.backstory) {
+      var backInp = document.getElementById('edit-timeline-backstory');
+      if (backInp) backInp.value = draft.timeline.backstory;
+    }
+    if (draft.timeline.milestones && Array.isArray(draft.timeline.milestones)) {
+      var mContainer = document.getElementById('milestones-builder-container');
+      if (mContainer) {
+        mContainer.innerHTML = '';
+        draft.timeline.milestones.forEach(function (m) {
+          addMilestoneRow(m.name, m.date, m.notes);
+        });
+      }
+    }
+  }
+  if (draft.details) {
+    if (draft.details.budget !== undefined) {
+      var amtInp = document.getElementById('edit-amount');
+      if (amtInp && draft.details.budget > 0) amtInp.value = draft.details.budget;
+    }
+    if (draft.details.world_fund !== undefined) {
+      var wfInp = document.getElementById('edit-detail-world-fund');
+      if (wfInp) wfInp.value = draft.details.world_fund;
+    }
+    if (draft.details.district_ddf !== undefined) {
+      var ddfInp = document.getElementById('edit-detail-ddf');
+      if (ddfInp) ddfInp.value = draft.details.district_ddf;
+    }
+    if (draft.details.club_contributions !== undefined) {
+      var cashInp = document.getElementById('edit-detail-club-cash');
+      if (cashInp) cashInp.value = draft.details.club_contributions;
+    }
+    if (draft.details.host_club) {
+      var hostInp = document.getElementById('edit-detail-host');
+      if (hostInp) hostInp.value = draft.details.host_club + (draft.details.host_district ? ' (D' + draft.details.host_district + ')' : '');
+    }
+    if (draft.details.international_club) {
+      var intlInp = document.getElementById('edit-detail-intl');
+      if (intlInp) intlInp.value = draft.details.international_club + (draft.details.international_district ? ' (D' + draft.details.international_district + ')' : '');
+    }
+    if (draft.details.partner_clubs && Array.isArray(draft.details.partner_clubs) && draft.details.partner_clubs.length > 0) {
+      var pClubsInp = document.getElementById('edit-detail-partner-clubs');
+      if (pClubsInp) pClubsInp.value = draft.details.partner_clubs.join(', ');
+    }
+    if (draft.details.partner_districts && Array.isArray(draft.details.partner_districts) && draft.details.partner_districts.length > 0) {
+      var pDistsInp = document.getElementById('edit-detail-partner-districts');
+      if (pDistsInp) pDistsInp.value = draft.details.partner_districts.join(', ');
+    }
+    if (draft.details.cooperating_organizations && draft.details.cooperating_organizations.length > 0) {
+      var orgsStr = Array.isArray(draft.details.cooperating_organizations) ? draft.details.cooperating_organizations.join(', ') : draft.details.cooperating_organizations;
+      var coopInp = document.getElementById('edit-detail-coop-orgs');
+      if (coopInp) coopInp.value = orgsStr;
+      var partnerInp = document.getElementById('edit-partner');
+      if (partnerInp) partnerInp.value = orgsStr;
+    }
+  }
+};
+
+window.openAiNotesModal = function (projectId) {
+  var modal = document.getElementById('ai-notes-modal');
+  var input = document.getElementById('ai-notes-input');
+  var errorEl = document.getElementById('ai-notes-error');
+  if (modal) {
+    modal.style.display = 'flex';
+    if (input) { input.value = ''; input.focus(); }
+    if (errorEl) errorEl.style.display = 'none';
+  }
+};
+
+window.closeAiNotesModal = function () {
+  var modal = document.getElementById('ai-notes-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.executeAiDraftFromNotes = function () {
+  var input = document.getElementById('ai-notes-input');
+  var errorEl = document.getElementById('ai-notes-error');
+  var text = (input && input.value.trim()) || '';
+  if (!text) {
+    if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = 'Please paste some notes or text first.'; }
+    return;
+  }
+  var p = allProjects[activeEditIdx];
+  var gid = String((p && (p.id || p.grant_id)) || '').trim();
+  closeAiNotesModal();
+  synthesizeFromAi(gid, 'notes', text);
+};
+
+window.setCoverPhoto = async function (projectId, filename) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
+    try {
+      await supabaseClient.from('project_assets').update({ display_order: 1 }).eq('project_id', projectId);
+      await supabaseClient.from('project_assets').update({ display_order: 0 }).match({ project_id: projectId, filename: filename });
+      var p = allProjects.find(function (item) {
+        return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+      });
+      if (p && p.project_assets) {
+        p.project_assets.forEach(function (a) {
+          a.display_order = (a.filename === filename ? 0 : 1);
+        });
+      }
+      loadEditFiles(projectId);
+      loadProjectFiles(projectId, 'edit-photo-area', null);
+    } catch (e) {
+      console.warn('Error setting cover photo:', e);
+    }
+  }
+};
+
+window.saveAssetCaption = async function (projectId, filename, caption) {
+  if (getDataSourceMode() !== 'csv' && supabaseClient) {
+    try {
+      var cap = (caption || '').trim();
+      await supabaseClient
+        .from('project_assets')
+        .update({ caption: cap })
+        .match({ project_id: projectId, filename: filename });
+      var p = allProjects.find(function (item) {
+        return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+      });
+      if (p && p.project_assets) {
+        var asset = p.project_assets.find(function (a) { return a.filename === filename; });
+        if (asset) asset.caption = cap;
+      }
+    } catch (e) {
+      console.warn('Error saving asset caption:', e);
+    }
+  }
+};
+
 window.openEditForm = function (idx) {
   if (!isMaintenanceMode) {
     window.toggleMaintenanceMode(true);
@@ -1070,6 +1738,12 @@ window.openEditForm = function (idx) {
   var optC2C = pType === 'Club-to-Club Grant' ? 'selected' : '';
   var optGG = pType === 'Global Grant' ? 'selected' : '';
 
+  var briefVal = (p.brief_overview || p.description || '').trim();
+  var completeVal = (p.complete_overview || p.narrative || '').trim();
+  var startDateVal = p.start_date || (p.start_year ? p.start_year + '-01-01' : '');
+  var endDateVal = p.end_date || '';
+  var dObj = p.details || {};
+
   rp.innerHTML = ''
     + '<div class="panel" id="edit-panel">'
     + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #d97706;padding-bottom:6px;">'
@@ -1079,6 +1753,22 @@ window.openEditForm = function (idx) {
     + '      <button type="button" id="btn-save-project" onclick="saveProjectEdits()" style="padding:5px 14px;border:none;background:#059669;color:white;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">Save Changes</button>'
     + '    </div>'
     + '  </div>'
+    + '  <div id="edit-sync-bar" style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:12px;">'
+    + '    <div id="edit-sync-badges" style="display:flex;gap:8px;align-items:center;">'
+    + '      <span class="sync-chip chip-gray">Checking sync status…</span>'
+    + '    </div>'
+    + '    <div id="edit-sync-actions" style="display:flex;gap:6px;"></div>'
+    + '  </div>'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f3ff;border:1px solid #ddd6fe;padding:8px 12px;border-radius:6px;margin-bottom:12px;">'
+    + '    <div style="font-size:12px;color:#5b21b6;font-weight:600;">'
+    + '      ✨ <strong>Gemini AI Assistant:</strong> Auto-draft overviews, timeline & details'
+    + '    </div>'
+    + '    <div style="display:flex;gap:6px;">'
+    + '      <button type="button" class="btn-ai" onclick="synthesizeFromAi(\'' + gid + '\', \'pdf\')">📄 Auto-fill from App PDF</button>'
+    + '      <button type="button" class="btn-ai" onclick="openAiNotesModal(\'' + gid + '\')">📝 Auto-fill from Notes / Paste</button>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div id="ai-status-banner" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:12px;"></div>'
     + '  <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:8px 12px;border-radius:6px;font-size:12px;color:#1e40af;margin-bottom:12px;">'
     + '    📍 <strong>Map Pinning Active:</strong> Drag the marker on the map or click anywhere on the map to set coordinates.'
     + '  </div>'
@@ -1098,7 +1788,7 @@ window.openEditForm = function (idx) {
     + '    </div>'
     + '    <div>'
     + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Type</label>'
-    + '      <select id="edit-type" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;background:white;">'
+    + '      <select id="edit-type" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;background:white;" onchange="renderMilestonesBuilder(null, this.value === \'Global Grant\')">'
     + '        <option value="Club Direct / Donation" ' + optDirect + '>Club Direct / Donation</option>'
     + '        <option value="District Grant" ' + optDG + '>District Grant</option>'
     + '        <option value="Club-to-Club Grant" ' + optC2C + '>Club-to-Club Grant</option>'
@@ -1106,18 +1796,96 @@ window.openEditForm = function (idx) {
     + '      </select>'
     + '    </div>'
     + '  </div>'
-    + '  <div style="margin-bottom:10px;">'
-    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Title</label>'
-    + '    <input type="text" id="edit-title" value="' + escapeHtml(p.title || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '  <div style="margin-bottom:12px;">'
+    + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '      <label style="font-size:11px;font-weight:bold;">Project Title * <span style="font-weight:normal;color:#64748b;">(SPC prjTitle max 50 chars)</span></label>'
+    + '      <span id="counter-title" class="char-counter counter-normal">0 / 50</span>'
+    + '    </div>'
+    + '    <input type="text" id="edit-title" maxlength="60" oninput="updateTitleCharCounter()" value="' + escapeHtml(p.title || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
     + '  </div>'
-    + '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Start Date <span style="font-weight:normal;color:#64748b;">(YYYY-MM-DD or YYYY-MM)</span></label>'
+    + '      <input type="text" id="edit-start-date" placeholder="YYYY-MM-DD" value="' + escapeHtml(startDateVal) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project End Date <span style="font-weight:normal;color:#64748b;">(YYYY-MM-DD or YYYY-MM)</span></label>'
+    + '      <input type="text" id="edit-end-date" placeholder="YYYY-MM-DD" value="' + escapeHtml(endDateVal) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="margin-bottom:12px;">'
+    + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '      <label style="font-size:11px;font-weight:bold;">Brief Overview <span style="font-weight:normal;color:#64748b;">(Exported to SPC prjOverview — max 100 chars)</span></label>'
+    + '      <span id="counter-brief" class="char-counter counter-normal">0 / 100 characters</span>'
+    + '    </div>'
+    + '    <textarea id="edit-brief-overview" rows="2" maxlength="150" oninput="updateBriefCharCounter()" placeholder="Punchy 100-character overview for Service Project Center..." style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;line-height:1.4;box-sizing:border-box;">' + escapeHtml(briefVal) + '</textarea>'
+    + '  </div>'
+    + '  <div style="margin-bottom:12px;">'
+    + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '      <label style="font-size:11px;font-weight:bold;">Complete Overview <span style="font-weight:normal;color:#64748b;">(Exported to SPC prjDetailedDescription — max 1,000 chars)</span></label>'
+    + '      <span id="counter-complete" class="char-counter counter-normal">0 / 1,000 characters</span>'
+    + '    </div>'
+    + '    <textarea id="edit-complete-overview" rows="4" maxlength="1200" oninput="updateCompleteCharCounter()" placeholder="Comprehensive 1,000-character overview of the project, community served, and impact..." style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;line-height:1.4;box-sizing:border-box;">' + escapeHtml(completeVal) + '</textarea>'
+    + '  </div>'
+    + '  <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:6px;margin-bottom:14px;">'
+    + '    <label style="font-size:12px;font-weight:bold;color:#1e293b;display:block;margin-bottom:4px;">⏱️ Project Timeline & Milestones</label>'
+    + '    <div style="font-size:11px;color:#64748b;margin-bottom:8px;">'
+    + '      Record the backstory of how the club started thinking about the project, plus chronological milestones.'
+    + '    </div>'
+    + '    <div style="margin-bottom:8px;">'
+    + '      <label style="font-size:11px;font-weight:bold;color:#475569;display:block;margin-bottom:2px;">Backstory Narrative</label>'
+    + '      <textarea id="edit-timeline-backstory" rows="2" placeholder="Describe the origin, relationship, and early discussions..." style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;box-sizing:border-box;">' + escapeHtml((p.timeline && p.timeline.backstory) || '') + '</textarea>'
+    + '    </div>'
+    + '    <label style="font-size:11px;font-weight:bold;color:#475569;display:block;margin-bottom:4px;">Milestones (e.g. Submitted, Approved, Implementation, Handover)</label>'
+    + '    <div id="milestones-builder-container"></div>'
+    + '    <button type="button" onclick="addMilestoneRow()" style="margin-top:6px;padding:4px 10px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;font-weight:600;">+ Add Milestone</button>'
+    + '  </div>'
+    + '  <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:6px;margin-bottom:14px;">'
+    + '    <label style="font-size:12px;font-weight:bold;color:#1e293b;display:block;margin-bottom:6px;">💰 Financial Breakdown & Partner Organizations</label>'
+    + '    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '      <div>'
+    + '        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">TRF World Fund ($)</label>'
+    + '        <input type="number" id="edit-detail-world-fund" value="' + escapeHtml(dObj.world_fund || 0) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      </div>'
+    + '      <div>'
+    + '        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">District DDF ($)</label>'
+    + '        <input type="number" id="edit-detail-ddf" value="' + escapeHtml(dObj.district_ddf || 0) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      </div>'
+    + '      <div>'
+    + '        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Club Contributions ($)</label>'
+    + '        <input type="number" id="edit-detail-club-cash" value="' + escapeHtml(dObj.club_contributions || 0) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      </div>'
+    + '    </div>'
+    + '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '      <div>'
+    + '        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Host Club & District</label>'
+    + '        <input type="text" id="edit-detail-host" placeholder="e.g. Club Rotario de Lake Atitlán (D4250)" value="' + escapeHtml(dObj.host_club || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      </div>'
+    + '      <div>'
+    + '        <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">International Sponsor Club & District</label>'
+    + '        <input type="text" id="edit-detail-intl" placeholder="e.g. Upper Arlington Rotary (D6690)" value="' + escapeHtml(dObj.international_club || p.international_club_name || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      </div>'
+    + '    </div>'
+    + '    <div style="margin-bottom:10px;">'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Contributing / Partner Rotary Clubs (comma-separated)</label>'
+    + '      <input type="text" id="edit-detail-partner-clubs" placeholder="e.g. Baltimore, Carroll Creek, Petaluma Valley, Rockville, Lake Shore-Severna Park" value="' + escapeHtml(Array.isArray(dObj.partner_clubs) ? dObj.partner_clubs.join(', ') : (dObj.partner_clubs || '')) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;">'
+    + '      <span style="font-size:10px;color:#64748b;">List all participating/contributing Rotary clubs. No need to break out individual amounts.</span>'
+    + '    </div>'
+    + '    <div style="margin-bottom:10px;">'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Contributing / Partner Districts (comma-separated)</label>'
+    + '      <input type="text" id="edit-detail-partner-districts" placeholder="e.g. 7620, 6690, 5360" value="' + escapeHtml(Array.isArray(dObj.partner_districts) ? dObj.partner_districts.join(', ') : (dObj.partner_districts || '')) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;">'
+    + '      <span style="font-size:10px;color:#64748b;">List all contributing DDF / partner districts.</span>'
+    + '    </div>'
+    + '    <div style="margin-bottom:4px;">'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Cooperating Partner Organizations / NGOs (comma-separated)</label>'
+    + '      <input type="text" id="edit-detail-coop-orgs" placeholder="e.g. Mayan Families, Hospitalito Atitlán, Municipality of Santa Lucía Utatlán" value="' + escapeHtml(Array.isArray(dObj.cooperating_organizations) ? dObj.cooperating_organizations.join(', ') : (dObj.cooperating_organizations || (p.partner || ''))) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;">'
+    + '      <span style="font-size:10px;color:#64748b;">Implementing partners, local NGOs, government entities, and community associations.</span>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">'
     + '    <div>'
     + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Budget / Amount ($)</label>'
     + '      <input type="number" id="edit-amount" value="' + escapeHtml(p.amount || p.budget || 0) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
-    + '    </div>'
-    + '    <div>'
-    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Start Year</label>'
-    + '      <input type="text" id="edit-year" value="' + escapeHtml(p.start_year || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
     + '    </div>'
     + '    <div>'
     + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Status</label>'
@@ -1140,16 +1908,16 @@ window.openEditForm = function (idx) {
     + '  </div>'
     + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
     + '    <div>'
-    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Shepherd</label>'
-    + '      <input type="text" id="edit-shepard" value="' + escapeHtml(p.shepard || p.shepherd || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Shepherd / Lead Rotarian</label>'
+    + '      <input type="text" id="edit-shepard" value="' + escapeHtml(p.shepard || p.shepherd || dObj.shepherd || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
     + '    </div>'
     + '    <div>'
-    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Key Partner</label>'
-    + '      <input type="text" id="edit-partner" value="' + escapeHtml(p.partner || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Key Partner / NGO</label>'
+    + '      <input type="text" id="edit-partner" value="' + escapeHtml(p.partner || (dObj.cooperating_organizations && dObj.cooperating_organizations.join(', ')) || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
     + '    </div>'
     + '  </div>'
-    + '  <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Narrative & Field Notes</label>'
-    + '  <textarea id="edit-narrative" style="width:100%;height:200px;font-family:monospace;padding:8px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;line-height:1.5;">' + escapeHtml(initialText) + '</textarea>'
+    + '  <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Full Narrative & Historical Notes</label>'
+    + '  <textarea id="edit-narrative" style="width:100%;height:180px;font-family:monospace;padding:8px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;line-height:1.5;">' + escapeHtml(initialText) + '</textarea>'
     + '  <div style="margin-top:14px;margin-bottom:14px;">'
     + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Web Links</label>'
     + '    <div id="modal-links-list"></div>'
@@ -1163,11 +1931,19 @@ window.openEditForm = function (idx) {
   loadProjectFiles(gid, 'edit-photo-area', null);
   loadEditFiles(gid);
   attachActiveWindowPaste(gid);
+  loadProjectSyncStatus(gid);
+  renderMilestonesBuilder(p.timeline && p.timeline.milestones, pType === 'Global Grant');
+  updateTitleCharCounter();
+  updateBriefCharCounter();
+  updateCompleteCharCounter();
 
   var linksLoaded = false;
   if (getDataSourceMode() !== 'csv') {
     if (p.project_links && p.project_links.length > 0) {
-      p.project_links.forEach(function (l) { addLinkInput(l.label, l.url); });
+      p.project_links.forEach(function (l) {
+        var u = (l.url && l.url.indexOf('spc.rotary.org') !== -1) ? normalizeSpcUrl(l.url) : (l.url || '');
+        addLinkInput(l.label, u);
+      });
       linksLoaded = true;
     } else if (supabaseClient) {
       supabaseClient
@@ -1177,7 +1953,10 @@ window.openEditForm = function (idx) {
         .order('display_order', { ascending: true })
         .then(function (res) {
           if (!res.error && res.data && res.data.length > 0) {
-            res.data.forEach(function (l) { addLinkInput(l.label, l.url); });
+            res.data.forEach(function (l) {
+              var u = (l.url && l.url.indexOf('spc.rotary.org') !== -1) ? normalizeSpcUrl(l.url) : (l.url || '');
+              addLinkInput(l.label, u);
+            });
           } else {
             addLinkInput();
           }
@@ -1275,21 +2054,28 @@ function uploadImageBlobInEdit(blob, projectId) {
 
         return supabaseClient
           .from('project_assets')
-          .insert({
-            project_id: projectId,
-            filename: filename,
-            file_type: 'image',
-            mime_type: file.type || 'image/png',
-            storage_path: storagePath,
-            public_url: publicUrl
+          .delete()
+          .match({ project_id: projectId, filename: filename })
+          .then(function () {
+            return supabaseClient
+              .from('project_assets')
+              .insert({
+                project_id: projectId,
+                filename: filename,
+                file_type: 'image',
+                mime_type: file.type || 'image/png',
+                storage_path: storagePath,
+                public_url: publicUrl
+              })
+              .select();
           })
-          .select()
           .then(function (assetRes) {
             var p = allProjects.find(function (item) {
               return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
             });
             if (p) {
               if (!p.project_assets) p.project_assets = [];
+              p.project_assets = p.project_assets.filter(function (a) { return a.filename !== filename; });
               if (assetRes && assetRes.data && assetRes.data[0]) {
                 p.project_assets.push(assetRes.data[0]);
               } else {
@@ -1300,31 +2086,13 @@ function uploadImageBlobInEdit(blob, projectId) {
           });
       })
       .catch(function (err) {
-        console.warn('Supabase image upload failed, falling back to local backend:', err);
-        uploadViaBackend();
+        console.error('Supabase image upload failed:', err);
+        if (banner) banner.textContent = '❌ Upload failed: ' + (err.message || err);
+        isUploadingImage = false;
       });
   } else {
-    uploadViaBackend();
-  }
-
-  function uploadViaBackend() {
-    var fd = new FormData();
-    fd.append('file', file);
-    fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/upload', {
-      method: 'POST',
-      body: fd
-    })
-    .then(function (res) {
-      if (!res.ok) throw new Error('Server returned ' + res.status);
-      return res.json();
-    })
-    .then(function () {
-      handleSuccess('projects/' + projectId + '/' + filename);
-    })
-    .catch(function (err) {
-      if (banner) banner.textContent = '❌ Upload failed: ' + err.message;
-      isUploadingImage = false;
-    });
+    if (banner) banner.textContent = '❌ Supabase client not initialized.';
+    isUploadingImage = false;
   }
 }
 
@@ -1375,29 +2143,62 @@ async function loadEditFiles(projectId) {
     } catch (e) {}
   }
 
+  // Deduplicate assets by filename
+  var seenEditAssets = new Set();
+  assets = assets.filter(function (a) {
+    var fn = (a.filename || '').trim();
+    if (!fn || seenEditAssets.has(fn.toLowerCase())) return false;
+    seenEditAssets.add(fn.toLowerCase());
+    return true;
+  });
+
   if (assets.length === 0) {
     container.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">No files or photos uploaded yet.</div>';
     return;
   }
 
-  var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">';
+  var html = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;">';
   assets.forEach(function (a, i) {
     var fn = a.filename || '';
     var isImg = a.file_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fn);
     var isVid = a.file_type === 'video' || /\.(mp4|mov|webm)$/i.test(fn);
+    var isAppPdf = /application.*\.pdf$/i.test(fn);
+    var isCover = a.display_order === 0;
     var elemId = 'file-thumb-' + i;
     var src = a.public_url || ('projects/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(fn));
+    var caption = a.caption || '';
 
     var mediaTag = isImg
-      ? '<img src="' + src + '" onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" style="width:100%;height:60px;object-fit:cover;border-radius:2px;">'
+      ? '<img src="' + src + '" onerror="this.src=\'' + BACKEND_URL + '/' + src + '\'; this.onerror=null;" style="width:100%;height:80px;object-fit:cover;border-radius:4px;cursor:pointer;" onclick="window.open(\'' + src + '\', \'_blank\')">'
       : isVid
-        ? '<div style="font-size:28px;line-height:60px;">🎬</div>'
-        : '<div style="font-size:28px;line-height:60px;">📄</div>';
+        ? '<div style="font-size:32px;line-height:80px;text-align:center;background:#f1f5f9;border-radius:4px;">🎬</div>'
+        : '<div style="font-size:32px;line-height:80px;text-align:center;background:#f1f5f9;border-radius:4px;cursor:pointer;" onclick="window.open(\'' + src + '\', \'_blank\')">' + (isAppPdf ? '📋' : '📄') + '</div>';
 
-    html += '<div id="' + elemId + '" style="position:relative;border:1px solid #cbd5e1;border-radius:4px;padding:4px;background:#fff;width:90px;text-align:center;">'
+    var coverTag = '';
+    if (isCover) {
+      coverTag = '<div style="font-size:10px;color:#059669;font-weight:bold;margin-top:3px;text-align:center;">★ Cover Photo</div>';
+    } else if (isImg) {
+      coverTag = '<button type="button" onclick="setCoverPhoto(\'' + projectId + '\', \'' + escapeHtml(fn) + '\')" style="font-size:10px;padding:2px 6px;margin-top:3px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:3px;cursor:pointer;color:#475569;width:100%;">☆ Set Cover</button>';
+    }
+
+    var appBadge = '';
+    if (isAppPdf) {
+      var isGG = projectId.toUpperCase().startsWith('GG');
+      var isDG = projectId.toUpperCase().startsWith('DG');
+      var appLabel = isGG ? 'GG Application' : (isDG ? 'DG Application' : 'Grant Application');
+      appBadge = '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;align-items:stretch;">'
+               + '  <span style="font-size:9px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:3px;padding:2px 4px;font-weight:bold;text-align:center;">📋 ' + appLabel + '</span>'
+               + '  <button type="button" onclick="synthesizeFromAi(\'' + projectId + '\', \'pdf\')" style="font-size:9px;background:#8b5cf6;color:white;border:none;border-radius:3px;padding:3px 6px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:3px;" title="Use Gemini AI to extract project details and auto-fill form fields from this PDF">✨ AI Auto-fill</button>'
+               + '</div>';
+    }
+
+    html += '<div id="' + elemId + '" style="position:relative;border:1px solid ' + (isCover ? '#10b981' : '#cbd5e1') + ';border-radius:6px;padding:6px;background:#fff;width:140px;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,0.05);">'
           + mediaTag
-          + '<div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" title="' + escapeHtml(fn) + '">' + escapeHtml(fn) + '</div>'
-          + '<button type="button" onclick="deleteProjectAsset(\'' + projectId + '\', \'' + escapeHtml(fn) + '\', \'' + elemId + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;" title="Delete file">✕</button>'
+          + '<div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;" title="' + escapeHtml(fn) + '">' + escapeHtml(fn) + '</div>'
+          + coverTag
+          + appBadge
+          + '<input type="text" class="asset-caption-input" data-filename="' + escapeHtml(fn) + '" value="' + escapeHtml(caption) + '" onchange="saveAssetCaption(\'' + projectId + '\', \'' + escapeHtml(fn) + '\', this.value)" placeholder="Caption / description" style="width:100%;font-size:10px;padding:3px 4px;margin-top:4px;border:1px solid #e2e8f0;border-radius:3px;box-sizing:border-box;" title="File caption (auto-saved or saved with project)">'
+          + '<button type="button" onclick="deleteProjectAsset(\'' + projectId + '\', \'' + escapeHtml(fn) + '\', \'' + elemId + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;z-index:2;" title="Delete file">✕</button>'
           + '</div>';
   });
   html += '</div>';
@@ -1429,18 +2230,7 @@ window.deleteProjectAsset = async function (projectId, filename, elementId) {
       }
       success = true;
     } catch (err) {
-      console.warn('Supabase asset delete failed, trying backend fallback:', err);
-    }
-  }
-
-  if (!success) {
-    try {
-      var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/files/' + encodeURIComponent(filename), {
-        method: 'DELETE'
-      });
-      if (!res.ok) throw new Error('Server returned ' + res.status);
-      success = true;
-    } catch (err) {
+      console.error('Supabase asset delete error:', err);
       alert('Error deleting file: ' + err.message);
       return;
     }
@@ -1461,7 +2251,15 @@ function handleFileInputUpload(event, projectId) {
     banner.textContent = '⏳ Uploading ' + files.length + ' file(s)...';
   }
 
-  var fileList = Array.from(files);
+  var fileList = [];
+  var seenUploadNames = new Set();
+  Array.from(files).forEach(function (f) {
+    var fn = (f.name || '').trim();
+    if (fn && !seenUploadNames.has(fn.toLowerCase())) {
+      seenUploadNames.add(fn.toLowerCase());
+      fileList.push(f);
+    }
+  });
 
   if (getDataSourceMode() !== 'csv' && supabaseClient) {
     var uploads = fileList.map(function (file) {
@@ -1625,7 +2423,7 @@ window.addLinkInput = function (label, url) {
   container.appendChild(div);
 };
 
-function saveProjectEdits() {
+async function saveProjectEdits() {
   var p = allProjects[activeEditIdx];
   if (!p) return;
   var oldGid = String(p.id || p.grant_id || '').trim();
@@ -1643,6 +2441,13 @@ function saveProjectEdits() {
   var intYear = parseInt(newYear, 10) || null;
   var shepherdVal = (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value) || '';
 
+  var briefVal = (document.getElementById('edit-brief-overview') && document.getElementById('edit-brief-overview').value.trim()) || '';
+  var completeVal = (document.getElementById('edit-complete-overview') && document.getElementById('edit-complete-overview').value.trim()) || '';
+  var startDateVal = (document.getElementById('edit-start-date') && document.getElementById('edit-start-date').value.trim()) || '';
+  var endDateVal = (document.getElementById('edit-end-date') && document.getElementById('edit-end-date').value.trim()) || '';
+  var timelineVal = typeof window.getTimelinePayload === 'function' ? window.getTimelinePayload() : (p.timeline || { backstory: '', milestones: [] });
+  var detailsVal = typeof window.getDetailsPayload === 'function' ? window.getDetailsPayload() : (p.details || {});
+
   var links = [];
   document.querySelectorAll('#modal-links-list .link-row').forEach(function (r) {
     var inputs = r.querySelectorAll('input');
@@ -1651,120 +2456,136 @@ function saveProjectEdits() {
     }
   });
 
+  // Collect asset captions
+  var captionUpdates = [];
+  document.querySelectorAll('#modal-existing-files .asset-caption-input').forEach(function (inp) {
+    var fn = inp.getAttribute('data-filename');
+    var cap = inp.value.trim();
+    if (fn) {
+      captionUpdates.push({ filename: fn, caption: cap });
+    }
+  });
+
   if (getDataSourceMode() !== 'csv' && supabaseClient) {
-    var supabasePayload = {
+    var fullPayload = {
       id: newGid,
       title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
       project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
       status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
       category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
       budget: numAmt,
-      start_year: intYear,
+      start_year: intYear || (startDateVal ? (parseInt(startDateVal.slice(0, 4), 10) || p.start_year) : p.start_year),
       shepherd: shepherdVal,
       partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
       narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
       position_lat: !isNaN(parsedLat) ? parsedLat : null,
-      position_lng: !isNaN(parsedLng) ? parsedLng : null
+      position_lng: !isNaN(parsedLng) ? parsedLng : null,
+      brief_overview: briefVal,
+      complete_overview: completeVal,
+      start_date: startDateVal || null,
+      end_date: endDateVal || null,
+      timeline: timelineVal,
+      details: detailsVal
     };
 
-    var promise;
-    if (newGid !== oldGid) {
-      promise = supabaseClient.from('projects').insert(supabasePayload).then(function (res) {
-        if (res.error) throw res.error;
-        return supabaseClient.from('projects').delete().eq('id', oldGid);
-      });
-    } else {
-      promise = supabaseClient.from('projects').upsert(supabasePayload);
+    var saveWarning = null;
+
+    try {
+      if (newGid !== oldGid) {
+        var insRes = await supabaseClient.from('projects').insert(fullPayload);
+        if (insRes.error) throw insRes.error;
+        await supabaseClient.from('projects').delete().eq('id', oldGid);
+      } else {
+        var upRes = await supabaseClient.from('projects').upsert(fullPayload);
+        if (upRes.error) throw upRes.error;
+      }
+    } catch (err) {
+      var errMsg = String((err && (err.message || err.details || err.hint)) || '').toLowerCase();
+      if (errMsg.includes('column') || errMsg.includes('schema cache') || errMsg.includes('does not exist')) {
+        console.warn('Supabase projects table missing extended columns; retrying with core fields:', errMsg);
+        saveWarning = 'Core project fields saved successfully.\n\nNote: Extended columns (brief_overview, complete_overview, timeline, details) could not be saved to Supabase because schema_migration.sql has not been run yet in the Supabase Cloud SQL Editor.';
+        var corePayload = {
+          id: fullPayload.id,
+          title: fullPayload.title,
+          project_type: fullPayload.project_type,
+          status: fullPayload.status,
+          category: fullPayload.category,
+          budget: fullPayload.budget,
+          start_year: fullPayload.start_year,
+          shepherd: fullPayload.shepherd,
+          partner: fullPayload.partner,
+          narrative: fullPayload.narrative,
+          position_lat: fullPayload.position_lat,
+          position_lng: fullPayload.position_lng
+        };
+        try {
+          if (newGid !== oldGid) {
+            var retryIns = await supabaseClient.from('projects').insert(corePayload);
+            if (retryIns.error) throw retryIns.error;
+            await supabaseClient.from('projects').delete().eq('id', oldGid);
+          } else {
+            var retryUp = await supabaseClient.from('projects').upsert(corePayload);
+            if (retryUp.error) throw retryUp.error;
+          }
+        } catch (retryErr) {
+          console.error('Supabase retry save error:', retryErr);
+          alert('Error saving project to Supabase: ' + (retryErr.message || JSON.stringify(retryErr)));
+          if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+          return;
+        }
+      } else {
+        console.error('Supabase save error:', err);
+        alert('Error saving project to Supabase: ' + (err.message || JSON.stringify(err)));
+        if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+        return;
+      }
     }
 
-    promise
-      .then(function (res) {
-        if (res && res.error) throw res.error;
-        return supabaseClient.from('project_links').delete().eq('project_id', newGid);
-      })
-      .then(function () {
-        if (links.length > 0) {
-          var linksPayload = links.map(function (l, idx) {
-            return {
-              project_id: newGid,
-              label: l.label,
-              url: l.url,
-              display_order: idx
-            };
-          });
-          return supabaseClient.from('project_links').insert(linksPayload);
-        }
-      })
-      .then(function () {
-        cancelEditCleanup();
-        return loadData();
-      })
-      .then(function (projects) {
-        allProjects = projects;
-        rebuildMarkers();
-        var targetIdx = allProjects.findIndex(function (item) {
-          return String(item.id || item.grant_id || '').trim().toLowerCase() === newGid.toLowerCase();
+    try {
+      // Sync links
+      await supabaseClient.from('project_links').delete().eq('project_id', newGid);
+      if (links.length > 0) {
+        var linksPayload = links.map(function (l, idx) {
+          return {
+            project_id: newGid,
+            label: l.label,
+            url: l.url,
+            display_order: idx
+          };
         });
-        showDetail(targetIdx !== -1 ? targetIdx : (activeEditIdx >= 0 ? activeEditIdx : 0));
-      })
-      .catch(function (err) {
-        console.warn('Supabase save error, attempting backend fallback:', err);
-        saveViaBackendFallback();
-      })
-      .finally(function () {
-        if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
-      });
-  } else {
-    saveViaBackendFallback();
-  }
+        await supabaseClient.from('project_links').insert(linksPayload);
+      }
 
-  function saveViaBackendFallback() {
-    var updates = {
-      id: newGid,
-      title: (document.getElementById('edit-title') && document.getElementById('edit-title').value) || '',
-      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
-      status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
-      shepard: shepherdVal,
-      shepherd: shepherdVal,
-      category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
-      amount: newAmt,
-      budget: newAmt,
-      start_year: newYear,
-      partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
-      narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
-      position_lat: latVal,
-      position_lng: lngVal
-    };
+      // Sync captions
+      if (captionUpdates.length > 0) {
+        await Promise.all(captionUpdates.map(function (cu) {
+          return supabaseClient
+            .from('project_assets')
+            .update({ caption: cu.caption })
+            .match({ project_id: newGid, filename: cu.filename });
+        }));
+      }
 
-    fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(oldGid), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    })
-    .then(function (res) {
-      if (!res.ok) return res.json().then(function (err) { throw new Error(err.detail || 'Server error'); });
-      return fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(newGid) + '/links', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ links: links })
-      });
-    })
-    .then(function () {
       cancelEditCleanup();
-      return loadData();
-    })
-    .then(function (projects) {
+      var projects = await loadData();
       allProjects = projects;
       rebuildMarkers();
       var targetIdx = allProjects.findIndex(function (item) {
         return String(item.id || item.grant_id || '').trim().toLowerCase() === newGid.toLowerCase();
       });
       showDetail(targetIdx !== -1 ? targetIdx : (activeEditIdx >= 0 ? activeEditIdx : 0));
-    })
-    .catch(function (err) { alert('Error updating project: ' + err.message); })
-    .finally(function () {
+
+      if (saveWarning) {
+        alert(saveWarning);
+      }
+    } catch (err) {
+      console.error('Post-save sync error:', err);
+    } finally {
       if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
-    });
+    }
+  } else {
+    alert('Supabase client is not connected. Cannot save changes.');
+    if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
   }
 }
 
@@ -1814,8 +2635,35 @@ window.openCreateForm = function () {
     + '    </div>'
     + '  </div>'
     + '  <div style="margin-bottom:10px;">'
-    + '    <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Title *</label>'
-    + '    <input type="text" id="edit-title" placeholder="Project Title" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '      <label style="font-size:11px;font-weight:bold;">Project Title * <span style="font-weight:normal;color:#64748b;">(SPC prjTitle max 50 chars)</span></label>'
+    + '      <span id="counter-title" class="char-counter counter-normal">0 / 50</span>'
+    + '    </div>'
+    + '    <input type="text" id="edit-title" maxlength="60" oninput="updateTitleCharCounter()" placeholder="Project Title" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '  </div>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project Start Date (YYYY-MM-DD or YYYY-MM)</label>'
+    + '      <input type="text" id="edit-start-date" placeholder="YYYY-MM-DD" value="' + currentYear + '-01-01" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '    <div>'
+    + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Project End Date (YYYY-MM-DD or YYYY-MM)</label>'
+    + '      <input type="text" id="edit-end-date" placeholder="YYYY-MM-DD" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="margin-bottom:12px;">'
+    + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '      <label style="font-size:11px;font-weight:bold;">Brief Overview <span style="font-weight:normal;color:#64748b;">(Exported to SPC prjOverview — max 100 chars)</span></label>'
+    + '      <span id="counter-brief" class="char-counter counter-normal">0 / 100</span>'
+    + '    </div>'
+    + '    <textarea id="edit-brief-overview" rows="2" maxlength="150" oninput="updateBriefCharCounter()" placeholder="Punchy 100-character overview for Service Project Center..." style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;box-sizing:border-box;"></textarea>'
+    + '  </div>'
+    + '  <div style="margin-bottom:12px;">'
+    + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '      <label style="font-size:11px;font-weight:bold;">Complete Overview <span style="font-weight:normal;color:#64748b;">(Exported to SPC prjDetailedDescription — max 1,000 chars)</span></label>'
+    + '      <span id="counter-complete" class="char-counter counter-normal">0 / 1,000</span>'
+    + '    </div>'
+    + '    <textarea id="edit-complete-overview" rows="4" maxlength="1200" oninput="updateCompleteCharCounter()" placeholder="Comprehensive 1,000-character overview of the project, community served, and impact..." style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;box-sizing:border-box;"></textarea>'
     + '  </div>'
     + '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">'
     + '    <div>'
@@ -1868,7 +2716,7 @@ window.openCreateForm = function () {
   setupLocationPicker(defaultCoords);
 };
 
-window.saveNewProject = function () {
+window.saveNewProject = async function () {
   var btn = document.getElementById('btn-save-project');
   if (btn) { btn.textContent = 'Creating...'; btn.disabled = true; }
 
@@ -1889,6 +2737,20 @@ window.saveNewProject = function () {
   var numAmt = parseFloat(newAmt) || 0;
   var intYear = parseInt(newYear, 10) || null;
   var shepherdVal = (document.getElementById('edit-shepard') && document.getElementById('edit-shepard').value) || '';
+  var pType = (document.getElementById('edit-type') && document.getElementById('edit-type').value) || 'Club Direct / Donation';
+
+  var briefVal = (document.getElementById('edit-brief-overview') && document.getElementById('edit-brief-overview').value.trim()) || '';
+  var completeVal = (document.getElementById('edit-complete-overview') && document.getElementById('edit-complete-overview').value.trim()) || '';
+  var startDateVal = (document.getElementById('edit-start-date') && document.getElementById('edit-start-date').value.trim()) || (intYear ? intYear + '-01-01' : '');
+  var endDateVal = (document.getElementById('edit-end-date') && document.getElementById('edit-end-date').value.trim()) || '';
+
+  var initialMilestones = [];
+  if (pType === 'Global Grant') {
+    initialMilestones.push({ id: 'm_1', name: 'Submitted', date: startDateVal || '', notes: 'Submitted to Rotary International' });
+    initialMilestones.push({ id: 'm_2', name: 'Approved', date: '', notes: 'Approved by The Rotary Foundation' });
+  } else {
+    initialMilestones.push({ id: 'm_1', name: 'Project Initiated', date: startDateVal || '', notes: '' });
+  }
 
   var links = [];
   document.querySelectorAll('#modal-links-list .link-row').forEach(function (r) {
@@ -1899,152 +2761,97 @@ window.saveNewProject = function () {
   });
 
   if (getDataSourceMode() !== 'csv' && supabaseClient) {
-    var supabasePayload = {
+    var fullPayload = {
       id: gid,
       title: title,
-      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
+      project_type: pType,
       status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || 'proposed',
       category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || 'Community Service',
       budget: numAmt,
-      start_year: intYear,
+      start_year: intYear || (startDateVal ? (parseInt(startDateVal.slice(0, 4), 10) || null) : null),
       shepherd: shepherdVal,
       partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
       narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
       position_lat: !isNaN(parsedLat) ? parsedLat : null,
-      position_lng: !isNaN(parsedLng) ? parsedLng : null
+      position_lng: !isNaN(parsedLng) ? parsedLng : null,
+      brief_overview: briefVal,
+      complete_overview: completeVal,
+      start_date: startDateVal || null,
+      end_date: endDateVal || null,
+      timeline: { backstory: '', milestones: initialMilestones },
+      details: {}
     };
 
-    supabaseClient
-      .from('projects')
-      .insert(supabasePayload)
-      .then(function (res) {
-        if (res.error) throw res.error;
-        if (links.length > 0) {
-          var linksPayload = links.map(function (l, idx) {
-            return { project_id: gid, label: l.label, url: l.url, display_order: idx };
-          });
-          return supabaseClient.from('project_links').insert(linksPayload);
+    var saveWarning = null;
+
+    try {
+      var insRes = await supabaseClient.from('projects').insert(fullPayload);
+      if (insRes.error) throw insRes.error;
+    } catch (err) {
+      var errMsg = String((err && (err.message || err.details || err.hint)) || '').toLowerCase();
+      if (errMsg.includes('column') || errMsg.includes('schema cache') || errMsg.includes('does not exist')) {
+        console.warn('Supabase projects table missing extended columns; retrying with core fields:', errMsg);
+        saveWarning = 'Project created successfully with core fields.\n\nNote: Extended columns (brief_overview, complete_overview, timeline, details) could not be saved to Supabase because schema_migration.sql has not been run yet in the Supabase Cloud SQL Editor.';
+        var corePayload = {
+          id: fullPayload.id,
+          title: fullPayload.title,
+          project_type: fullPayload.project_type,
+          status: fullPayload.status,
+          category: fullPayload.category,
+          budget: fullPayload.budget,
+          start_year: fullPayload.start_year,
+          shepherd: fullPayload.shepherd,
+          partner: fullPayload.partner,
+          narrative: fullPayload.narrative,
+          position_lat: fullPayload.position_lat,
+          position_lng: fullPayload.position_lng
+        };
+        try {
+          var retryIns = await supabaseClient.from('projects').insert(corePayload);
+          if (retryIns.error) throw retryIns.error;
+        } catch (retryErr) {
+          console.error('Supabase retry create error:', retryErr);
+          alert('Error creating project: ' + (retryErr.message || JSON.stringify(retryErr)));
+          if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
+          return;
         }
-      })
-      .then(function () {
-        cancelEditCleanup();
-        return loadData();
-      })
-      .then(function (projects) {
-        allProjects = projects;
-        rebuildMarkers();
-        var targetIdx = allProjects.findIndex(function (item) {
-          return String(item.id || item.grant_id || '').trim().toLowerCase() === gid.toLowerCase();
-        });
-        showDetail(targetIdx !== -1 ? targetIdx : 0);
-      })
-      .catch(function (err) {
-        alert('Error creating project: ' + err.message);
-      })
-      .finally(function () {
+      } else {
+        console.error('Supabase create error:', err);
+        alert('Error creating project: ' + (err.message || JSON.stringify(err)));
         if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
-      });
-  } else {
-    var updates = {
-      id: gid,
-      title: title,
-      project_type: (document.getElementById('edit-type') && document.getElementById('edit-type').value) || '',
-      status: (document.getElementById('edit-status') && document.getElementById('edit-status').value) || '',
-      shepard: shepherdVal,
-      shepherd: shepherdVal,
-      category: (document.getElementById('edit-category') && document.getElementById('edit-category').value) || '',
-      amount: newAmt,
-      budget: newAmt,
-      start_year: newYear,
-      partner: (document.getElementById('edit-partner') && document.getElementById('edit-partner').value) || '',
-      narrative: (document.getElementById('edit-narrative') && document.getElementById('edit-narrative').value) || '',
-      position_lat: latVal,
-      position_lng: lngVal
-    };
+        return;
+      }
+    }
 
-    fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(gid), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    })
-    .then(function (res) {
-      if (!res.ok) return res.json().then(function (err) { throw new Error(err.detail || 'Server error'); });
+    try {
+      if (links.length > 0) {
+        var linksPayload = links.map(function (l, idx) {
+          return { project_id: gid, label: l.label, url: l.url, display_order: idx };
+        });
+        await supabaseClient.from('project_links').insert(linksPayload);
+      }
+
       cancelEditCleanup();
-      return loadData();
-    })
-    .then(function (projects) {
+      var projects = await loadData();
       allProjects = projects;
       rebuildMarkers();
       var targetIdx = allProjects.findIndex(function (item) {
         return String(item.id || item.grant_id || '').trim().toLowerCase() === gid.toLowerCase();
       });
       showDetail(targetIdx !== -1 ? targetIdx : 0);
-    })
-    .catch(function (err) { alert('Error creating project: ' + err.message); })
-    .finally(function () {
+
+      if (saveWarning) {
+        alert(saveWarning);
+      }
+    } catch (err) {
+      console.error('Post-create sync error:', err);
+    } finally {
       if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
-    });
+    }
+  } else {
+    alert('Supabase client is not connected. Cannot create project.');
+    if (btn) { btn.textContent = 'Create Project'; btn.disabled = false; }
   }
-};
-
-window.showDiffModal = function () {
-  var modal = document.getElementById('diff-modal');
-  var container = document.getElementById('diff-output-container');
-  var countLabel = document.getElementById('diff-file-count');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  if (container) container.innerHTML = 'Fetching repository diff...';
-
-  fetch(BACKEND_URL + '/api/diff')
-    .then(function (res) {
-      if (!res.ok) throw new Error('Failed to retrieve diff');
-      return res.json();
-    })
-    .then(function (data) {
-      if (!container) return;
-      if (data.status === 'clean') {
-        container.innerHTML = '<span style="color:#94a3b8;">✔ Working tree is clean. No uncommitted modifications.</span>';
-        if (countLabel) countLabel.textContent = '0 files changed';
-        return;
-      }
-
-      var out = '';
-      if (data.untracked && data.untracked.length > 0) {
-        out += '<span style="color:#f59e0b;font-weight:bold;">Untracked New Files:</span>\n';
-        data.untracked.forEach(function (f) {
-          out += '<span class="diff-line-add">? ' + escapeHtml(f) + '</span>\n';
-        });
-        out += '\n';
-      }
-
-      var diffLines = (data.diff || '').split('\n');
-      diffLines.forEach(function (line) {
-        var escaped = escapeHtml(line);
-        if (line.startsWith('+++') || line.startsWith('---')) {
-          out += '<span style="color:#38bdf8;font-weight:bold;">' + escaped + '</span>\n';
-        } else if (line.startsWith('+')) {
-          out += '<span class="diff-line-add">' + escaped + '</span>\n';
-        } else if (line.startsWith('-')) {
-          out += '<span class="diff-line-del">' + escaped + '</span>\n';
-        } else if (line.startsWith('@@')) {
-          out += '<span class="diff-line-hunk">' + escaped + '</span>\n';
-        } else {
-          out += escaped + '\n';
-        }
-      });
-
-      container.innerHTML = out || '<span style="color:#94a3b8;">No textual diff available.</span>';
-      if (countLabel) countLabel.textContent = 'Status: ' + data.status;
-    })
-    .catch(function () {
-      if (container) container.innerHTML = '<span style="color:#059669;">✔ Connected to Supabase Cloud. All edits are saved directly to PostgreSQL and Cloud Storage in real-time.</span>';
-      if (countLabel) countLabel.textContent = 'Supabase Online';
-    });
-};
-
-window.closeDiffModal = function () {
-  var modal = document.getElementById('diff-modal');
-  if (modal) modal.style.display = 'none';
 };
 
 function escapeHtml(str) {
@@ -2119,11 +2926,7 @@ window.toggleMaintenanceMode = function (forceState) {
 };
 
 window.handleBackendIndicatorClick = function (event) {
-  if (isMaintenanceMode) {
-    toggleDataSource();
-  } else {
-    window.toggleMaintenanceMode(true);
-  }
+  window.toggleMaintenanceMode();
 };
 
 // Keyboard shortcut: Ctrl+Shift+M or Cmd+Shift+M to toggle maintainer mode
@@ -2144,16 +2947,20 @@ function initMaintainerClient() {
     return;
   }
 
+  // Load existing log history immediately on load
+  window.fetchLogHistory();
+
   try {
     var evtSource = new EventSource(BACKEND_URL + '/api/logs');
     evtSource.onmessage = function (event) {
       var logDiv = document.getElementById('log-output');
+      var drawer = document.getElementById('log-drawer');
       if (logDiv) {
         var newLine = document.createElement('div');
         newLine.className = 'log-line';
         newLine.textContent = event.data;
         logDiv.appendChild(newLine);
-        logDiv.scrollTop = logDiv.scrollHeight;
+        if (drawer) drawer.scrollTop = drawer.scrollHeight;
       }
       pollMaintStatus();
     };
@@ -2171,6 +2978,48 @@ function initMaintainerClient() {
   pollMaintStatus();
 }
 
+window.fetchLogHistory = async function () {
+  try {
+    var res = await fetch(BACKEND_URL + '/api/logs/history');
+    if (res.ok) {
+      var data = await res.json();
+      var logDiv = document.getElementById('log-output');
+      var drawer = document.getElementById('log-drawer');
+      if (logDiv && data.logs && data.logs.length > 0) {
+        logDiv.innerHTML = '';
+        var hasFinished = false;
+        data.logs.forEach(function (line) {
+          var div = document.createElement('div');
+          div.className = 'log-line';
+          div.textContent = line;
+          logDiv.appendChild(div);
+          if (line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1 || line.indexOf('Synced to Supabase') !== -1) {
+            hasFinished = true;
+          }
+        });
+        if (drawer) drawer.scrollTop = drawer.scrollHeight;
+        if (hasFinished && window.currentActiveProjectId) {
+          window.loadProjectSyncStatus(window.currentActiveProjectId);
+        }
+      }
+    }
+  } catch (e) {}
+};
+
+var logPollInterval = null;
+window.startLogPolling = function (durationMs) {
+  if (logPollInterval) clearInterval(logPollInterval);
+  window.fetchLogHistory();
+  var endTime = Date.now() + (durationMs || 15000);
+  logPollInterval = setInterval(function () {
+    window.fetchLogHistory();
+    if (Date.now() > endTime) {
+      clearInterval(logPollInterval);
+      logPollInterval = null;
+    }
+  }, 1000);
+};
+
 function pollMaintStatus() {
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   if (!isLocal) return;
@@ -2183,14 +3032,16 @@ function pollMaintStatus() {
     .then(function (data) {
       var badge = document.getElementById('sync-status-badge');
       if (badge) {
-        badge.textContent = 'Sync: ' + data.status.toUpperCase();
+        var label = data.status.toUpperCase();
+        if (data.task) label += ' (' + (data.task === 'spc_export' ? 'SPC' : 'GrantCenter') + ')';
+        badge.textContent = 'Status: ' + label;
         badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
       }
     })
     .catch(function () {
       var badge = document.getElementById('sync-status-badge');
       if (badge) {
-        badge.textContent = 'Sync: Local Offline';
+        badge.textContent = 'Orchestrator: Offline';
         badge.style.background = '#64748b';
       }
     });
@@ -2199,29 +3050,27 @@ function pollMaintStatus() {
 window.triggerSync = function (dryRun) {
   if (dryRun === undefined) dryRun = true;
   window.toggleLogConsole(true);
-  fetch(BACKEND_URL + '/api/sync?dry_run=' + dryRun, { method: 'POST' });
+  window.startLogPolling(20000);
+  fetch(BACKEND_URL + '/api/grantcenter/sync?dry_run=' + dryRun, { method: 'POST' });
 };
 
-window.publishChanges = function () {
-  var msg = prompt('Commit message:', 'chore(sync): automated grant update');
-  if (!msg) return;
-  fetch(BACKEND_URL + '/api/publish', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg })
-  })
-  .then(function (res) { return res.json(); })
-  .then(function (data) {
-    alert(data.message || 'Published commit: ' + data.commit);
-  })
-  .catch(function () {
-    alert('Publish failed. Check orchestrator logs.');
-  });
+window.triggerSpcExport = function (dryRun) {
+  if (dryRun === undefined) dryRun = true;
+  window.toggleLogConsole(true);
+  window.startLogPolling(20000);
+  fetch(BACKEND_URL + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' });
 };
 
 window.toggleLogConsole = function (forceOpen) {
   var drawer = document.getElementById('log-drawer');
-  if (drawer) drawer.style.display = forceOpen || drawer.style.display === 'none' ? 'block' : 'none';
+  if (drawer) {
+    var willOpen = forceOpen || drawer.style.display === 'none';
+    drawer.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) {
+      window.fetchLogHistory();
+      drawer.scrollTop = drawer.scrollHeight;
+    }
+  }
 };
 
 function initDivider() {
