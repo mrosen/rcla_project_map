@@ -133,13 +133,40 @@ function getProjectSummaryText(p) {
 
 function normalizeSpcUrl(url, guid) {
   if (url && typeof url === 'string') {
-    return url.replace(/\/project\/detail\//g, '/project?guid=').trim();
+    var u = url.trim();
+    if (u.indexOf('http') === 0) {
+      return u.replace(/\/project\/detail\//g, '/project?guid=');
+    }
+    if (/^[0-9a-fA-F-]{32,36}$/.test(u)) {
+      return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(u);
+    }
   }
-  if (guid) {
-    return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(guid);
+  if (guid && typeof guid === 'string' && guid.trim()) {
+    var g = guid.trim();
+    if (g.indexOf('http') === 0) return normalizeSpcUrl(g);
+    return 'https://spc.rotary.org/project?guid=' + encodeURIComponent(g);
   }
   return '';
 }
+
+function getProjectSpcUrl(project) {
+  if (!project) return '';
+  var spcData = (project.sync_status && project.sync_status.spc) || {};
+  var candidate = spcData.spc_url || spcData.url || project.spc_url;
+  var guid = spcData.spc_project_id || spcData.guid || project.spc_id || project.spc_guid;
+  var url = normalizeSpcUrl(candidate, guid);
+  if (url) return url;
+
+  if (project.project_links && Array.isArray(project.project_links)) {
+    var sLink = project.project_links.find(function (l) {
+      return (l.url && l.url.indexOf('spc.rotary.org') !== -1) ||
+             (l.label && l.label.toLowerCase().indexOf('spc') !== -1);
+    });
+    if (sLink && sLink.url) return normalizeSpcUrl(sLink.url);
+  }
+  return '';
+}
+
 
 function getProjectCoords(project) {
   if (!project) return null;
@@ -850,16 +877,16 @@ function showDetail(idx) {
     ? '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">✏️ Edit Project</button>'
     : '';
 
-  // SPC Link Badge
+  // SPC Link Badge & Export Button
   var spcBadge = '';
-  var spcData = project.sync_status && project.sync_status.spc;
-  var spcUrl = normalizeSpcUrl(spcData && (spcData.spc_url || spcData.spc_project_id), spcData && spcData.spc_project_id);
-  if (!spcUrl && project.project_links) {
-    var sLink = project.project_links.find(function (l) { return l.url && l.url.indexOf('spc.rotary.org') !== -1; });
-    if (sLink) spcUrl = normalizeSpcUrl(sLink.url);
-  }
+  var spcUrl = getProjectSpcUrl(project);
   if (spcUrl) {
-    spcBadge = '<a href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="View on Rotary Service Project Center">🌐 View on SPC</a>';
+    spcBadge = '<a href="' + escapeHtml(spcUrl) + '" target="_blank" style="background:#2563eb;color:white;text-decoration:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="View on Rotary Service Project Center">🌐 View on SPC ↗</a>';
+    if (isMaintenanceMode) {
+      spcBadge += ' <button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#1d4ed8;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Re-export or update project in Rotary Service Project Center">🚀 Export to SPC</button>';
+    }
+  } else if (isMaintenanceMode) {
+    spcBadge = '<button type="button" onclick="triggerProjectSpcExport(\'' + gid + '\', false)" style="background:#2563eb;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;cursor:pointer;" title="Export this project to Rotary Service Project Center">🚀 Export to SPC</button>';
   }
 
   // Lead Brief Overview
@@ -1264,14 +1291,27 @@ window.loadProjectSyncStatus = async function (projectId) {
       ? '<span class="sync-chip chip-green" title="' + escapeHtml(gc.application_pdf_name || '') + '">📄 ' + prefix + ' Appl PDF on file' + reportTxt + '</span>'
       : '<span class="sync-chip chip-gray">📄 No ' + prefix + ' Appl PDF</span>';
 
-    var spcUrl = normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
-    var spcHtml = spc.exported
+    var spcUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc.spc_url || spc.spc_project_id, spc.spc_project_id);
+    var spcHtml = (spc.exported || spcUrl)
       ? (spcUrl
           ? '<a href="' + escapeHtml(spcUrl) + '" target="_blank" class="sync-chip chip-green" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="View on Rotary Service Project Center">✓ Synced to SPC ↗</a>'
           : '<span class="sync-chip chip-green">✓ Synced to SPC</span>')
       : '<span class="sync-chip chip-gray">Not exported to SPC</span>';
 
     badgesEl.innerHTML = gcHtml + spcHtml;
+  }
+
+  function renderSyncActions(pid, spc) {
+    if (!actionsEl) return;
+    var sUrl = getProjectSpcUrl(p) || normalizeSpcUrl(spc && (spc.spc_url || spc.spc_project_id), spc && spc.spc_project_id);
+    var html = '';
+    if (sUrl) {
+      html += '<a href="' + escapeHtml(sUrl) + '" target="_blank" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;text-decoration:none;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:bold;" title="Open project in Rotary Service Project Center">🌐 View on SPC ↗</a> ';
+    }
+    html += '<button type="button" onclick="triggerProjectRiFetch(\'' + pid + '\')" style="padding:4px 8px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;">📥 Re-check RI</button>'
+      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + pid + '\', true)" style="padding:4px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;font-weight:600;" title="Audit and validate payload for SPC without submitting">🧪 SPC Dry Run</button>'
+      + ' <button type="button" onclick="triggerProjectSpcExport(\'' + pid + '\', false)" style="padding:4px 8px;font-size:11px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Authenticate with My Rotary and create project in SPC">🚀 ' + (sUrl ? 'Re-export to SPC' : 'Export to SPC') + '</button>';
+    actionsEl.innerHTML = html;
   }
 
   // 1. Initial optimistic render from local / Supabase project memory
@@ -1292,8 +1332,9 @@ window.loadProjectSyncStatus = async function (projectId) {
     }
   }
 
-  // Render initial state immediately so badges appear without delay
+  // Render initial state immediately so badges and actions appear without delay
   renderSyncChips(localGc, localSpc);
+  renderSyncActions(projectId, localSpc);
 
   // 2. Query live backend daemon if available
   try {
@@ -1304,6 +1345,7 @@ window.loadProjectSyncStatus = async function (projectId) {
     var spc = data.spc || {};
 
     renderSyncChips(gc, spc);
+    renderSyncActions(projectId, spc);
 
     // Update in-memory project so detail view and links list have the SPC link immediately!
     if (p) {
@@ -1329,15 +1371,10 @@ window.loadProjectSyncStatus = async function (projectId) {
         }
       }
     }
-
-    var actionsHtml = ''
-      + '<button type="button" onclick="triggerProjectRiFetch(\'' + projectId + '\')" style="padding:4px 8px;font-size:11px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;">📥 Re-check RI</button>'
-      + '<button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', true)" style="padding:4px 8px;font-size:11px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Audit and validate payload for SPC without submitting">🧪 SPC Dry Run</button>'
-      + '<button type="button" onclick="triggerProjectSpcExport(\'' + projectId + '\', false)" style="padding:4px 8px;font-size:11px;background:#1d4ed8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" title="Authenticate with My Rotary and create project in SPC">🚀 SPC Live Export</button>';
-    if (actionsEl) actionsEl.innerHTML = actionsHtml;
   } catch (err) {
-    // If backend daemon is offline (e.g. static hosting on GitHub Pages), retain the local sync chips!
-    if (actionsEl) actionsEl.innerHTML = '';
+    // If backend daemon is offline (e.g. static hosting on GitHub Pages), retain the local sync chips and action buttons!
+    renderSyncChips(localGc, localSpc);
+    renderSyncActions(projectId, localSpc);
   }
 };
 
@@ -1362,6 +1399,25 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
     if (!confirm('Proceed with LIVE export to Rotary Service Project Center (SPC) for project ' + projectId + '?\n\nThis will launch the SPC automation, authenticate with My Rotary, and create the project entry in Rotary International.')) {
       return;
     }
+  }
+
+  // Check if we are on static GitHub Pages
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isLocal) {
+    var openLocal = confirm(
+      '⚠️ Local Orchestrator Required for SPC Export\n\n' +
+      'Automated SPC export uses Playwright browser automation to authenticate with My Rotary and create the project entry in Rotary International.\n\n' +
+      'Because GitHub Pages is a static host without a Python backend, the export must run through your local orchestrator.\n\n' +
+      'Steps:\n' +
+      '1. In terminal: ./start_server.sh  (or: python3 orchestrator.py)\n' +
+      '2. In browser: Open http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true\n' +
+      '3. Click "🚀 Export to SPC"\n\n' +
+      'Would you like to open http://localhost:8000 now?'
+    );
+    if (openLocal) {
+      window.open('http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true', '_blank');
+    }
+    return;
   }
 
   // Immediately open the log console and print an instant status line
@@ -3273,6 +3329,23 @@ window.triggerSync = function (dryRun) {
 
 window.triggerSpcExport = function (dryRun) {
   if (dryRun === undefined) dryRun = true;
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isLocal) {
+    var openLocal = confirm(
+      '⚠️ Local Orchestrator Required for SPC Export\n\n' +
+      'Batch SPC export uses Playwright browser automation to authenticate with My Rotary and create project entries in Rotary International.\n\n' +
+      'Because GitHub Pages is a static host without a Python backend, the export must run through your local orchestrator.\n\n' +
+      'Steps:\n' +
+      '1. In terminal: ./start_server.sh  (or: python3 orchestrator.py)\n' +
+      '2. In browser: Open http://localhost:8000\n' +
+      '3. Click "SPC Export (Live)" in the maintainer bar\n\n' +
+      'Would you like to open http://localhost:8000 now?'
+    );
+    if (openLocal) {
+      window.open('http://localhost:8000/', '_blank');
+    }
+    return;
+  }
   window.toggleLogConsole(true);
   window.startLogPolling(20000);
   fetch(BACKEND_URL + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' });
