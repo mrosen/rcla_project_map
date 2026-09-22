@@ -1408,7 +1408,7 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
       'Automated SPC export uses Playwright browser automation to authenticate with My Rotary and create the project entry in Rotary International.\n\n' +
       'Because GitHub Pages is a static host without a Python backend, the export must run through your local orchestrator.\n\n' +
       'Steps:\n' +
-      '1. In terminal: ./start_server.sh  (or: python3 orchestrator.py)\n' +
+      '1. Start server: start_server.bat (Windows) or ./start_server.sh (WSL/Linux)\n' +
       '2. In browser: Open http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true\n' +
       '3. Click "🚀 Export to SPC"\n\n' +
       'Would you like to open http://localhost:8000 now?'
@@ -3350,7 +3350,7 @@ window.triggerSpcExport = function (dryRun) {
       'Batch SPC export uses Playwright browser automation to authenticate with My Rotary and create project entries in Rotary International.\n\n' +
       'Because GitHub Pages is a static host without a Python backend, the export must run through your local orchestrator.\n\n' +
       'Steps:\n' +
-      '1. In terminal: ./start_server.sh  (or: python3 orchestrator.py)\n' +
+      '1. Start server: start_server.bat (Windows) or ./start_server.sh (WSL/Linux)\n' +
       '2. In browser: Open http://localhost:8000\n' +
       '3. Click "SPC Export (Live)" in the maintainer bar\n\n' +
       'Would you like to open http://localhost:8000 now?'
