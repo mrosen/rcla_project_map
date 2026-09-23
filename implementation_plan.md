@@ -20,11 +20,11 @@ Make Maintenance Mode strictly opt-in and hidden from standard public visitors, 
 
 ### Top Navigation & Maintenance Mode Defaults
 
-#### [MODIFY] [index.html](file:///home/msr/rcla_project_map/index.html)
+#### [MODIFY] [index.html](./index.html)
 - Set `#btn-maint-toggle` and `#backend-status-indicator` to `display: none;` by default in HTML so they never flash or appear for regular visitors.
 - Add `ondblclick="toggleMaintenanceMode()"` to the navbar club title as a discreet maintainer fallback on devices without a keyboard.
 
-#### [MODIFY] [main.js](file:///home/msr/rcla_project_map/main.js)
+#### [MODIFY] [main.js](./main.js)
 - In `checkMaintenanceMode()`: Default to `false` (remove the `hostname === 'localhost'` override so local and production behave identically for clean public preview).
 - In `applyMaintenanceModeUI()`:
   - When `isMaintenanceMode` is `false`: Hide `#maintainer-panel`, hide `#btn-maint-toggle`, and hide `#backend-status-indicator`.

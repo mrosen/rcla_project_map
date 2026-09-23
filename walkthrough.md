@@ -35,10 +35,10 @@ All requested changes to streamline the public interface and make maintenance mo
 
 | File | Changes |
 | :--- | :--- |
-| [index.html](file:///home/msr/rcla_project_map/index.html) | Hidden `#btn-maint-toggle` and `#backend-status-indicator` by default (`display: none;`). Added `ondblclick="toggleMaintenanceMode()"` to navbar title. Bumped script version to `v=2.0.6`. |
-| [main.js](file:///home/msr/rcla_project_map/main.js) | Changed `checkMaintenanceMode()` to default to `false`. Conditioned `editBtn` and `spcBadge` on `isMaintenanceMode`. Added `✓ Synced to Rotary SPC ↗` header badge. Added SPC link to `renderFilesAndLinksFromProject` and `renderFilesAndLinks`. |
-| [implementation_plan.md](file:///home/msr/rcla_project_map/implementation_plan.md) | Updated plan documentation and link references. |
-| [walkthrough.md](file:///home/msr/rcla_project_map/walkthrough.md) | Updated walkthrough documentation and link references. |
+| [index.html](./index.html) | Hidden `#btn-maint-toggle` and `#backend-status-indicator` by default (`display: none;`). Added `ondblclick="toggleMaintenanceMode()"` to navbar title. Bumped script version to `v=2.0.6`. |
+| [main.js](./main.js) | Changed `checkMaintenanceMode()` to default to `false`. Conditioned `editBtn` and `spcBadge` on `isMaintenanceMode`. Added `✓ Synced to Rotary SPC ↗` header badge. Added SPC link to `renderFilesAndLinksFromProject` and `renderFilesAndLinks`. |
+| [implementation_plan.md](./implementation_plan.md) | Updated plan documentation and link references. |
+| [walkthrough.md](./walkthrough.md) | Updated walkthrough documentation and link references. |
 
 ---
 
