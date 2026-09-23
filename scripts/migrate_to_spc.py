@@ -898,6 +898,25 @@ def construct_spc_payload(p: dict) -> dict:
                     if not ckey and not is_host:
                         f_item["fundingOtherName"] = c_name
                     fundings.append(f_item)
+
+            # Ensure any non-contributing clubs named in partner_clubs are still represented in partners
+            for c_raw in (details.get("partner_clubs") or []):
+                c_name = str(c_raw).strip()
+                if not c_name:
+                    continue
+                matched = find_partner_club(c_name)
+                k = matched.get("key") if matched else c_name
+                is_host = (k == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_name.lower())
+                use_k = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else k
+                existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_k).lower()), None)
+                if not existing_p:
+                    partners.append({
+                        "partnerOrganizationKey": use_k,
+                        "Hour": "",
+                        "MoneyDonated": "",
+                        "NoOfVolunteer": "",
+                        "year": ""
+                    })
         else:
             raw_pclubs = details.get("partner_clubs") or []
             if isinstance(raw_pclubs, str):
@@ -945,6 +964,21 @@ def construct_spc_payload(p: dict) -> dict:
                     if not ckey and not is_host:
                         f_item["fundingOtherName"] = c_str
                     fundings.append(f_item)
+
+        # 4. Other Contributions (e.g. Donor Advised Funds, Cooperating Partners)
+        other_contribs = details.get("other_contributions")
+        if other_contribs and isinstance(other_contribs, list):
+            for oc in other_contribs:
+                o_name = str(oc.get("name", "")).strip()
+                amt_val = float(re.sub(r'[^0-9.]', '', str(oc.get("amount", 0))) or 0)
+                amt_str = str(int(amt_val)) if amt_val > 0 else ""
+                if amt_val > 0 and o_name:
+                    fundings.append({
+                        "fundingSource": "Other",
+                        "fundingAmount": amt_str,
+                        "fundingClubKey": "",
+                        "fundingOtherName": o_name
+                    })
     else:
         intl_club = str(p.get("international_club_name") or p.get("internationalClub_name") or "").strip()
         partner_club = find_partner_club(intl_club)
