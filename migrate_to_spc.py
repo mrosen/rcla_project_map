@@ -70,10 +70,14 @@ KNOWN_PARTNER_CLUBS = {
     "marin evening": {"key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "id": "85885", "district": "5150"},
     "san rafael marin evening": {"key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "id": "85885", "district": "5150"},
     "peninsula starlight": {"key": "5d8ac492-7950-4a28-95d8-a0272158d2cd", "name": "Peninsula Starlight-San Mateo County", "id": "90074", "district": "5150"},
+    "wiarton": {"key": "36e86754-6c0b-44c9-9cff-46974241043a", "name": "Wiarton", "id": "2896", "district": "6330"},
+    "fort collins": {"key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3", "name": "Fort Collins", "id": "1100", "district": "5440"},
 }
 
 KNOWN_DISTRICTS = {
-    "7620": {"key": "9445e695-1a25-4e21-941e-3eff587a0a8f", "name": "7620"}
+    "7620": {"key": "9445e695-1a25-4e21-941e-3eff587a0a8f", "name": "7620"},
+    "6330": {"key": "", "name": "6330"},
+    "5440": {"key": "", "name": "5440"}
 }
 
 # Detailed financial profiles for complex grants with multi-club and NGO partners
@@ -117,16 +121,64 @@ DETAILED_PROJECT_PROFILES = {
             {"source": "Other - Government Entity", "name": "Guatemala Federal Department of Education", "amount": "0"},
             {"source": "Other - Community Group", "name": "Vista Hermosa Water & Sanitation Committee / COCODE", "amount": "0"}
         ]
+    },
+    "GG2684872": {
+        "club_contributions": [
+            {"club_key": "36e86754-6c0b-44c9-9cff-46974241043a", "name": "Wiarton", "amount": "8750"},
+            {"club_key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3", "name": "Fort Collins", "amount": "5000"},
+            {"club_key": "c575902e-aae0-4b82-9aba-54947c09f4fe", "name": "Lake Atitlan", "amount": "300"},
+        ],
+        "district_contributions": [
+            {"district": "6330", "source": "District(DDF)", "amount": "8750"},
+            {"district": "5440", "source": "District(DDF)", "amount": "5000"},
+        ],
+        "world_fund": "11000",
+        "implementing_partners": []
     }
 }
 
 def find_partner_club(club_name_str: str) -> dict:
     if not club_name_str:
         return None
-    s = club_name_str.lower()
+    s = club_name_str.lower().strip()
     for k, v in KNOWN_PARTNER_CLUBS.items():
         if k in s:
             return v
+
+    clean_name = re.sub(r'\(d\d+\)', '', s, flags=re.IGNORECASE)
+    clean_name = re.sub(r'rotary\s+club\s+(?:of\s+)?', '', clean_name, flags=re.IGNORECASE).strip()
+    if len(clean_name) >= 3:
+        try:
+            req_data = json.dumps({
+                "type": "Rotary Club",
+                "clubName": clean_name,
+                "districtNumber": "",
+                "countrykey": ""
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                "https://spc.rotary.org/api/Search/Organization",
+                data=req_data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "subscriptionkey": "ROTARY_API_KEY"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                results = json.loads(resp.read().decode())
+                if results and isinstance(results, list):
+                    match = next((item for item in results if item.get("orgName", "").lower() == clean_name), results[0])
+                    entry = {
+                        "key": match.get("orgKey"),
+                        "name": match.get("orgName"),
+                        "id": match.get("clubIdExt"),
+                        "district": match.get("districtAddress")
+                    }
+                    KNOWN_PARTNER_CLUBS[clean_name] = entry
+                    return entry
+        except Exception as e:
+            print(f"Warning: Rotary Org search failed for '{clean_name}': {e}")
+
     return None
 
 # --- Load Environment Variables ---
