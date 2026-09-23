@@ -1,56 +1,81 @@
-# Walkthrough: Streamlined Public View & Discreet Maintenance Mode
+# Walkthrough: Dynamic Extraction & Migration of Non-Financial Partner Organizations to Rotary SPC
 
-All requested changes to streamline the public interface and make maintenance mode strictly opt-in have been implemented, tested, and verified.
-
----
-
-## 1. Overview of Changes
-
-### A. Maintenance Mode Completely Hidden by Default
-- **Public Experience**: Regular visitors now see a completely clean interface:
-  - No `🛠️ Maintainer Mode` button in the navbar.
-  - No database status indicator pill.
-  - No maintainer toolbar.
-  - No `✏️ Edit Project` button.
-  - No `🚀 Export to SPC` button.
-- **Maintainer Access**:
-  - **Keyboard Shortcut**: Press `Ctrl+Shift+M` (or `Cmd+Shift+M` on macOS).
-  - **URL Parameter**: Visit with `?maint=true`, `?admin=true`, or `?edit=true`.
-  - **Discreet Double-Click**: Double-click the club title (*"Rotary Club of Lake Atitlán — Projects"*) in the top navbar.
-  - Once active, the navbar displays `🛠️ Maint Mode ON (✕ Exit)` along with the database indicator pill and maintainer panel. Clicking the button again exits back to the clean public mode.
-
-### B. Rotary SPC Integration for Public Viewers
-- **Header Sync Badge**: When a project is synced to Rotary SPC, a subtle, elegant badge appears in the metadata row alongside Project Type and Status:
-  `✓ Synced to Rotary SPC ↗`
-  Clicking it opens the official Rotary SPC page in a new tab.
-- **Attached Documents & Web Links**: The project's Rotary SPC entry is now integrated directly into the project's standard resource links list at the bottom of the details view:
-  `🌐 Rotary Service Project Center (SPC) ↗`
-
-### C. File Link Resolution in WSL
-- All file references in documentation and responses are formatted as `file:///home/msr/rcla_project_map/...` (or workspace-relative), eliminating the VS Code UNC doubling issue (`\\wsl.localhost\wsl.localhost\...`).
+We have completed the dynamic extraction and migration engine for non-financial implementing partner organizations (NGOs, Municipalities, Schools, Community Committees / COCODEs) to Rotary Service Project Center (SPC), completely eliminating fragile hardcoded profiles and guaranteeing zero `$0 USD` funding lines.
 
 ---
 
-## 2. Modified Files
+## 1. Key Accomplishments
 
-| File | Changes |
-| :--- | :--- |
-| [index.html](./index.html) | Hidden `#btn-maint-toggle` and `#backend-status-indicator` by default (`display: none;`). Added `ondblclick="toggleMaintenanceMode()"` to navbar title. Bumped script version to `v=2.0.6`. |
-| [main.js](./main.js) | Changed `checkMaintenanceMode()` to default to `false`. Conditioned `editBtn` and `spcBadge` on `isMaintenanceMode`. Added `✓ Synced to Rotary SPC ↗` header badge. Added SPC link to `renderFilesAndLinksFromProject` and `renderFilesAndLinks`. |
-| [implementation_plan.md](./implementation_plan.md) | Updated plan documentation and link references. |
-| [walkthrough.md](./walkthrough.md) | Updated walkthrough documentation and link references. |
+### A. Elimination of Fragile Hardcoded Profiles
+- Removed `DETAILED_PROJECT_PROFILES` entirely from [`scripts/migrate_to_spc.py`](./scripts/migrate_to_spc.py) and [`migrate_to_spc.py`](./migrate_to_spc.py).
+- Canonical financial breakdowns (`club_contributions_list`, `district_contributions`, `world_fund`) are now sourced directly and dynamically from Supabase database fields, ensuring all downstream tools and web views share identical data.
+
+### B. Dynamic Partner Extraction (`extract_partner_organizations`)
+- Dynamically extracts cooperating and implementing partner organizations from:
+  - `details.cooperating_organizations` (string arrays, comma-delimited strings)
+  - `details.implementing_partners`
+  - `project.partner`
+  - `project.narrative` (under `### Partner Organizations` / `NGOs & Local Organizations`)
+- Robust cleaning pipeline:
+  - Normalizes smart quotes and typographic punctuation.
+  - Strips parenthetical roles, URLs, and noisy suffixes while preserving acronyms like `(AdP)`.
+  - Normalizes duplicate names and sub-strings (e.g. deduplicates "COCODE" vs "Vista Hermosa Water Committee / COCODE").
+  - Automatically classifies partner types into `GovernmentEntity`, `LocalCommunityGroup`, `Foundation`, or `NonGovernmentalOrganization`.
+
+### C. Partner Credit & Clean Financial Table in Rotary SPC
+- **0 Zero-Dollar Funding Rows**:
+  - Only genuine financial contributions with `fundingAmount > 0` are placed in `projectFundings`.
+  - Verified across all 37 projects: **0 zero-dollar funding rows** exist in the generated payloads.
+- **Prominent Narrative Callout**:
+  - Dynamically appends `Cooperating Partner(s): ...` to `description` within Rotary SPC's 1,000-character limit, ensuring all non-financial partners are prominently credited.
+- **Search Tag Indexing**:
+  - Dynamically populates partner names into Rotary SPC's `tags` field within the 100-character limit, ensuring projects are discoverable when searching for partner organizations.
+- **RI Service Partners Mapping**:
+  - Formal Rotary International Global Partners in Service (Ashoka, Habitat for Humanity, IEP, Peace Corps, ShelterBox, USAID) are mapped to their official RI database GUIDs in `projectNonRotaryPartners`.
+
+### D. In-Browser Evaluation & Duplicate Prevention
+- Reconciles existing project details fetched via `ProjectDetail/en/{spcKey}`:
+  - Preserves backend category keys and handles existing club members.
+  - Guarantees valid `partnerCategoryId` and `fundTypeId` on all club member rows, preventing ASP.NET backend crashes.
+  - Automatically deduplicates individual contact joiners to prevent constraint violations.
 
 ---
 
-## 3. Verification
+## 2. Verification & Live Results
 
-1. **JavaScript Syntax Check**:
-   - `node -c main.js` executed with exit code 0 (zero errors).
-2. **Public View Verification**:
-   - Verified that by default, `isMaintenanceMode` evaluates to `false`.
-   - Verified that navbar contains no maintenance toggle button or database status indicator.
-   - Verified that project detail headers show only standard public metadata badges plus `✓ Synced to Rotary SPC ↗` when synced.
-   - Verified that `Attached Documents & Web Links` renders `🌐 Rotary Service Project Center (SPC) ↗`.
-3. **Maintainer Mode Verification**:
-   - Toggling maintenance mode (`Ctrl+Shift+M` or `?maint=true`) reveals the maintainer panel, `✏️ Edit Project` button, and `🚀 Export to SPC` / `🌐 Open SPC View ↗` action cluster.
-   - Exiting maintenance mode restores the clean public view.
+### A. Automated 37-Project Survey
+Running [`scripts/test_all_projects_payload.py`](./scripts/test_all_projects_payload.py) across all 37 projects confirmed:
+- **29 projects** dynamically extracted and populated non-financial implementing partners.
+- **Total `$0 USD` funding rows across all 37 projects: 0**.
+
+### B. Live Migration of `GG2578692`
+Executed:
+```bash
+python3 -u scripts/migrate_to_spc.py GG2578692 --headless
+```
+- Successfully authenticated via My Rotary Okta with headless OneTrust consent handler.
+- Matched existing project on SPC (`0c101fff-43ee-41ea-97bc-22fd018d4cff`) and performed in-place update.
+- Updated local migration state and synced status to Supabase `projects` and `project_links`.
+
+### C. Live Rotary SPC API Confirmation
+Direct query of `https://spc.rotary.org/api/Project/ProjectDetail/en/0c101fff-43ee-41ea-97bc-22fd018d4cff`:
+- **Title**: `WASH for Vista Hermosa, Phase II`
+- **Tags**: Indexed with partner names:
+  `['Asociacion Pro Agua del Pueblo (AdP)', 'Municipality of Santa Lucia Utatlan', 'Guatemala Federal Departmen']`
+- **Description**: Sits cleanly at 1,000 chars and ends with:
+  > *Cooperating Partner(s): Asociacion Pro Agua del Pueblo (ADP), Municipality of Santa Lucia Utatlan, Guatemala Federal Department of Education, Vista Hermosa Water & Sanitation Committee / COCODE.*
+- **Funding Sources**: 12 rows, all positive, with **0 zero-dollar entries**:
+  - District 7620 DDF: \$15,000
+  - Global Grant: \$12,000
+  - Annapolis: \$8,450
+  - Washington, D.C.: \$5,000
+  - Baltimore: \$3,000
+  - Carroll Creek: \$2,500
+  - Petaluma Valley: \$1,600
+  - Rockville: \$1,500
+  - Lake Shore-Severna Park: \$1,000
+  - Dupont Circle: \$700
+  - Capitol Hill: \$500
+  - Lake Atitlán: \$300
+- **Partners**: All 8 partner clubs intact with financial contributions recorded.
+- **Contacts**: Single joiner contact (Michael Rosen), 0 duplicate active contacts.

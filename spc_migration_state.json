@@ -17,7 +17,7 @@
     "spc_id": "0c101fff-43ee-41ea-97bc-22fd018d4cff",
     "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II",
     "action": "updated",
-    "migrated_at": "2026-09-22T16:21:29.904469",
+    "migrated_at": "2026-09-23T13:43:34.610102",
     "spc_url": "https://spc.rotary.org/project?guid=0c101fff-43ee-41ea-97bc-22fd018d4cff"
   },
   "CLUB_2026_BasketballCourtPanab": {
@@ -68,5 +68,12 @@
     "action": "updated",
     "migrated_at": "2026-09-22T20:32:20.169363",
     "spc_url": "https://spc.rotary.org/project?guid=f1003a9b-fc97-498f-9b1a-325bbe8bce59"
+  },
+  "DG_2020_SantaCruz": {
+    "spc_id": "c452adfd-9940-45de-809e-36302b4b0bb1",
+    "title": "Sunspring installation Santa Lucia Utatlan",
+    "action": "updated",
+    "migrated_at": "2026-09-23T15:43:10.910137",
+    "spc_url": "https://spc.rotary.org/project?guid=c452adfd-9940-45de-809e-36302b4b0bb1"
   }
 }

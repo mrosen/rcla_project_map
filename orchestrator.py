@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/msr/venv/bin/python3
 """
 orchestrator.py — Rotary Grant Sync & Integration Orchestrator
 --------------------------------------------------------------
@@ -10,17 +10,26 @@ Provides backend services for the Rotary Club of Lake Atitlán Project Map:
 - Real-time Server-Sent Events (SSE) log streaming
 """
 
+import sys
+import os
+
+# Auto-re-execute inside dedicated venv if started with system Python on Linux
+if sys.platform != "win32" and sys.prefix != "/home/msr/venv" and os.path.exists("/home/msr/venv/bin/python3"):
+    os.execv("/home/msr/venv/bin/python3", ["/home/msr/venv/bin/python3"] + sys.argv)
+
 import asyncio
 from collections import deque
 import json
 import mimetypes
-import os
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, List, Optional
 
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
+
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request

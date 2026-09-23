@@ -21,10 +21,14 @@ import time
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
 # --- Configuration & Constants ---
-ENV_PATHS = [Path("/home/msr/grantcenter/.env"), Path(".env")]
+ENV_PATHS = [Path("/home/msr/grantcenter/.env"), Path(__file__).resolve().parent.parent / ".env", Path(".env")]
+for p in ENV_PATHS:
+    if p.exists():
+        load_dotenv(p)
 CSV_PATH = Path("/home/msr/rcla_project_map/RCLA_Projects_v2.csv")
 STATE_PATH = Path("/home/msr/rcla_project_map/spc_migration_state.json")
 
@@ -49,29 +53,22 @@ AREA_OF_FOCUS_MAP = {
     "peace": ("5a49b16b-8dc8-4e19-b0f8-fa092c9976d4", "Peacebuilding and conflict prevention"),
 }
 
-KNOWN_PARTNER_CLUBS = {
-    "clemens": {"key": "aa6158d9-e628-4776-838d-77d236513a50", "name": "Mt. Clemens", "id": "2992", "district": "6380"},
-    "mount clemens": {"key": "aa6158d9-e628-4776-838d-77d236513a50", "name": "Mt. Clemens", "id": "2992", "district": "6380"},
-    "santa cruz": {"key": "d4624df4-a8eb-4ec9-8664-9f202272ee57", "name": "Santa Cruz", "district": "5170"},
-    "lake atitlan": {"key": "c575902e-aae0-4b82-9aba-54947c09f4fe", "name": "Lake Atitlan", "id": "84633", "district": "4250"},
-    "annapolis": {"key": "2d768063-d1d0-4573-a094-a7ace36588d0", "name": "Annapolis", "id": "5853", "district": "7620"},
-    "petaluma valley": {"key": "7b11cb6f-a6be-46c3-9049-d5e885c02186", "name": "Petaluma Valley", "id": "400", "district": "5130"},
-    "washington": {"key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0", "name": "Washington, D.C.", "id": "5851", "district": "7620"},
-    "washington, d.c.": {"key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0", "name": "Washington, D.C.", "id": "5851", "district": "7620"},
-    "carroll creek": {"key": "53a43929-2e4f-402a-9977-44999b441c7d", "name": "Carroll Creek (Frederick)", "id": "29713", "district": "7620"},
-    "rockville": {"key": "151cd8fb-2591-4ccf-9424-0ee852bd647f", "name": "Rockville", "id": "5890", "district": "7620"},
-    "capitol hill": {"key": "d9232f9f-f95b-4fbc-95c4-35bfb25ff9ef", "name": "Capitol Hill (Washington, DC)", "id": "63814", "district": "7620"},
-    "baltimore": {"key": "a909d44a-de9c-4cb8-9749-a6c321df348f", "name": "Baltimore", "id": "5855", "district": "7620"},
-    "lake shore": {"key": "e819dd35-8c87-4002-a80d-a985d75a94c9", "name": "Lake Shore-Severna Park", "id": "5878", "district": "7620"},
-    "lake shore-severna park": {"key": "e819dd35-8c87-4002-a80d-a985d75a94c9", "name": "Lake Shore-Severna Park", "id": "5878", "district": "7620"},
-    "dupont circle": {"key": "fa68604c-4068-498f-a701-7b623b92ba50", "name": "Dupont Circle Washington", "id": "84311", "district": "7620"},
-    "pacifica": {"key": "fa9079c0-a0c0-4d98-8939-c47b5c1a2ecd", "name": "Pacifica", "id": "398", "district": "5150"},
-    "mill valley": {"key": "96521569-a11b-4602-93b6-c928a2a07bf5", "name": "Mill Valley", "id": "393", "district": "5150"},
-    "marin evening": {"key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "id": "85885", "district": "5150"},
-    "san rafael marin evening": {"key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "id": "85885", "district": "5150"},
-    "peninsula starlight": {"key": "5d8ac492-7950-4a28-95d8-a0272158d2cd", "name": "Peninsula Starlight-San Mateo County", "id": "90074", "district": "5150"},
-    "wiarton": {"key": "36e86754-6c0b-44c9-9cff-46974241043a", "name": "Wiarton", "id": "2896", "district": "6330"},
-    "fort collins": {"key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3", "name": "Fort Collins", "id": "1100", "district": "5440"},
+US_STATE_ABBR = {
+    'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
+    'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA',
+    'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA',
+    'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+    'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO',
+    'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+    'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH',
+    'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+    'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT',
+    'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+}
+
+# Runtime cache for dynamically resolved Rotary Clubs
+RESOLVED_CLUBS_CACHE = {
+    "lake atitlan": {"key": ROTARY_LAKE_ATITLAN_CLUB_KEY, "name": "Lake Atitlan", "id": "84633", "district": "4250"},
 }
 
 KNOWN_DISTRICTS = {
@@ -80,78 +77,50 @@ KNOWN_DISTRICTS = {
     "5440": {"key": "", "name": "5440"}
 }
 
-# Detailed financial profiles for complex grants with multi-club and NGO partners
-DETAILED_PROJECT_PROFILES = {
-    "GG1633934": {
-        "club_contributions": [
-            {"club_key": "96521569-a11b-4602-93b6-c928a2a07bf5", "name": "Mill Valley", "amount": "3500"},
-            {"club_key": "ae1057de-565c-49bf-800f-a5b9fe30bdac", "name": "San Rafael Marin Evening", "amount": "1500"},
-            {"club_key": "fa9079c0-a0c0-4d98-8939-c47b5c1a2ecd", "name": "Pacifica", "amount": "1000"},
-            {"club_key": "c575902e-aae0-4b82-9aba-54947c09f4fe", "name": "Lake Atitlan", "amount": "0"}
-        ],
-        "district_contributions": [
-            {"district": "5150", "source": "District(DDF)", "amount": "28024"}
-        ],
-        "world_fund": "31024",
-        "implementing_partners": [
-            {"source": "Other - NGO", "name": "Fundacion Namaste Guatemaya", "amount": "0"},
-            {"source": "Other - Community Group", "name": "St. Aidan's Episcopal Church, San Francisco", "amount": "980"}
-        ]
-    },
-    "GG2578692": {
-        "club_contributions": [
-            {"club_key": "2d768063-d1d0-4573-a094-a7ace36588d0", "name": "Annapolis", "amount": "8450"},
-            {"club_key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0", "name": "Washington, D.C.", "amount": "5000"},
-            {"club_key": "a909d44a-de9c-4cb8-9749-a6c321df348f", "name": "Baltimore", "amount": "3000"},
-            {"club_key": "53a43929-2e4f-402a-9977-44999b441c7d", "name": "Carroll Creek (Frederick)", "amount": "2500"},
-            {"club_key": "7b11cb6f-a6be-46c3-9049-d5e885c02186", "name": "Petaluma Valley", "amount": "1600"},
-            {"club_key": "151cd8fb-2591-4ccf-9424-0ee852bd647f", "name": "Rockville", "amount": "1500"},
-            {"club_key": "e819dd35-8c87-4002-a80d-a985d75a94c9", "name": "Lake Shore-Severna Park", "amount": "1000"},
-            {"club_key": "fa68604c-4068-498f-a701-7b623b92ba50", "name": "Dupont Circle Washington", "amount": "700"},
-            {"club_key": "d9232f9f-f95b-4fbc-95c4-35bfb25ff9ef", "name": "Capitol Hill (Washington, DC)", "amount": "500"},
-            {"club_key": "c575902e-aae0-4b82-9aba-54947c09f4fe", "name": "Lake Atitlan", "amount": "300"},
-        ],
-        "district_contributions": [
-            {"district": "7620", "source": "District(DDF)", "amount": "15000"}
-        ],
-        "world_fund": "12000",
-        "implementing_partners": [
-            {"source": "Other - NGO", "name": "Asociacion Pro Agua del Pueblo (AdP)", "amount": "0"},
-            {"source": "Other - Government Entity", "name": "Municipality of Santa Lucia Utatlan", "amount": "0"},
-            {"source": "Other - Government Entity", "name": "Guatemala Federal Department of Education", "amount": "0"},
-            {"source": "Other - Community Group", "name": "Vista Hermosa Water & Sanitation Committee / COCODE", "amount": "0"}
-        ]
-    },
-    "GG2684872": {
-        "club_contributions": [
-            {"club_key": "36e86754-6c0b-44c9-9cff-46974241043a", "name": "Wiarton", "amount": "8750"},
-            {"club_key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3", "name": "Fort Collins", "amount": "5000"},
-            {"club_key": "c575902e-aae0-4b82-9aba-54947c09f4fe", "name": "Lake Atitlan", "amount": "300"},
-        ],
-        "district_contributions": [
-            {"district": "6330", "source": "District(DDF)", "amount": "8750"},
-            {"district": "5440", "source": "District(DDF)", "amount": "5000"},
-        ],
-        "world_fund": "11000",
-        "implementing_partners": []
-    }
+# Rotary International official global Partners in Service GUIDs
+RI_SERVICE_PARTNERS = {
+    "ashoka": "9367DB34-E7FA-494A-909E-8A363A2B8F54",
+    "habitat for humanity": "23284EBE-1A9A-459C-BCBD-E63A8E1403B9",
+    "iep": "08359657-3EEC-4385-B64F-C5AF428FB7B5",
+    "peace corps": "AEFC46C7-A13A-4C33-B324-B342D136123E",
+    "shelterbox": "428CE9D0-E7E4-4B6A-A8B5-3232D8D60BE7",
+    "usaid": "49E5D5B0-8A6F-46BA-80F4-F12120F18FDC",
 }
 
+
 def find_partner_club(club_name_str: str) -> dict:
+    """Dynamically searches the Rotary International Organization API for partner clubs."""
     if not club_name_str:
         return None
-    s = club_name_str.lower().strip()
-    for k, v in KNOWN_PARTNER_CLUBS.items():
-        if k in s:
-            return v
+    s = club_name_str.strip()
+    s_lower = s.lower()
+    if s_lower in RESOLVED_CLUBS_CACHE:
+        return RESOLVED_CLUBS_CACHE[s_lower]
 
-    clean_name = re.sub(r'\(d\d+\)', '', s, flags=re.IGNORECASE)
-    clean_name = re.sub(r'rotary\s+club\s+(?:of\s+)?', '', clean_name, flags=re.IGNORECASE).strip()
-    if len(clean_name) >= 3:
+    clean = re.sub(r'\(d\d+\)', '', s, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'^(?:RC\s+of\s+|RC\s+|Rotary\s+Club\s+(?:of\s+)?|Club\s+Rotario\s+(?:de\s+)?)', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'\brotary\b', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'\bclub\b', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    clean = re.sub(r'\bMount\b', 'Mt.', clean, flags=re.IGNORECASE)
+
+    parts = [p.strip() for p in clean.split(',') if p.strip()]
+    club_query = parts[0]
+    loc_hint = parts[1] if len(parts) > 1 else ''
+
+    if not loc_hint:
+        m = re.match(r'^(.*?)\s+([A-Za-z]{2})$', club_query)
+        if m and (m.group(2).lower() in US_STATE_ABBR or m.group(2).upper() in US_STATE_ABBR.values()):
+            club_query = m.group(1).strip()
+            loc_hint = m.group(2).strip()
+
+    state_code = US_STATE_ABBR.get(loc_hint.lower(), loc_hint.upper()) if loc_hint else ''
+
+    if len(club_query) >= 3:
         try:
             req_data = json.dumps({
                 "type": "Rotary Club",
-                "clubName": clean_name,
+                "clubName": club_query,
                 "districtNumber": "",
                 "countrykey": ""
             }).encode("utf-8")
@@ -164,22 +133,44 @@ def find_partner_club(club_name_str: str) -> dict:
                     "subscriptionkey": "ROTARY_API_KEY"
                 }
             )
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 results = json.loads(resp.read().decode())
                 if results and isinstance(results, list):
-                    match = next((item for item in results if item.get("orgName", "").lower() == clean_name), results[0])
+                    match = None
+                    if state_code:
+                        for r in results:
+                            if r.get('orgName', '').lower() == club_query.lower() and (r.get('stateAddress') == state_code or state_code in str(r.get('countryAddress') or '')):
+                                match = r
+                                break
+                        if not match:
+                            for r in results:
+                                if r.get('stateAddress') == state_code or state_code in str(r.get('countryAddress') or '') or state_code in str(r.get('provinceIntlAddress') or ''):
+                                    match = r
+                                    break
+                    if not match:
+                        for r in results:
+                            if r.get('orgName', '').lower() == club_query.lower():
+                                match = r
+                                break
+                    if not match:
+                        match = results[0]
+
                     entry = {
                         "key": match.get("orgKey"),
                         "name": match.get("orgName"),
                         "id": match.get("clubIdExt"),
                         "district": match.get("districtAddress")
                     }
-                    KNOWN_PARTNER_CLUBS[clean_name] = entry
+                    RESOLVED_CLUBS_CACHE[s_lower] = entry
+                    clean_lower = clean.lower()
+                    if clean_lower not in RESOLVED_CLUBS_CACHE:
+                        RESOLVED_CLUBS_CACHE[clean_lower] = entry
                     return entry
         except Exception as e:
-            print(f"Warning: Rotary Org search failed for '{clean_name}': {e}")
+            print(f"Warning: Rotary Org search failed for '{club_name_str}': {e}")
 
     return None
+
 
 # --- Load Environment Variables ---
 for p in ENV_PATHS:
@@ -357,6 +348,173 @@ def match_area_of_focus(cat_str: str) -> tuple:
         return AREA_OF_FOCUS_MAP["water"]
     return AREA_OF_FOCUS_MAP["economic"]
 
+# Rotary SPC Constants
+SPC_FUND_TYPE_MAP = {
+    "NonGovernmentalOrganization": "123456be-cece-4096-ab1b-4a554f213f14",
+    "GovernmentEntity": "123456be-cece-4096-ab1b-4a554f213f13",
+    "LocalCommunityGroup": "123456be-cece-4096-ab1b-4a554f213f16",
+    "Foundation": "123456be-cece-4096-ab1b-4a554f213f15",
+    "Rotary Club": "123456be-cece-4096-ab1b-4a554f213f05",
+    "Other": "123456be-cece-4096-ab1b-4a554f213f07",
+}
+
+SPC_PARTNER_CATEGORY_FUNDING = "09b7b3de-56b4-4d12-95b1-eaa58b53f573" # Funding partner
+SPC_PARTNER_CATEGORY_IMPLEMENTING = "b8d43fa6-15a2-4398-b60e-ef07a3f09f16" # Implementing Partner
+SPC_PARTNER_CATEGORY_BOTH = "8881284b-572b-4247-8546-6f5a9ead9ae8" # Funding partner, Implementing Partner
+
+def clean_partner_name(name: str) -> str:
+    if not name:
+        return ""
+    clean = str(name).strip()
+    # 1. Normalize curly quotes and apostrophes to standard ASCII
+    clean = clean.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    clean = clean.replace("**", "").replace("*", "").strip()
+    clean = re.sub(r'^[•\-\*\s]+', '', clean)
+
+    # 2. Strip em-dash / hyphen descriptions
+    clean = re.split(r'\s+[—–-]\s+(?:Cooperating|Implementing|Local|Partner|School|Municipal)', clean, flags=re.I)[0].strip()
+    clean = re.split(r'\s+[—–-]\s+', clean)[0].strip()
+
+    # 3. Strip noisy descriptive parentheticals (roles, websites, geographic notes)
+    clean = re.sub(r'\s*\([^)]*(?:https?://|www\.)[^)]*\)', '', clean, flags=re.I)
+    clean = re.sub(r'\s*\([^)]*\b(?:partner|cooperating|implementing|councils|consejo|non-rotarian|donor|usa|guatemala|eagan|hopedale|spain|minnesota)\b[^)]*\)', '', clean, flags=re.I)
+
+    # 4. Strip standalone URLs and website links
+    clean = re.sub(r'https?://\S+', '', clean)
+    clean = re.sub(r'www\.\S+', '', clean)
+
+    # 5. Strip trailing geographic metadata suffixes (e.g. ", Panajachel, Sololá, Guatemala")
+    clean = re.sub(r',\s*(?:Panajachel|Sololá|Solola|Guatemala|Quetzaltenango|Antigua|San Francisco|Black Mountain|Eagan|Hopedale).*$', '', clean, flags=re.I)
+
+    # 6. Strip unclosed opening parentheses at end or unopened closing parentheses at start
+    if clean.startswith('(') and clean.endswith(')') and clean.count('(') == 1 and clean.count(')') == 1:
+        clean = clean[1:-1].strip()
+    if clean.count('(') > clean.count(')'):
+        clean = re.sub(r'\s*\([^)]*$', '', clean)
+    if clean.count(')') > clean.count('('):
+        clean = re.sub(r'^[^(]*\)\s*', '', clean)
+
+    # 7. Clean boundary punctuation and truncate to SPC max length
+    clean = re.sub(r'^[,\.\s;:\-]+', '', clean).strip()
+    clean = re.sub(r'[,\.\s;:\-]+$', '', clean).strip()
+    return clean[:100].strip()
+
+def extract_partner_organizations(p: dict) -> list:
+    """Dynamically extracts all non-Rotary partner organizations (NGOs, Government, Community groups)
+    from Supabase details, partner fields, and grant narratives."""
+    orgs = []
+    seen_keys = set()
+    seen_names = []
+
+    def add_org(name: str, org_type: str = "NonGovernmentalOrganization"):
+        clean = clean_partner_name(name)
+        if not clean or len(clean) < 2:
+            return
+        clean_lower = clean.lower()
+        if any(w in clean_lower for w in ["rotary club", "rc ", "rotary international", "district "]):
+            return
+        if clean_lower in ("none stated", "none", "n/a", "test", "various", "tbd", "unknown", "guatemala", "san francisco"):
+            return
+
+        words_clean = set(re.findall(r'[a-z0-9]+', clean_lower))
+        for idx, existing in enumerate(seen_names):
+            ex_lower = existing.lower()
+            if clean_lower == ex_lower:
+                return
+            if clean_lower in ex_lower:
+                return
+            if ex_lower in clean_lower:
+                seen_names[idx] = clean
+                orgs[idx]["name"] = clean
+                return
+            words_ex = set(re.findall(r'[a-z0-9]+', ex_lower))
+            if words_clean and words_ex:
+                overlap = len(words_clean.intersection(words_ex)) / min(len(words_clean), len(words_ex))
+                if overlap >= 0.6:
+                    if len(clean) > len(existing):
+                        seen_names[idx] = clean
+                        orgs[idx]["name"] = clean
+                    return
+
+        key = re.sub(r'[^a-z0-9]', '', clean_lower)
+        if key in seen_keys:
+            return
+        seen_keys.add(key)
+        seen_names.append(clean)
+
+        t = "NonGovernmentalOrganization"
+        if any(w in clean_lower for w in ["municipality", "municipal", "department of education", "ministry", "government", "mayor", "alcaldia"]):
+            t = "GovernmentEntity"
+        elif any(w in clean_lower for w in ["committee", "cocode", "community", "church", "iglesia", "aldea", "caserio"]):
+            t = "LocalCommunityGroup"
+        elif any(w in clean_lower for w in ["foundation", "fundacion"]):
+            t = "Foundation"
+        elif any(w in clean_lower for w in ["hospital", "clinic", "health", "salud"]):
+            t = "NonGovernmentalOrganization"
+
+        orgs.append({
+            "name": clean,
+            "type": t,
+            "fundTypeId": SPC_FUND_TYPE_MAP.get(t, SPC_FUND_TYPE_MAP["NonGovernmentalOrganization"])
+        })
+
+    details = p.get("details") or {}
+    if isinstance(details, str):
+        try: details = json.loads(details)
+        except Exception: details = {}
+
+    for ip in details.get("implementing_partners", []):
+        if isinstance(ip, dict):
+            add_org(ip.get("name"), ip.get("source"))
+        elif isinstance(ip, str):
+            add_org(ip)
+
+    co_list = details.get("cooperating_organizations") or []
+    if isinstance(co_list, str):
+        co_list = [c.strip() for c in co_list.split(",") if c.strip()]
+    for co in co_list:
+        if isinstance(co, str):
+            for sub in co.split(","):
+                add_org(sub.strip())
+
+    partner_str = str(p.get("partner") or "").strip()
+    if partner_str:
+        for sub in partner_str.split(","):
+            add_org(sub.strip())
+
+    narrative = str(p.get("narrative") or "")
+    if "Partner Organizations" in narrative or "NGOs & Local Organizations" in narrative or "Cooperating Organization" in narrative:
+        in_ngo_section = False
+        for line in narrative.splitlines():
+            line_str = line.strip()
+            if "NGOs & Local Organizations" in line_str or "Cooperating Organization" in line_str:
+                in_ngo_section = True
+                continue
+            if in_ngo_section:
+                if line_str.startswith("#") or line_str.startswith("**Rotary Clubs**"):
+                    in_ngo_section = False
+                    continue
+                if line_str.startswith("-") or line_str.startswith("*"):
+                    item = line_str.lstrip("-* ").strip()
+                    # 1. Strip em-dash / en-dash / double-hyphen description
+                    item_org = re.split(r'\s+[—–-]\s+', item)[0].strip()
+                    # 2. Check if the remaining org part is a comma-separated list of multiple distinct orgs
+                    if len(item_org.split(",")) > 3 and not any(loc in item_org.lower() for loc in ["sololá", "panajachel", "guatemala"]):
+                        for sub_item in item_org.split(","):
+                            add_org(sub_item.strip())
+                    else:
+                        add_org(item_org)
+
+    # Final deduplication pass: remove any org that is a substring of another org
+    final_orgs = []
+    for org in orgs:
+        o_lower = org["name"].lower()
+        if any(o_lower != other["name"].lower() and o_lower in other["name"].lower() for other in orgs):
+            continue
+        final_orgs.append(org)
+
+    return final_orgs
+
 # --- Build SPC Payload ---
 def construct_spc_payload(p: dict) -> dict:
     gid = String(p.get("id") or p.get("grant_id") or "").strip()
@@ -371,25 +529,11 @@ def construct_spc_payload(p: dict) -> dict:
         except Exception:
             details = {}
 
-    detail_profile = DETAILED_PROJECT_PROFILES.get(gid)
     partner_name = (p.get("partner") or "").strip()
 
-    # Collect cooperating organizations / implementing partners
-    cooperating_orgs = []
-    if detail_profile:
-        for ip in detail_profile.get("implementing_partners", []):
-            name = ip.get("name")
-            if name and name not in cooperating_orgs:
-                cooperating_orgs.append(name)
-    for org in (details.get("cooperating_organizations") or []):
-        o_clean = str(org).strip()
-        if o_clean and o_clean not in cooperating_orgs:
-            cooperating_orgs.append(o_clean)
-    if partner_name:
-        for sub_p in partner_name.split(","):
-            sub_clean = sub_p.strip()
-            if sub_clean and not any(sub_clean.lower() in existing.lower() or existing.lower() in sub_clean.lower() for existing in cooperating_orgs):
-                cooperating_orgs.append(sub_clean)
+    # Dynamically extract all cooperating organizations / implementing partners
+    extracted_partners = extract_partner_organizations(p)
+    cooperating_orgs = [o["name"] for o in extracted_partners]
 
     full_desc = description.strip()
     if narrative.strip() and narrative.strip() != description.strip():
@@ -405,13 +549,16 @@ def construct_spc_payload(p: dict) -> dict:
     elif not full_desc:
         full_desc = f"{title}. Project facilitated by the Rotary Club of Lake Atitlán."
 
-    # Highlight cooperating organizations if not already mentioned
+    # Highlight cooperating organizations prominently in description
     if cooperating_orgs:
         org_names = [o for o in cooperating_orgs if "rotary" not in o.lower()]
-        if org_names and not any("cooperating" in full_desc.lower() or "partnering with" in full_desc.lower() for _ in [1]):
+        if org_names and not any("cooperating partner" in full_desc.lower() for _ in [1]):
             callout = "Cooperating Partner(s): " + ", ".join(org_names) + "."
-            if len(full_desc) + len(callout) + 2 <= 1000:
-                full_desc = full_desc.rstrip() + "\n\n" + callout
+            max_desc_len = 1000 - len(callout) - 2
+            if len(full_desc) > max_desc_len:
+                full_desc = full_desc[:max_desc_len].rsplit(' ', 1)[0].rstrip('.,;:') + "..."
+            full_desc = full_desc.rstrip() + "\n\n" + callout
+
 
 
     # Prioritize brief_overview if available
@@ -521,84 +668,33 @@ def construct_spc_payload(p: dict) -> dict:
         except Exception:
             details = {}
 
-    detail_profile = DETAILED_PROJECT_PROFILES.get(gid)
+    partners = []
+    fundings = []
+
+    # Always ensure host club is registered
+    partners.append({
+        "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+        "Hour": "",
+        "MoneyDonated": "",
+        "NoOfVolunteer": "",
+        "year": ""
+    })
+
     has_custom_details = bool(details.get("world_fund") or details.get("district_ddf") or details.get("club_contributions") or details.get("partner_clubs") or details.get("partner_districts") or details.get("cooperating_organizations"))
 
-    if detail_profile:
-        # Detailed Partner Clubs & NGOs
-        partners = []
-        # Ensure Lake Atitlan host club is included in partners
-        partners.append({
-            "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-            "Hour": "",
-            "MoneyDonated": "",
-            "NoOfVolunteer": "",
-            "year": ""
-        })
-
-        for cc in detail_profile.get("club_contributions", []):
-            ckey = cc.get("club_key") or (find_partner_club(cc.get("name")) or {}).get("key")
-            amt = str(cc.get("amount", "")).strip()
-            if ckey and ckey != ROTARY_LAKE_ATITLAN_CLUB_KEY:
-                partners.append({
-                    "partnerOrganizationKey": ckey,
-                    "Hour": "",
-                    "MoneyDonated": amt if amt != "0" else "",
-                    "NoOfVolunteer": "",
-                    "year": ""
-                })
-
-        # Detailed Funding Sources (ONLY include sources with amount > 0)
-        fundings = []
-        if detail_profile.get("world_fund"):
-            wf = str(detail_profile["world_fund"]).strip()
-            if wf and wf != "0":
-                fundings.append({
-                    "fundingSource": "Global grant",
-                    "fundingAmount": wf,
-                    "fundingClubKey": gid
-                })
-        for dc in detail_profile.get("district_contributions", []):
-            dnum = str(dc.get("district", "")).strip()
-            amt = str(dc.get("amount", "0")).strip()
-            if dnum and amt and amt != "0":
-                fundings.append({
-                    "fundingSource": dc.get("source", "District(DDF)"),
-                    "fundingAmount": amt,
-                    "fundingClubKey": dnum,
-                    "isImplementingPartnerFlag": False
-                })
-        for cc in detail_profile.get("club_contributions", []):
-            ckey = cc.get("club_key") or (find_partner_club(cc.get("name")) or {}).get("key")
-            amt = str(cc.get("amount", "0")).strip()
-            if ckey and amt and amt != "0":
-                fundings.append({
-                    "fundingSource": "Rotary Club",
-                    "fundingAmount": amt,
-                    "fundingClubKey": ckey,
-                    "isImplementingPartnerFlag": False
-                })
-        for ip in detail_profile.get("implementing_partners", []):
-            amt = str(ip.get("amount", "0")).strip()
-            if amt and amt != "0":
-                fundings.append({
-                    "fundingSource": ip.get("source", "Other - Community Group"),
-                    "fundingAmount": amt,
-                    "fundingClubKey": ip.get("name"),
-                    "isImplementingPartnerFlag": True
-                })
-    elif has_custom_details:
-        partners = []
-        fundings = []
-
+    if has_custom_details:
         # 1. World Fund
         wf_amt = details.get("world_fund") or 0
         if not wf_amt and is_international and gid.startswith("GG") and num_budget:
             wf_amt = int(num_budget * 0.45)
-        if wf_amt:
+        try:
+            num_wf = float(re.sub(r'[^0-9.]', '', str(wf_amt)) or 0)
+        except Exception:
+            num_wf = 0
+        if num_wf > 0:
             fundings.append({
                 "fundingSource": "Global grant",
-                "fundingAmount": str(int(float(wf_amt))),
+                "fundingAmount": str(int(num_wf)),
                 "fundingClubKey": gid
             })
 
@@ -607,13 +703,12 @@ def construct_spc_payload(p: dict) -> dict:
         if explicit_dist_contribs and isinstance(explicit_dist_contribs, list):
             for dc in explicit_dist_contribs:
                 dnum = re.sub(r'[^0-9]', '', str(dc.get("district", ""))) or str(dc.get("district", "")).strip()
-                amt = str(int(float(dc.get("amount", 0))))
-                if dnum and (amt != "0" or str(dnum) != "4250"):
+                amt_val = float(re.sub(r'[^0-9.]', '', str(dc.get("amount", 0))) or 0)
+                if dnum and amt_val > 0:
                     fundings.append({
                         "fundingSource": dc.get("source", "District(DDF)"),
-                        "fundingAmount": amt,
-                        "fundingClubKey": dnum,
-                        "isImplementingPartnerFlag": False
+                        "fundingAmount": str(int(amt_val)),
+                        "fundingClubKey": dnum
                     })
         else:
             raw_pdist = details.get("partner_districts") or []
@@ -625,24 +720,23 @@ def construct_spc_payload(p: dict) -> dict:
                 raw_pdist.append(intl_clean_d)
 
             total_ddf = details.get("district_ddf") or 0
-            # Target the international partner district first, never default to host district 4250
+            try:
+                num_ddf = float(re.sub(r'[^0-9.]', '', str(total_ddf)) or 0)
+            except Exception:
+                num_ddf = 0
+
             target_d = intl_clean_d if (intl_clean_d and intl_clean_d != "4250") else None
             if not target_d:
                 non_host = [re.sub(r'[^0-9]', '', str(d)) for d in raw_pdist if re.sub(r'[^0-9]', '', str(d)) and re.sub(r'[^0-9]', '', str(d)) != "4250"]
                 target_d = non_host[0] if non_host else (raw_pdist[0] if raw_pdist else None)
 
-            for d_val in raw_pdist:
-                clean_d = re.sub(r'[^0-9]', '', str(d_val)) or str(d_val).strip()
-                if clean_d:
-                    is_target = (clean_d == target_d)
-                    amt = str(int(float(total_ddf))) if (is_target and total_ddf) else "0"
-                    if amt != "0" or clean_d != "4250":
-                        fundings.append({
-                            "fundingSource": "District(DDF)",
-                            "fundingAmount": amt,
-                            "fundingClubKey": clean_d,
-                            "isImplementingPartnerFlag": False
-                        })
+            if target_d and num_ddf > 0:
+                clean_target = re.sub(r'[^0-9]', '', str(target_d)) or str(target_d).strip()
+                fundings.append({
+                    "fundingSource": "District(DDF)",
+                    "fundingAmount": str(int(num_ddf)),
+                    "fundingClubKey": clean_target
+                })
 
         # 3. Contributing / Partner Clubs
         explicit_club_contribs = details.get("club_contributions_list")
@@ -653,28 +747,30 @@ def construct_spc_payload(p: dict) -> dict:
                     continue
                 matched_club = find_partner_club(c_name)
                 ckey = cc.get("club_key") or (matched_club.get("key") if matched_club else None)
-                amt = str(int(float(cc.get("amount", 0))))
-                if ckey:
-                    partners.append({
-                        "partnerOrganizationKey": ckey,
-                        "Hour": "",
-                        "MoneyDonated": amt if amt != "0" else "",
-                        "NoOfVolunteer": "",
-                        "year": ""
-                    })
-                    if amt != "0":
-                        fundings.append({
-                            "fundingSource": "Rotary Club",
-                            "fundingAmount": amt,
-                            "fundingClubKey": ckey,
-                            "isImplementingPartnerFlag": False
+                amt_val = float(re.sub(r'[^0-9.]', '', str(cc.get("amount", 0))) or 0)
+                amt_str = str(int(amt_val)) if amt_val > 0 else ""
+
+                is_host = (ckey == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_name.lower())
+                use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else (ckey or c_name)
+
+                if ckey or is_host:
+                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
+                    if not existing_p:
+                        partners.append({
+                            "partnerOrganizationKey": use_key,
+                            "Hour": "",
+                            "MoneyDonated": amt_str,
+                            "NoOfVolunteer": "",
+                            "year": ""
                         })
-                elif amt != "0":
+                    elif amt_str and not existing_p.get("MoneyDonated"):
+                        existing_p["MoneyDonated"] = amt_str
+
+                if amt_val > 0:
                     fundings.append({
                         "fundingSource": "Rotary Club",
-                        "fundingAmount": amt,
-                        "fundingClubKey": c_name,
-                        "isImplementingPartnerFlag": False
+                        "fundingAmount": amt_str,
+                        "fundingClubKey": use_key
                     })
         else:
             raw_pclubs = details.get("partner_clubs") or []
@@ -685,51 +781,40 @@ def construct_spc_payload(p: dict) -> dict:
                 raw_pclubs.insert(0, intl_club_raw)
 
             total_cash = details.get("club_contributions") or 0
+            try:
+                num_cash = float(re.sub(r'[^0-9.]', '', str(total_cash)) or 0)
+            except Exception:
+                num_cash = 0
+
             for idx, c_name in enumerate(raw_pclubs):
                 c_str = str(c_name).strip()
                 if not c_str:
                     continue
                 matched_club = find_partner_club(c_str)
                 ckey = matched_club.get("key") if matched_club else None
-                amt = str(int(float(total_cash))) if (idx == 0 and total_cash) else "0"
-                if ckey:
-                    partners.append({
-                        "partnerOrganizationKey": ckey,
-                        "Hour": "",
-                        "MoneyDonated": amt if amt != "0" else "",
-                        "NoOfVolunteer": "",
-                        "year": ""
-                    })
-                    if amt != "0":
-                        fundings.append({
-                            "fundingSource": "Rotary Club",
-                            "fundingAmount": amt,
-                            "fundingClubKey": ckey,
-                            "isImplementingPartnerFlag": False
+                amt_val = num_cash if (idx == 0 and num_cash > 0) else 0
+                amt_str = str(int(amt_val)) if amt_val > 0 else ""
+
+                is_host = (ckey == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_str.lower())
+                use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else (ckey or c_str)
+
+                if ckey or is_host:
+                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
+                    if not existing_p:
+                        partners.append({
+                            "partnerOrganizationKey": use_key,
+                            "Hour": "",
+                            "MoneyDonated": amt_str,
+                            "NoOfVolunteer": "",
+                            "year": ""
                         })
-                elif amt != "0":
+
+                if amt_val > 0:
                     fundings.append({
                         "fundingSource": "Rotary Club",
-                        "fundingAmount": amt,
-                        "fundingClubKey": c_str,
-                        "isImplementingPartnerFlag": False
+                        "fundingAmount": amt_str,
+                        "fundingClubKey": use_key
                     })
-
-        # Ensure Lake Atitlan host club is included in partners
-        has_atitlan_partner = any(ROTARY_LAKE_ATITLAN_CLUB_KEY in str(p.get("partnerOrganizationKey", "")) for p in partners)
-        if not has_atitlan_partner:
-            partners.insert(0, {
-                "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                "Hour": "",
-                "MoneyDonated": "",
-                "NoOfVolunteer": "",
-                "year": ""
-            })
-
-        # 4. Cooperating Partner Organizations / NGOs
-        # Non-Rotary NGOs cannot be placed in projectPartnerClubMembers (which requires Rotary Organization UUIDs).
-        # Any financial donations from NGOs belong in projectFundings if amount > 0.
-
     else:
         intl_club = str(p.get("international_club_name") or p.get("internationalClub_name") or "").strip()
         partner_club = find_partner_club(intl_club)
@@ -741,7 +826,6 @@ def construct_spc_payload(p: dict) -> dict:
         intl_dist = dist_digits if dist_digits else intl_dist_raw
 
         if is_international and gid.startswith("GG"):
-            # Global Grant Breakdown
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(int(num_budget * 0.45)) if num_budget else "20000",
@@ -751,83 +835,63 @@ def construct_spc_payload(p: dict) -> dict:
                 fundings.append({
                     "fundingSource": "District(Cash)",
                     "fundingAmount": str(int(num_budget * 0.35)) if num_budget else "15000",
-                    "fundingClubKey": intl_dist,
-                    "isImplementingPartnerFlag": False
+                    "fundingClubKey": intl_dist
                 })
             if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": str(int(num_budget * 0.15)) if num_budget else "5000",
-                    "fundingClubKey": partner_club_key,
-                    "isImplementingPartnerFlag": False
+                    "fundingClubKey": partner_club_key
                 })
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": str(int(num_budget * 0.05)) if num_budget else "2000",
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "isImplementingPartnerFlag": False
+                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
                 })
             else:
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": str(int(num_budget * 0.20)) if num_budget else "5000",
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "isImplementingPartnerFlag": False
+                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
                 })
         else:
-            # Club Direct / District Grant / Other
             if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
                 fundings.append({
                     "fundingSource": "Rotary Club",
-                    "fundingAmount": str(int(num_budget * 0.70)) if num_budget else budget_str,
-                    "fundingClubKey": partner_club_key,
-                    "isImplementingPartnerFlag": False
-                })
-                fundings.append({
-                    "fundingSource": "Rotary Club",
-                    "fundingAmount": str(int(num_budget * 0.30)) if num_budget else "1000",
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "isImplementingPartnerFlag": False
+                    "fundingAmount": budget_str,
+                    "fundingClubKey": partner_club_key
                 })
             elif intl_dist:
                 fundings.append({
                     "fundingSource": "District(Cash)",
-                    "fundingAmount": str(int(num_budget * 0.70)) if num_budget else budget_str,
-                    "fundingClubKey": intl_dist,
-                    "isImplementingPartnerFlag": False
-                })
-                fundings.append({
-                    "fundingSource": "Rotary Club",
-                    "fundingAmount": str(int(num_budget * 0.30)) if num_budget else "1000",
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "isImplementingPartnerFlag": False
+                    "fundingAmount": budget_str,
+                    "fundingClubKey": intl_dist
                 })
             else:
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": budget_str,
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "isImplementingPartnerFlag": False
+                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
                 })
 
-        # Partners
-        partners = [{
-            "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-            "Hour": "",
-            "MoneyDonated": "",
-            "NoOfVolunteer": "",
-            "year": ""
-        }]
         if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
             partners.append({
                 "partnerOrganizationKey": partner_club_key,
                 "Hour": "",
-                "MoneyDonated": str(int(num_budget * 0.70)) if num_budget else "",
+                "MoneyDonated": budget_str if num_budget else "",
                 "NoOfVolunteer": "",
                 "year": ""
             })
 
-    # Project search tags (semicolon-delimited for Rotary SPC)
+    # Strict Funding Cleanup: ONLY entries with fundingAmount > 0 are allowed in Rotary SPC
+    clean_fundings = []
+    for f in fundings:
+        f_amt = float(re.sub(r'[^0-9.]', '', str(f.get("fundingAmount", 0))) or 0)
+        if f_amt > 0:
+            clean_fundings.append(f)
+    fundings = clean_fundings
+
+    # Project search tags (semicolon-delimited for Rotary SPC, max 100 chars)
     tag_list = []
     for org in cooperating_orgs:
         if org and org not in tag_list and "rotary" not in org.lower():
@@ -836,7 +900,25 @@ def construct_spc_payload(p: dict) -> dict:
         tag_list.append(aof_name)
     tag_list.append("Guatemala")
     tag_list.append("Lake Atitlan")
-    tags_str = ";".join(tag_list[:6])
+
+    shortened_tags = []
+    cur_len = 0
+    for t in tag_list:
+        add_len = len(t) + (1 if shortened_tags else 0)
+        if cur_len + add_len <= 100:
+            shortened_tags.append(t)
+            cur_len += add_len
+        else:
+            break
+    tags_str = ";".join(shortened_tags)
+
+    # Map any official Rotary International Service Partners (Peace Corps, USAID, etc.)
+    matched_ri_partners = []
+    for ep in extracted_partners:
+        ep_clean = ep["name"].lower()
+        for ri_name, ri_guid in RI_SERVICE_PARTNERS.items():
+            if ri_name in ep_clean and ri_guid not in matched_ri_partners:
+                matched_ri_partners.append(ri_guid)
 
     payload = {
         "projectSource": "4",
@@ -905,7 +987,10 @@ def construct_spc_payload(p: dict) -> dict:
         "projectFundings": fundings,
         "projectPartnerClubMembers": partners,
         "projectInkindDonations": [],
-        "projectNonRotaryPartners": [],
+        "projectNonRotaryPartners": [
+            {"nonRotaryPartnerKey": guid}
+            for guid in matched_ri_partners
+        ],
         "language1": "Spanish",
         "language2": ""
     }
@@ -994,21 +1079,19 @@ async def main():
         # Step 1: Login
         print("[2/4] Logging into My Rotary...")
         await page.goto("https://my.rotary.org/en/login", wait_until="domcontentloaded")
+        await page.wait_for_timeout(3000)
 
         email = os.getenv("ROTARY_EMAIL", "")
         password = os.getenv("ROTARY_PASSWORD", "")
 
         if email and password:
             try:
-                # 1. Dismiss any OneTrust cookie banners or modal overlays that intercept pointer events
+                # Accept OneTrust cookies if present to allow Okta sign-in widget to render
                 try:
-                    await page.evaluate("""() => {
-                        const ot = document.getElementById('onetrust-consent-sdk');
-                        if (ot) ot.remove();
-                        const btn = document.getElementById('onetrust-accept-btn-handler');
-                        if (btn) btn.click();
-                        document.querySelectorAll('.ReactModalPortal, .ReactModal__Overlay').forEach(e => e.remove());
-                    }""")
+                    accept_btn = await page.wait_for_selector("#onetrust-accept-btn-handler", timeout=6000)
+                    if accept_btn:
+                        await accept_btn.click()
+                        await page.wait_for_timeout(1000)
                 except Exception:
                     pass
 
@@ -1021,19 +1104,9 @@ async def main():
                     except Exception:
                         pass
                 if not user_input:
-                    user_input = await page.wait_for_selector("#okta-signin-username", timeout=20000)
+                    user_input = await page.wait_for_selector("#okta-signin-username", timeout=15000)
                 await user_input.fill(email)
                 await page.fill("#okta-signin-password, input[name='password']", password)
-
-                # Dismiss overlays again right before submitting
-                try:
-                    await page.evaluate("""() => {
-                        const ot = document.getElementById('onetrust-consent-sdk');
-                        if (ot) ot.remove();
-                        document.querySelectorAll('.ReactModalPortal, .ReactModal__Overlay').forEach(e => e.remove());
-                    }""")
-                except Exception:
-                    pass
 
                 submitted = False
                 try:
@@ -1201,6 +1274,15 @@ async def main():
                             if (existingDetail.profile.tags && existingDetail.profile.tags.length > 0) {
                                 payload.tags = existingDetail.profile.tags.join(';');
                             }
+                            if (existingDetail.profile.currentProjectAddressKey) {
+                                payload.currentProjectAddressKey = existingDetail.profile.currentProjectAddressKey;
+                            }
+                            if (existingDetail.profile.currentEstablishedProjectKey) {
+                                payload.currentEstablishedProjectKey = existingDetail.profile.currentEstablishedProjectKey;
+                            }
+                            if (existingDetail.profile.currentProposedProjectKey) {
+                                payload.currentProposedProjectKey = existingDetail.profile.currentProposedProjectKey;
+                            }
                         }
                         if (payload.location && payload.location.length > 50) {
                             payload.location = payload.location.slice(0, 50);
@@ -1253,114 +1335,207 @@ async def main():
                         }
 
                         // Reconcile FundingSources (prevents duplicate fundings)
-                        if (existingDetail && existingDetail.fundingSources && existingDetail.fundingSources.length > 0) {
-                            const existingFundings = existingDetail.fundingSources;
-                            const newFundings = [];
-                            const usedFundingKeys = new Set();
+                        const existingFundings = (existingDetail && existingDetail.fundingSources) ? existingDetail.fundingSources : [];
+                        const newFundings = [];
+                        const usedFundingKeys = new Set();
 
-                            for (const f of (payload.projectFundings || [])) {
-                                const match = existingFundings.find(ef => (!usedFundingKeys.has(ef.projectFundingSourceKey)) && (
-                                    (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)) ||
-                                    (f.fundingClubKey && ef.fundingOtherName === f.fundingClubKey)
-                                ));
-                                if (match) {
-                                    usedFundingKeys.add(match.projectFundingSourceKey);
+                        for (const f of (payload.projectFundings || [])) {
+                            delete f.fundingOrgName;
+                            delete f.fundingOtherName;
+                            delete f.fundingSourceKey;
+                            delete f.isImplementingPartnerFlag;
+
+                            const match = existingFundings.find(ef => (!usedFundingKeys.has(ef.projectFundingSourceKey)) && (
+                                (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)) ||
+                                (f.fundingClubKey && ef.fundingOtherName === f.fundingClubKey)
+                            ));
+                            if (match) {
+                                usedFundingKeys.add(match.projectFundingSourceKey);
+                                newFundings.push({
+                                    ...f,
+                                    projectFundingSourceKey: match.projectFundingSourceKey,
+                                    isChangedProjectFundingSource: true,
+                                    isDeleted: false
+                                });
+                            } else {
+                                const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey) && ef.fundingSource === f.fundingSource);
+                                if (unused) {
+                                    usedFundingKeys.add(unused.projectFundingSourceKey);
                                     newFundings.push({
                                         ...f,
-                                        projectFundingSourceKey: match.projectFundingSourceKey,
+                                        projectFundingSourceKey: unused.projectFundingSourceKey,
                                         isChangedProjectFundingSource: true,
                                         isDeleted: false
                                     });
                                 } else {
-                                    const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey) && ef.fundingSource === f.fundingSource);
-                                    if (unused) {
-                                        usedFundingKeys.add(unused.projectFundingSourceKey);
-                                        newFundings.push({
-                                            ...f,
-                                            projectFundingSourceKey: unused.projectFundingSourceKey,
-                                            isChangedProjectFundingSource: true,
-                                            isDeleted: false
-                                        });
-                                    } else {
-                                        newFundings.push({
-                                            ...f,
-                                            isChangedProjectFundingSource: true,
-                                            isDeleted: false
-                                        });
-                                    }
-                                }
-                            }
-
-                            // Mark any unreferenced existing funding as deleted
-                            for (const ef of existingFundings) {
-                                if (!usedFundingKeys.has(ef.projectFundingSourceKey)) {
                                     newFundings.push({
-                                        projectFundingSourceKey: ef.projectFundingSourceKey,
-                                        fundingSource: ef.fundingSource || "",
-                                        fundingAmount: ef.fundingAmount || "",
-                                        fundingClubKey: "",
-                                        isDeleted: true,
-                                        isChangedProjectFundingSource: true
+                                        ...f,
+                                        isChangedProjectFundingSource: true,
+                                        isDeleted: false
                                     });
                                 }
                             }
-                            payload.projectFundings = newFundings;
                         }
+
+                        // Mark any unreferenced existing funding as deleted
+                        for (const ef of existingFundings) {
+                            if (!usedFundingKeys.has(ef.projectFundingSourceKey)) {
+                                newFundings.push({
+                                    projectFundingSourceKey: ef.projectFundingSourceKey,
+                                    fundingSource: ef.fundingSource || "",
+                                    fundingAmount: ef.fundingAmount || "",
+                                    fundingClubKey: "",
+                                    isDeleted: true,
+                                    isChangedProjectFundingSource: true
+                                });
+                            }
+                        }
+                        payload.projectFundings = newFundings;
 
                         // Reconcile Partners (prevents duplicate partners)
-                        if (existingDetail && existingDetail.partners && existingDetail.partners.length > 0) {
-                            const existingPartners = existingDetail.partners;
-                            const newPartners = [];
-                            const usedPartnerKeys = new Set();
+                        const existingPartners = (existingDetail && existingDetail.partners) ? existingDetail.partners : [];
+                        const newPartners = [];
+                        const usedPartnerKeys = new Set();
 
-                            for (const pcm of (payload.projectPartnerClubMembers || [])) {
-                                const match = existingPartners.find(ep => (!usedPartnerKeys.has(ep.key)) && (ep.partnerKey === pcm.partnerOrganizationKey));
-                                if (match) {
-                                    usedPartnerKeys.add(match.key);
-                                    newPartners.push({
-                                        ...pcm,
-                                        projectPartnerClubMemberKey: match.key,
-                                        isChangedProjectPartnerClubMember: false,
-                                        isDeleted: false
-                                    });
-                                } else {
-                                    newPartners.push({
-                                        ...pcm,
-                                        isChangedProjectPartnerClubMember: true,
-                                        isDeleted: false
-                                    });
-                                }
-                            }
+                        const hostClubKey = "c575902e-aae0-4b82-9aba-54947c09f4fe";
+                        const bothCat = "8881284b-572b-4247-8546-6f5a9ead9ae8";
+                        const fundingCat = "09b7b3de-56b4-4d12-95b1-eaa58b53f573";
+                        const clubFundType = "123456be-cece-4096-ab1b-4a554f213f05";
 
-                            // Mark unreferenced duplicate partners as deleted
-                            for (const ep of existingPartners) {
-                                if (!usedPartnerKeys.has(ep.key)) {
-                                    newPartners.push({
-                                        projectPartnerClubMemberKey: ep.key,
-                                        partnerOrganizationKey: ep.partnerKey,
-                                        isDeleted: true,
-                                        isChangedProjectPartnerClubMember: true
-                                    });
-                                }
-                            }
-                            payload.projectPartnerClubMembers = newPartners;
-                        }
+                        for (const pcm of (payload.projectPartnerClubMembers || [])) {
+                            const pcmKey = (pcm.partnerOrganizationKey || '').toLowerCase().trim();
+                            const isHost = (pcmKey === hostClubKey.toLowerCase());
+                            const catId = pcm.partnerCategoryId || (isHost ? bothCat : fundingCat);
+                            const fTypeId = pcm.fundTypeId || clubFundType;
 
-                        // Reconcile Contacts / Joiners (preserves existing contacts and prevents duplicate/deletion errors)
-                        if (existingDetail && existingDetail.joiners && existingDetail.joiners.length > 0) {
-                            const existingContacts = existingDetail.joiners.map(j => j.contacts).filter(Boolean);
-                            const newContacts = [];
-                            for (const ec of existingContacts) {
-                                newContacts.push({
-                                    projectContactKey: ec.key,
-                                    individualContactKey: ec.individualId,
-                                    individualContactId: ec.memberId,
-                                    isChangedProjectContact: false,
+                            const match = existingPartners.find(ep => (!usedPartnerKeys.has(ep.key)) && (
+                                (ep.partnerKey && ep.partnerKey.toLowerCase().trim() === pcmKey) ||
+                                (ep.organizationName && ep.organizationName.toLowerCase().trim() === pcmKey) ||
+                                (ep.clubName && ep.clubName.toLowerCase().trim() === pcmKey)
+                            ));
+                            if (match) {
+                                usedPartnerKeys.add(match.key);
+                                newPartners.push({
+                                    partnerOrganizationKey: pcm.partnerOrganizationKey,
+                                    partnerCategoryId: catId,
+                                    fundTypeId: fTypeId,
+                                    Hour: pcm.Hour || "",
+                                    MoneyDonated: pcm.MoneyDonated || "",
+                                    NoOfVolunteer: pcm.NoOfVolunteer || "",
+                                    year: pcm.year || "",
+                                    projectPartnerClubMemberKey: match.key,
+                                    isChangedProjectPartnerClubMember: true,
+                                    isDeleted: false
+                                });
+                            } else {
+                                newPartners.push({
+                                    partnerOrganizationKey: pcm.partnerOrganizationKey,
+                                    partnerCategoryId: catId,
+                                    fundTypeId: fTypeId,
+                                    Hour: pcm.Hour || "",
+                                    MoneyDonated: pcm.MoneyDonated || "",
+                                    NoOfVolunteer: pcm.NoOfVolunteer || "",
+                                    year: pcm.year || "",
+                                    isChangedProjectPartnerClubMember: true,
                                     isDeleted: false
                                 });
                             }
+                        }
+
+                        // Mark unreferenced duplicate partners as deleted
+                        for (const ep of existingPartners) {
+                            if (!usedPartnerKeys.has(ep.key)) {
+                                newPartners.push({
+                                    projectPartnerClubMemberKey: ep.key,
+                                    partnerOrganizationKey: ep.partnerKey || ep.organizationName || ep.clubName || "",
+                                    partnerCategoryId: ep.partnerCategoryId || fundingCat,
+                                    fundTypeId: ep.fundTypeId || clubFundType,
+                                    year: ep.year || "",
+                                    Hour: ep.numberOfHours ? String(ep.numberOfHours) : "",
+                                    NoOfVolunteer: ep.numberOfVolunteer ? String(ep.numberOfVolunteer) : "",
+                                    MoneyDonated: ep.moneyDonated ? String(ep.moneyDonated) : "",
+                                    isDeleted: true,
+                                    isChangedProjectPartnerClubMember: true
+                                });
+                            }
+                        }
+                        payload.projectPartnerClubMembers = newPartners;
+
+                        // Reconcile Non-Rotary Partners (Partners in Service)
+                        const existingNonRotary = (existingDetail && existingDetail.nonRotaryPartners) ? existingDetail.nonRotaryPartners : [];
+                        const newNonRotary = [];
+                        const usedNonRotaryKeys = new Set();
+
+                        for (const pnr of (payload.projectNonRotaryPartners || [])) {
+                            const pnrGuid = (pnr.nonRotaryPartnerKey || '').trim().toUpperCase();
+                            if (!pnrGuid) continue;
+                            const match = existingNonRotary.find(enr => (!usedNonRotaryKeys.has(enr.projectNonRotaryPartnerKey)) && (
+                                (enr.nonRotaryPartnerKey && enr.nonRotaryPartnerKey.toUpperCase() === pnrGuid)
+                            ));
+                            if (match) {
+                                usedNonRotaryKeys.add(match.projectNonRotaryPartnerKey);
+                                newNonRotary.push({
+                                    projectNonRotaryPartnerKey: match.projectNonRotaryPartnerKey,
+                                    nonRotaryPartnerKey: pnrGuid,
+                                    isChangedNonRotaryPartner: false,
+                                    isDeleted: false
+                                });
+                            } else {
+                                newNonRotary.push({
+                                    nonRotaryPartnerKey: pnrGuid,
+                                    isChangedNonRotaryPartner: true,
+                                    isDeleted: false
+                                });
+                            }
+                        }
+
+                        // Mark any unreferenced existing non-rotary partners as deleted
+                        for (const enr of existingNonRotary) {
+                            if (!usedNonRotaryKeys.has(enr.projectNonRotaryPartnerKey)) {
+                                newNonRotary.push({
+                                    projectNonRotaryPartnerKey: enr.projectNonRotaryPartnerKey,
+                                    nonRotaryPartnerKey: enr.nonRotaryPartnerKey,
+                                    isDeleted: true,
+                                    isChangedNonRotaryPartner: true
+                                });
+                            }
+                        }
+                        payload.projectNonRotaryPartners = newNonRotary;
+
+                        // Reconcile Contacts / Joiners (deduplicates so each individual appears only once active)
+                        if (existingDetail && existingDetail.joiners && existingDetail.joiners.length > 0) {
+                            const existingContacts = existingDetail.joiners.map(j => j.contacts).filter(Boolean);
+                            const seenIndividuals = new Set();
+                            const newContacts = [];
+                            for (const ec of existingContacts) {
+                                const indKey = ec.individualId || ec.memberId;
+                                if (!seenIndividuals.has(indKey)) {
+                                    seenIndividuals.add(indKey);
+                                    newContacts.push({
+                                        projectContactKey: ec.key,
+                                        individualContactKey: ec.individualId,
+                                        individualContactId: ec.memberId,
+                                        isChangedProjectContact: false,
+                                        isDeleted: false
+                                    });
+                                } else {
+                                    // Mark duplicate joiner for the same individual as deleted to resolve conflict
+                                    newContacts.push({
+                                        projectContactKey: ec.key,
+                                        individualContactKey: ec.individualId,
+                                        individualContactId: ec.memberId,
+                                        isChangedProjectContact: true,
+                                        isDeleted: true
+                                    });
+                                }
+                            }
                             payload.projectContacts = newContacts;
                         }
+
+                        payload.isChangedProjectPartnerDetail = true;
+                        payload.isChangedProjectNonRotaryPartnerDetail = newNonRotary.some(x => x.isChangedNonRotaryPartner !== false);
+                        payload.isChangedProjectFundingDetail = true;
+                        payload.isChangedProjectDetail = true;
 
                         const res = await fetch('https://spc.rotary.org/api/Project/UpdateProject', {
                             method: 'PUT',
@@ -1373,7 +1548,7 @@ async def main():
                         });
                         if (!res.ok) {
                             const errTxt = await res.text();
-                            return { ok: false, status: res.status, error: errTxt };
+                            return { ok: false, status: res.status, error: errTxt, sentPayload: payload };
                         }
                         const resText = await res.text();
                         let data = null;

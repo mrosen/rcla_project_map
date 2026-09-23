@@ -15,3 +15,4 @@ When running with VS Code on Windows accessing this workspace via WSL UNC (`\\ws
 
 3. **Links Inside Workspace Markdown Files**:
    Inside markdown files committed to the repository (e.g. `walkthrough.md`, `implementation_plan.md`), use document-relative paths (`./<file>`) so they can be browsed seamlessly in both VS Code Markdown Preview and on GitHub.
+

@@ -3,6 +3,12 @@ import subprocess
 import threading
 import re
 import sys
+import os
+
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
 
 def get_wsl_ip():
     try:
@@ -29,10 +35,14 @@ def forward(src, dst):
         try: dst.close()
         except: pass
 
-def handle_client(client_sock, wsl_ip, port):
+def handle_client(client_sock, port):
     try:
+        # WSL can receive a new address after it restarts; resolve it per request.
+        wsl_ip = get_wsl_ip()
         wsl_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        wsl_sock.settimeout(5)
         wsl_sock.connect((wsl_ip, port))
+        wsl_sock.settimeout(None)
         threading.Thread(target=forward, args=(client_sock, wsl_sock), daemon=True).start()
         threading.Thread(target=forward, args=(wsl_sock, client_sock), daemon=True).start()
     except Exception:
@@ -40,8 +50,7 @@ def handle_client(client_sock, wsl_ip, port):
 
 def main():
     port = 8000
-    wsl_ip = get_wsl_ip()
-    print(f"Forwarding Windows localhost:{port} -> WSL {wsl_ip}:{port}...", flush=True)
+    print(f"Forwarding Windows localhost:{port} -> current WSL address:{port}...", flush=True)
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -52,7 +61,7 @@ def main():
     while True:
         try:
             client, addr = server.accept()
-            threading.Thread(target=handle_client, args=(client, wsl_ip, port), daemon=True).start()
+            threading.Thread(target=handle_client, args=(client, port), daemon=True).start()
         except KeyboardInterrupt:
             break
         except Exception as e:

@@ -1,70 +1,60 @@
-# Implementation Plan: Streamline Public View & Restrict Maintenance Mode
+# Implementation Plan: Dynamic Extraction & Migration of Non-Financial Partner Organizations to Rotary SPC
 
-Make Maintenance Mode strictly opt-in and hidden from standard public visitors, remove the "Edit Project" and "Export to SPC" action buttons from the default view, relocate the SPC link into the project's web links section, and display a clean sync indicator badge in the header metadata.
+Dynamically extract cooperating and implementing partner organizations directly from source data (Supabase `details.cooperating_organizations`, `details.implementing_partners`, `partner`, and markdown narrative) and export them to Rotary SPC as Implementing Partners, eliminating fragile per-project hardcoded profiles and preventing unwanted `$0 USD` funding lines.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Default View for Public Users**: Maintenance Mode will be **OFF** by default for all visitors (both local and on GitHub Pages). Standard visitors will see a clean public interface with **no** "Maintainer Mode" button, **no** database status pill, **no** "Edit Project" button, and **no** "Export to SPC" button.
-> - **Accessing Maintenance Mode**: Maintainers can activate Maintenance Mode at any time using:
->   1. Keyboard shortcut: `Ctrl+Shift+M` (or `Cmd+Shift+M` on Mac).
->   2. URL query parameter: appending `?maint=true`, `?admin=true`, or `?edit=true` to the URL.
->   3. Discreet trigger: double-clicking the club name in the top navigation bar.
-> - **SPC Link for Public Users**: When a project has been synced to Rotary SPC:
->   1. A subtle, elegant metadata badge `✓ Synced to Rotary SPC ↗` appears alongside the project status/type badges in the header.
->   2. The project's Rotary Service Project Center entry appears as one of the web links in the **"Attached Documents & Web Links"** section.
+> - **Elimination of Fragile Profiles**: `DETAILED_PROJECT_PROFILES` will no longer be used as a hardcoded source for partner organizations. The migration engine will dynamically extract and categorize partner organizations across all projects from the database and grant narratives.
+> - **Partner Type Classification on Rotary SPC**:
+>   - **Partner Clubs**: Mapped to Rotary's live Organization directory and assigned `partnerCategoryId: "09b7b3de-56b4-4d12-95b1-eaa58b53f573"` (Funding partner).
+>   - **Host Club (Lake Atitlán)**: Assigned `partnerCategoryId: "8881284b-572b-4247-8546-6f5a9ead9ae8"` (Funding & Implementing partner).
+>   - **Non-Rotary Partners (NGOs, Government, Community Groups)**: Passed in `projectPartnerClubMembers` with `partnerCategoryId: "b8d43fa6-15a2-4398-b60e-ef07a3f09f16"` (Implementing Partner) and their appropriate `fundTypeId` (e.g. NonGovernmentalOrganization, GovernmentEntity, LocalCommunityGroup).
+>   - **No $0 USD Rows**: Organizations that did not contribute money will not be placed in `projectFundings`, preventing unwanted `$0 USD` rows in the financial breakdown table.
 
 ---
 
 ## Proposed Changes
 
-### Top Navigation & Maintenance Mode Defaults
+### Dynamic Partner Extractor & Payload Builder
 
-#### [MODIFY] [index.html](./index.html)
-- Set `#btn-maint-toggle` and `#backend-status-indicator` to `display: none;` by default in HTML so they never flash or appear for regular visitors.
-- Add `ondblclick="toggleMaintenanceMode()"` to the navbar club title as a discreet maintainer fallback on devices without a keyboard.
+#### [MODIFY] [scripts/migrate_to_spc.py](file://wsl.localhost/Ubuntu/home/msr/rcla_project_map/scripts/migrate_to_spc.py) & [migrate_to_spc.py](file://wsl.localhost/Ubuntu/home/msr/rcla_project_map/migrate_to_spc.py)
 
-#### [MODIFY] [main.js](./main.js)
-- In `checkMaintenanceMode()`: Default to `false` (remove the `hostname === 'localhost'` override so local and production behave identically for clean public preview).
-- In `applyMaintenanceModeUI()`:
-  - When `isMaintenanceMode` is `false`: Hide `#maintainer-panel`, hide `#btn-maint-toggle`, and hide `#backend-status-indicator`.
-  - When `isMaintenanceMode` is `true`: Show `#maintainer-panel`, show `#btn-maint-toggle` styled as `🛠️ Maint Mode ON (✕ Exit)`, and show `#backend-status-indicator`.
+1. **Implement `extract_partner_organizations(project)`**:
+   - Extract partner organizations from:
+     - `details.cooperating_organizations` (handles strings, lists, and comma-separated lists)
+     - `details.implementing_partners`
+     - `project.partner` field
+     - `project.narrative` under `### Partner Organizations` (NGOs & Local Organizations section)
+   - Clean names, remove markdown formatting, and deduplicate.
+   - Infer organization classification (`GovernmentEntity`, `LocalCommunityGroup`, `Foundation`, `NonGovernmentalOrganization`).
+   - Map each to Rotary SPC's standard `fundTypeId` UUIDs:
+     - NonGovernmentalOrganization: `123456be-cece-4096-ab1b-4a554f213f14`
+     - GovernmentEntity: `123456be-cece-4096-ab1b-4a554f213f13`
+     - LocalCommunityGroup: `123456be-cece-4096-ab1b-4a554f213f16`
+     - Foundation: `123456be-cece-4096-ab1b-4a554f213f15`
+     - Other: `123456be-cece-4096-ab1b-4a554f213f07`
 
----
+2. **Update `construct_spc_payload`**:
+   - Include extracted non-Rotary implementing partners in `payload["projectPartnerClubMembers"]` with `partnerCategoryId: "b8d43fa6-15a2-4398-b60e-ef07a3f09f16"` (Implementing Partner).
+   - Only add financial contributors with `fundingAmount > 0` to `payload["projectFundings"]`.
+   - Ensure `payload["description"]` includes the `Cooperating Partner(s): ...` callout so partners are prominently credited in the narrative.
+   - Include partner names in project `tags`.
 
-### Project Detail View & SPC Link Relocation
-
-#### [MODIFY] [main.js](file:///home/msr/rcla_project_map/main.js)
-- In `showDetail(idx)`:
-  - Make `editBtn` (`✏️ Edit Project`) visible **only** when `isMaintenanceMode` is `true`.
-  - Make `spcBadge` (`🚀 Export to SPC` / `🌐 Open SPC View ↗` maintainer action cluster) visible **only** when `isMaintenanceMode` is `true`.
-  - In the project meta badge row (next to Project Type and Status):
-    - If project has an SPC link (`getProjectSpcUrl(project)`): display a tasteful link badge:
-      `✓ Synced to Rotary SPC ↗`
-  - In `renderFilesAndLinksFromProject` and `renderFilesAndLinks`:
-    - Ensure that if `getProjectSpcUrl(project)` exists, the link `🌐 Rotary Service Project Center (SPC) ↗` is included in the project's **Attached Documents & Web Links** list as one of the standard web links.
+3. **Improve Browser In-Page Partner Reconciliation**:
+   - In `UpdateProject` evaluation inside `main()`, match existing partners in `ProjectDetail` by either `partnerKey` or `organizationName` / `clubName` to preserve existing references without creating duplicates or dropping non-Rotary partners.
 
 ---
 
 ## Verification Plan
 
 ### Automated / Syntax Verification
-- Run `node -c main.js` to ensure 0 syntax errors.
-- Test endpoint responses and build files.
+- Run python compilation check on `scripts/migrate_to_spc.py` and `migrate_to_spc.py`.
+- Run payload test for `GG2578692` and verify all partner organizations appear in `projectPartnerClubMembers` and that `projectFundings` contains zero $0 rows.
 
-### Manual Verification
-1. **Public View (Default)**:
-   - Load `http://localhost:8000/` without any query parameters or session state.
-   - Verify `#nav`: Shows only `Overview` and `Projects`. No maintainer button, no database indicator, no maintainer panel.
-   - Click a project (e.g. `GG2578692`):
-     - Confirm **NO** `✏️ Edit Project` button.
-     - Confirm **NO** `🚀 Export to SPC` button.
-     - Confirm `✓ Synced to Rotary SPC ↗` appears gracefully in the badge row.
-     - Scroll down to "Attached Documents & Web Links" and confirm `🌐 Rotary Service Project Center (SPC) ↗` is present among the web links.
-2. **Maintainer Mode Activation**:
-   - Press `Ctrl+Shift+M` (or visit `http://localhost:8000/?maint=true`):
-     - Confirm the maintainer panel opens at the top.
-     - Confirm `#btn-maint-toggle` appears in the navbar with `🛠️ Maint Mode ON (✕ Exit)`.
-     - Confirm `✏️ Edit Project` and `🚀 Re-export to SPC` / `🌐 Open SPC View ↗` appear in the detail header.
-   - Click `✕ Exit Maint`:
-     - Confirm UI seamlessly returns to the clean public view.
+### Live Rotary SPC Verification
+1. Run `python3 scripts/migrate_to_spc.py GG2578692 --headless`.
+2. Fetch `https://spc.rotary.org/api/Project/ProjectDetail/en/0c101fff-43ee-41ea-97bc-22fd018d4cff`.
+3. Verify:
+   - `partners`: Contains all partner organizations (`AdP`, `Municipality of Santa Lucia Utatlan`, `Guatemala Federal Department of Education`, `Vista Hermosa Water & Sanitation Committee / COCODE`) as Implementing Partners.
+   - `fundingSources`: Contains only the valid financial contributions (World Fund, District 7620 DDF, and contributing Rotary clubs). No $0 USD entries.
