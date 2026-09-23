@@ -75,5 +75,12 @@
     "action": "updated",
     "migrated_at": "2026-09-23T15:43:10.910137",
     "spc_url": "https://spc.rotary.org/project?guid=c452adfd-9940-45de-809e-36302b4b0bb1"
+  },
+  "GG2570516": {
+    "spc_id": "c39bdffe-761e-422b-b74d-2c0a0441f63c",
+    "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I",
+    "action": "created",
+    "migrated_at": "2026-09-23T15:49:46.315604",
+    "spc_url": "https://spc.rotary.org/project?guid=c39bdffe-761e-422b-b74d-2c0a0441f63c"
   }
 }

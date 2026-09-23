@@ -67,9 +67,37 @@ US_STATE_ABBR = {
 }
 
 # Runtime cache for dynamically resolved Rotary Clubs
+# Persistent cache file for resolved Rotary Clubs
+RESOLVED_CLUBS_PATH = Path(__file__).resolve().parent / "spc_resolved_clubs.json"
+if not RESOLVED_CLUBS_PATH.exists():
+    RESOLVED_CLUBS_PATH = Path(__file__).resolve().parent.parent / "spc_resolved_clubs.json"
+if not RESOLVED_CLUBS_PATH.exists():
+    RESOLVED_CLUBS_PATH = Path("spc_resolved_clubs.json")
+
+# Runtime cache for dynamically resolved Rotary Clubs
 RESOLVED_CLUBS_CACHE = {
     "lake atitlan": {"key": ROTARY_LAKE_ATITLAN_CLUB_KEY, "name": "Lake Atitlan", "id": "84633", "district": "4250"},
 }
+
+def load_resolved_clubs():
+    if RESOLVED_CLUBS_PATH.exists():
+        try:
+            with open(RESOLVED_CLUBS_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    for k, v in data.items():
+                        RESOLVED_CLUBS_CACHE[k.lower().strip()] = v
+        except Exception as e:
+            print(f"Warning: Failed to load {RESOLVED_CLUBS_PATH}: {e}")
+
+def save_resolved_clubs():
+    try:
+        with open(RESOLVED_CLUBS_PATH, "w", encoding="utf-8") as f:
+            json.dump(RESOLVED_CLUBS_CACHE, f, indent=2)
+    except Exception as e:
+        print(f"Warning: Failed to save {RESOLVED_CLUBS_PATH}: {e}")
+
+load_resolved_clubs()
 
 KNOWN_DISTRICTS = {
     "7620": {"key": "9445e695-1a25-4e21-941e-3eff587a0a8f", "name": "7620"},
@@ -88,21 +116,78 @@ RI_SERVICE_PARTNERS = {
 }
 
 
+def _search_rotary_org_api(q_name: str, q_district: str = "") -> list:
+    """Executes a search against the Rotary International Organization Search API with retries and throttling."""
+    if not q_name or len(q_name.strip()) < 3:
+        return []
+    url = "https://spc.rotary.org/api/Search/Organization"
+    req_body = json.dumps({
+        "type": "Rotary Club",
+        "clubName": q_name.strip(),
+        "districtNumber": q_district.strip() if q_district else "",
+        "countrykey": ""
+    }).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "subscriptionkey": "ROTARY_API_KEY"
+    }
+
+    max_retries = 3
+    for attempt in range(max_retries):
+        time.sleep(0.2)  # Pacing delay to avoid tripping 503 / Cloudflare limits
+        try:
+            req = urllib.request.Request(url, data=req_body, headers=headers)
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                data = json.loads(resp.read().decode())
+                if isinstance(data, list):
+                    return data
+                return []
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 502, 503, 504) and attempt < max_retries - 1:
+                wait_sec = (attempt + 1) * 1.5
+                time.sleep(wait_sec)
+                continue
+            return []
+        except (urllib.error.URLError, TimeoutError) as e:
+            if attempt < max_retries - 1:
+                wait_sec = (attempt + 1) * 1.5
+                time.sleep(wait_sec)
+                continue
+            return []
+        except Exception:
+            return []
+    return []
+
+
 def find_partner_club(club_name_str: str) -> dict:
-    """Dynamically searches the Rotary International Organization API for partner clubs."""
+    """Dynamically searches or looks up cached Rotary International Organization for partner clubs."""
     if not club_name_str:
         return None
     s = club_name_str.strip()
     s_lower = s.lower()
+
+    # Fast-path 1: Exact raw string in cache
     if s_lower in RESOLVED_CLUBS_CACHE:
         return RESOLVED_CLUBS_CACHE[s_lower]
 
+    # Normalize name variations
     clean = re.sub(r'\(d\d+\)', '', s, flags=re.IGNORECASE).strip()
     clean = re.sub(r'^(?:RC\s+of\s+|RC\s+|Rotary\s+Club\s+(?:of\s+)?|Club\s+Rotario\s+(?:de\s+)?)', '', clean, flags=re.IGNORECASE).strip()
     clean = re.sub(r'\brotary\b', '', clean, flags=re.IGNORECASE).strip()
     clean = re.sub(r'\bclub\b', '', clean, flags=re.IGNORECASE).strip()
     clean = re.sub(r'\s+', ' ', clean).strip()
-    clean = re.sub(r'\bMount\b', 'Mt.', clean, flags=re.IGNORECASE)
+
+    clean_lower = clean.lower()
+    # Fast-path 2: Cleaned string in cache
+    if clean_lower in RESOLVED_CLUBS_CACHE:
+        entry = RESOLVED_CLUBS_CACHE[clean_lower]
+        RESOLVED_CLUBS_CACHE[s_lower] = entry
+        return entry
+
+    # Extract district if present in input string (e.g. '(D7620)' or '(d4250)')
+    m_dist = re.search(r'\b[dD](\d{4})\b', s)
+    district_num = m_dist.group(1) if m_dist else ""
 
     parts = [p.strip() for p in clean.split(',') if p.strip()]
     club_query = parts[0]
@@ -116,58 +201,97 @@ def find_partner_club(club_name_str: str) -> dict:
 
     state_code = US_STATE_ABBR.get(loc_hint.lower(), loc_hint.upper()) if loc_hint else ''
 
-    if len(club_query) >= 3:
-        try:
-            req_data = json.dumps({
-                "type": "Rotary Club",
-                "clubName": club_query,
-                "districtNumber": "",
-                "countrykey": ""
-            }).encode("utf-8")
-            req = urllib.request.Request(
-                "https://spc.rotary.org/api/Search/Organization",
-                data=req_data,
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "subscriptionkey": "ROTARY_API_KEY"
-                }
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                results = json.loads(resp.read().decode())
-                if results and isinstance(results, list):
-                    match = None
-                    if state_code:
-                        for r in results:
-                            if r.get('orgName', '').lower() == club_query.lower() and (r.get('stateAddress') == state_code or state_code in str(r.get('countryAddress') or '')):
-                                match = r
-                                break
-                        if not match:
-                            for r in results:
-                                if r.get('stateAddress') == state_code or state_code in str(r.get('countryAddress') or '') or state_code in str(r.get('provinceIntlAddress') or ''):
-                                    match = r
-                                    break
-                    if not match:
-                        for r in results:
-                            if r.get('orgName', '').lower() == club_query.lower():
-                                match = r
-                                break
-                    if not match:
-                        match = results[0]
+    # Fast-path 3: First part in cache
+    if club_query.lower() in RESOLVED_CLUBS_CACHE:
+        entry = RESOLVED_CLUBS_CACHE[club_query.lower()]
+        RESOLVED_CLUBS_CACHE[s_lower] = entry
+        RESOLVED_CLUBS_CACHE[clean_lower] = entry
+        return entry
 
-                    entry = {
-                        "key": match.get("orgKey"),
-                        "name": match.get("orgName"),
-                        "id": match.get("clubIdExt"),
-                        "district": match.get("districtAddress")
-                    }
-                    RESOLVED_CLUBS_CACHE[s_lower] = entry
-                    clean_lower = clean.lower()
-                    if clean_lower not in RESOLVED_CLUBS_CACHE:
-                        RESOLVED_CLUBS_CACHE[clean_lower] = entry
-                    return entry
-        except Exception as e:
-            print(f"Warning: Rotary Org search failed for '{club_name_str}': {e}")
+    # Fast-path 4: Query without parentheses (e.g. 'Carroll Creek (Frederick)' -> 'Carroll Creek')
+    no_paren = re.sub(r'\(.*?\)', '', club_query).strip()
+    if no_paren.lower() in RESOLVED_CLUBS_CACHE:
+        entry = RESOLVED_CLUBS_CACHE[no_paren.lower()]
+        RESOLVED_CLUBS_CACHE[s_lower] = entry
+        return entry
+
+    # Fast-path 5: Mount / Mt. substitution
+    mt_var = re.sub(r'\bMount\b', 'Mt.', club_query, flags=re.IGNORECASE) if "mount" in club_query.lower() else re.sub(r'\bMt\b\.?', 'Mount', club_query, flags=re.IGNORECASE)
+    if mt_var.lower() in RESOLVED_CLUBS_CACHE:
+        entry = RESOLVED_CLUBS_CACHE[mt_var.lower()]
+        RESOLVED_CLUBS_CACHE[s_lower] = entry
+        return entry
+
+    # Multi-pass candidate queries for live API lookup
+    candidate_queries = []
+    # 1. Full query with district (if district known)
+    if district_num:
+        candidate_queries.append((club_query, district_num))
+        candidate_queries.append((no_paren, district_num))
+    # 2. Main club query without district
+    candidate_queries.append((club_query, ""))
+    # 3. Mount / Mt. variant
+    if mt_var != club_query:
+        candidate_queries.append((mt_var, ""))
+    # 4. Without parentheses
+    if no_paren != club_query and len(no_paren) >= 3:
+        candidate_queries.append((no_paren, ""))
+    # 5. Without prefix words like 'E-Club of', 'CdGuatemala', 'San Rafael'
+    strip_prefix = re.sub(r'^(?:e-club of|cdguatemala|cd\s*guatemala)\s*', '', club_query, flags=re.IGNORECASE).strip()
+    if strip_prefix != club_query and len(strip_prefix) >= 3:
+        candidate_queries.append((strip_prefix, ""))
+
+    seen_attempts = set()
+    results = []
+    for q_name, q_dist in candidate_queries:
+        call_key = (q_name.lower().strip(), q_dist)
+        if call_key in seen_attempts or len(q_name.strip()) < 3:
+            continue
+        seen_attempts.add(call_key)
+        res = _search_rotary_org_api(q_name, q_dist)
+        if res:
+            results = res
+            break
+
+    if results:
+        match = None
+        # Priority match: state match if state known
+        if state_code:
+            for r in results:
+                if r.get('orgName', '').lower() == club_query.lower() and (r.get('stateAddress') == state_code or state_code in str(r.get('countryAddress') or '')):
+                    match = r
+                    break
+            if not match:
+                for r in results:
+                    if r.get('stateAddress') == state_code or state_code in str(r.get('countryAddress') or '') or state_code in str(r.get('provinceIntlAddress') or ''):
+                        match = r
+                        break
+        # Exact name match
+        if not match:
+            for r in results:
+                if r.get('orgName', '').lower() == club_query.lower():
+                    match = r
+                    break
+        if not match and no_paren:
+            for r in results:
+                if r.get('orgName', '').lower() == no_paren.lower():
+                    match = r
+                    break
+        if not match:
+            match = results[0]
+
+        entry = {
+            "key": match.get("orgKey"),
+            "name": match.get("orgName"),
+            "id": match.get("clubIdExt"),
+            "district": match.get("districtAddress"),
+            "state": match.get("stateAddress"),
+            "country": match.get("countryAddress")
+        }
+        RESOLVED_CLUBS_CACHE[s_lower] = entry
+        RESOLVED_CLUBS_CACHE[clean_lower] = entry
+        save_resolved_clubs()
+        return entry
 
     return None
 
@@ -753,25 +877,27 @@ def construct_spc_payload(p: dict) -> dict:
                 is_host = (ckey == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_name.lower())
                 use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else (ckey or c_name)
 
-                if ckey or is_host:
-                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
-                    if not existing_p:
-                        partners.append({
-                            "partnerOrganizationKey": use_key,
-                            "Hour": "",
-                            "MoneyDonated": amt_str,
-                            "NoOfVolunteer": "",
-                            "year": ""
-                        })
-                    elif amt_str and not existing_p.get("MoneyDonated"):
-                        existing_p["MoneyDonated"] = amt_str
+                existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
+                if not existing_p:
+                    partners.append({
+                        "partnerOrganizationKey": use_key,
+                        "Hour": "",
+                        "MoneyDonated": amt_str,
+                        "NoOfVolunteer": "",
+                        "year": ""
+                    })
+                elif amt_str and not existing_p.get("MoneyDonated"):
+                    existing_p["MoneyDonated"] = amt_str
 
                 if amt_val > 0:
-                    fundings.append({
+                    f_item = {
                         "fundingSource": "Rotary Club",
                         "fundingAmount": amt_str,
-                        "fundingClubKey": use_key
-                    })
+                        "fundingClubKey": use_key if ckey or is_host else ""
+                    }
+                    if not ckey and not is_host:
+                        f_item["fundingOtherName"] = c_name
+                    fundings.append(f_item)
         else:
             raw_pclubs = details.get("partner_clubs") or []
             if isinstance(raw_pclubs, str):
@@ -798,23 +924,27 @@ def construct_spc_payload(p: dict) -> dict:
                 is_host = (ckey == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_str.lower())
                 use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else (ckey or c_str)
 
-                if ckey or is_host:
-                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
-                    if not existing_p:
-                        partners.append({
-                            "partnerOrganizationKey": use_key,
-                            "Hour": "",
-                            "MoneyDonated": amt_str,
-                            "NoOfVolunteer": "",
-                            "year": ""
-                        })
+                existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
+                if not existing_p:
+                    partners.append({
+                        "partnerOrganizationKey": use_key,
+                        "Hour": "",
+                        "MoneyDonated": amt_str,
+                        "NoOfVolunteer": "",
+                        "year": ""
+                    })
+                elif amt_str and not existing_p.get("MoneyDonated"):
+                    existing_p["MoneyDonated"] = amt_str
 
                 if amt_val > 0:
-                    fundings.append({
+                    f_item = {
                         "fundingSource": "Rotary Club",
                         "fundingAmount": amt_str,
-                        "fundingClubKey": use_key
-                    })
+                        "fundingClubKey": use_key if ckey or is_host else ""
+                    }
+                    if not ckey and not is_host:
+                        f_item["fundingOtherName"] = c_str
+                    fundings.append(f_item)
     else:
         intl_club = str(p.get("international_club_name") or p.get("internationalClub_name") or "").strip()
         partner_club = find_partner_club(intl_club)
@@ -877,6 +1007,14 @@ def construct_spc_payload(p: dict) -> dict:
         if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
             partners.append({
                 "partnerOrganizationKey": partner_club_key,
+                "Hour": "",
+                "MoneyDonated": budget_str if num_budget else "",
+                "NoOfVolunteer": "",
+                "year": ""
+            })
+        elif intl_club and "lake atitlan" not in intl_club.lower():
+            partners.append({
+                "partnerOrganizationKey": intl_club,
                 "Hour": "",
                 "MoneyDonated": budget_str if num_budget else "",
                 "NoOfVolunteer": "",
@@ -1341,7 +1479,7 @@ async def main():
 
                         for (const f of (payload.projectFundings || [])) {
                             delete f.fundingOrgName;
-                            delete f.fundingOtherName;
+                            if (!f.fundingOtherName) delete f.fundingOtherName;
                             delete f.fundingSourceKey;
                             delete f.isImplementingPartnerFlag;
 

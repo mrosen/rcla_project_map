@@ -1,0 +1,610 @@
+{
+  "lake atitlan": {
+    "key": "c575902e-aae0-4b82-9aba-54947c09f4fe",
+    "name": "Lake Atitlan",
+    "id": "84633",
+    "district": "4250"
+  },
+  "lake atitl\u00e1n": {
+    "key": "c575902e-aae0-4b82-9aba-54947c09f4fe",
+    "name": "Lake Atitlan",
+    "id": "84633",
+    "district": "4250"
+  },
+  "lake atitl\u00e1n (d4250)": {
+    "key": "c575902e-aae0-4b82-9aba-54947c09f4fe",
+    "name": "Lake Atitlan",
+    "id": "84633",
+    "district": "4250"
+  },
+  "annapolis": {
+    "key": "2d768063-d1d0-4573-a094-a7ace36588d0",
+    "name": "Annapolis",
+    "id": "5853",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "ashville  nc": {
+    "key": "b3b3dc27-dab1-4d07-855a-935390c81a93",
+    "name": "Asheville",
+    "id": "5996",
+    "district": "7670",
+    "state": "NC",
+    "country": "United States"
+  },
+  "ashville nc": {
+    "key": "b3b3dc27-dab1-4d07-855a-935390c81a93",
+    "name": "Asheville",
+    "id": "5996",
+    "district": "7670",
+    "state": "NC",
+    "country": "United States"
+  },
+  "baltimore": {
+    "key": "a909d44a-de9c-4cb8-9749-a6c321df348f",
+    "name": "Baltimore",
+    "id": "5855",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "calgary heritage park": {
+    "key": "dba7d1e3-49e6-47c7-b969-00989fee8953",
+    "name": "Calgary Heritage Park",
+    "id": "51727",
+    "district": "5360",
+    "state": "AB",
+    "country": "Canada"
+  },
+  "capitol hill (washington": {
+    "key": "d9232f9f-f95b-4fbc-95c4-35bfb25ff9ef",
+    "name": "Capitol Hill (Washington, DC)",
+    "id": "63814",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "capitol hill (washington, dc)": {
+    "key": "d9232f9f-f95b-4fbc-95c4-35bfb25ff9ef",
+    "name": "Capitol Hill (Washington, DC)",
+    "id": "63814",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "carroll creek (frederick)": {
+    "key": "53a43929-2e4f-402a-9977-44999b441c7d",
+    "name": "Carroll Creek (Frederick)",
+    "id": "29713",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "college park": {
+    "key": "61d01425-0fdb-437b-af6d-ef55f59f6ba0",
+    "name": "College Park",
+    "id": "5864",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "corral de tierra": {
+    "key": "d479c0cd-ad8b-4f04-a02f-d2f72538fef0",
+    "name": "Corral de Tierra",
+    "id": "24749",
+    "district": "5230",
+    "state": "CA",
+    "country": "United States"
+  },
+  "dupont circle washington": {
+    "key": "fa68604c-4068-498f-a701-7b623b92ba50",
+    "name": "Dupont Circle Washington",
+    "id": "84311",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "evergreen": {
+    "key": "8ca08b8f-934f-4e71-9a9d-0cc6a2e9c392",
+    "name": "Evergreen",
+    "id": "4076",
+    "district": "6880",
+    "state": "AL",
+    "country": "United States"
+  },
+  "ferndale, wa": {
+    "key": "0571dc57-4d0d-484d-bf4a-5148a1a608ad",
+    "name": "Ferndale",
+    "id": "191",
+    "district": "5050",
+    "state": "WA",
+    "country": "United States"
+  },
+  "fort collins": {
+    "key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3",
+    "name": "Fort Collins",
+    "id": "1100",
+    "district": "5440",
+    "state": "CO",
+    "country": "United States"
+  },
+  "fort collins-breakfast": {
+    "key": "30495041-3626-490f-8911-294094f361b4",
+    "name": "Fort Collins-Breakfast",
+    "id": "26298",
+    "district": "5440",
+    "state": "CO",
+    "country": "United States"
+  },
+  "glenview-sunrise": {
+    "key": "e17c4c19-7bbb-45c9-b64f-2b0cae0baa92",
+    "name": "Glenview-Sunrise",
+    "id": "26025",
+    "district": "6440",
+    "state": "IL",
+    "country": "United States"
+  },
+  "greeley (centennial)": {
+    "key": "daa34a78-1b74-4af6-82ef-d0efc7c26a6a",
+    "name": "Greeley (Centennial)",
+    "id": "1106",
+    "district": "5440",
+    "state": "CO",
+    "country": "United States"
+  },
+  "hingham": {
+    "key": "8bf1f5dc-9349-4f10-b39a-7b0d44a43799",
+    "name": "Hingham",
+    "id": "6661",
+    "district": "7950",
+    "state": "MA",
+    "country": "United States"
+  },
+  "howard west": {
+    "key": "e3a762d4-c507-41f6-aa64-b251dbfcceab",
+    "name": "Howard West",
+    "id": "86245",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "lake shore-severna park": {
+    "key": "e819dd35-8c87-4002-a80d-a985d75a94c9",
+    "name": "Lake Shore-Severna Park",
+    "id": "5878",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "lakeport": {
+    "key": "d71d9356-4173-4ea7-9ec5-0b7af4b943dd",
+    "name": "Lakeport",
+    "id": "388",
+    "district": "5130",
+    "state": "CA",
+    "country": "United States"
+  },
+  "livermore": {
+    "key": "8eb255ef-f39d-4bf4-9d5c-08a6cf29f100",
+    "name": "Livermore",
+    "id": "485",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "marin evening": {
+    "key": "ae1057de-565c-49bf-800f-a5b9fe30bdac",
+    "name": "San Rafael Marin Evening",
+    "id": "85885",
+    "district": "5150",
+    "state": "CA",
+    "country": "United States"
+  },
+  "metro bethesda": {
+    "key": "61390f26-4efb-4d2b-92fb-a8d7edbef055",
+    "name": "Metro Bethesda",
+    "id": "71574",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "mildmay, ontario canada": {
+    "key": "316909fd-7a66-4f64-83de-69b7e935ac67",
+    "name": "Mildmay",
+    "id": "2881",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "mill valley": {
+    "key": "96521569-a11b-4602-93b6-c928a2a07bf5",
+    "name": "Mill Valley",
+    "id": "393",
+    "district": "5150",
+    "state": "CA",
+    "country": "United States"
+  },
+  "nelson": {
+    "key": "b73b00b4-2945-4a62-acac-7fa53aa41926",
+    "name": "Nelson",
+    "id": "240",
+    "district": "5080",
+    "state": "BC",
+    "country": "Canada"
+  },
+  "northfield, mn": {
+    "key": "bc4485ed-daef-494e-b006-97c0b22a4ee7",
+    "name": "Northfield",
+    "id": "2157",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "oakland": {
+    "key": "9d3fb1c5-d4dc-4e44-8d30-3e7d85903543",
+    "name": "Oakland",
+    "id": "496",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "oakville": {
+    "key": "fec94a36-3c95-4047-b49b-951e877fd31d",
+    "name": "Oakville",
+    "id": "4707",
+    "district": "7080",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "pacifica": {
+    "key": "fa9079c0-a0c0-4d98-8939-c47b5c1a2ecd",
+    "name": "Pacifica",
+    "id": "398",
+    "district": "5150",
+    "state": "CA",
+    "country": "United States"
+  },
+  "parole (annapolis)": {
+    "key": "a51f50ab-e792-4e40-8b7d-c39b53738e6f",
+    "name": "Parole (Annapolis)",
+    "id": "23264",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "petaluma": {
+    "key": "55fba6a2-d4ee-4c6e-beb1-7faa18c7d02c",
+    "name": "Petaluma",
+    "id": "399",
+    "district": "5130",
+    "state": "CA",
+    "country": "United States"
+  },
+  "petaluma valley": {
+    "key": "7b11cb6f-a6be-46c3-9049-d5e885c02186",
+    "name": "Petaluma Valley",
+    "id": "400",
+    "district": "5130",
+    "state": "CA",
+    "country": "United States"
+  },
+  "rc fort collins, co": {
+    "key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3",
+    "name": "Fort Collins",
+    "id": "1100",
+    "district": "5440",
+    "state": "CO",
+    "country": "United States"
+  },
+  "fort collins, co": {
+    "key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3",
+    "name": "Fort Collins",
+    "id": "1100",
+    "district": "5440",
+    "state": "CO",
+    "country": "United States"
+  },
+  "rc santa cruz, ca": {
+    "key": "ec9220fa-fde5-4266-aaef-26b464bcd5c0",
+    "name": "Santa Cruz",
+    "id": "510",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "santa cruz, ca": {
+    "key": "ec9220fa-fde5-4266-aaef-26b464bcd5c0",
+    "name": "Santa Cruz",
+    "id": "510",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "rc topeka, ks": {
+    "key": "52ae12a4-a4f5-4a78-ab27-21334d71d251",
+    "name": "Topeka",
+    "id": "1634",
+    "district": "5710",
+    "state": "KS",
+    "country": "United States"
+  },
+  "topeka, ks": {
+    "key": "52ae12a4-a4f5-4a78-ab27-21334d71d251",
+    "name": "Topeka",
+    "id": "1634",
+    "district": "5710",
+    "state": "KS",
+    "country": "United States"
+  },
+  "rc upper arlington, oh": {
+    "key": "1ca5ab11-d389-41bc-a877-280484de2923",
+    "name": "Upper Arlington",
+    "id": "3694",
+    "district": "6690",
+    "state": "OH",
+    "country": "United States"
+  },
+  "upper arlington, oh": {
+    "key": "1ca5ab11-d389-41bc-a877-280484de2923",
+    "name": "Upper Arlington",
+    "id": "3694",
+    "district": "6690",
+    "state": "OH",
+    "country": "United States"
+  },
+  "reno central": {
+    "key": "e18d9119-7ee3-43ca-9688-da5229af2c96",
+    "name": "Reno Central",
+    "id": "21034",
+    "district": "5190",
+    "state": "NV",
+    "country": "United States"
+  },
+  "rochester risers, mn": {
+    "key": "a18e49cd-3fa3-4856-99ac-a347bfc6c8a3",
+    "name": "Rochester Risers",
+    "id": "25242",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "rochester, mn": {
+    "key": "e15358f9-6bf0-4ca6-8939-4826ee29b5d8",
+    "name": "Rochester",
+    "id": "2164",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "rockville": {
+    "key": "151cd8fb-2591-4ccf-9424-0ee852bd647f",
+    "name": "Rockville",
+    "id": "5890",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "san francisco rotary chinatown": {
+    "key": "212152c6-7b91-4d2e-877a-de67bfe0eee2",
+    "name": "San Francisco Chinatown",
+    "id": "79931",
+    "district": "5150",
+    "state": "CA",
+    "country": "United States"
+  },
+  "san francisco chinatown": {
+    "key": "212152c6-7b91-4d2e-877a-de67bfe0eee2",
+    "name": "San Francisco Chinatown",
+    "id": "79931",
+    "district": "5150",
+    "state": "CA",
+    "country": "United States"
+  },
+  "santa cruz, california": {
+    "key": "ec9220fa-fde5-4266-aaef-26b464bcd5c0",
+    "name": "Santa Cruz",
+    "id": "510",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "south anne arundel county (edgewater)": {
+    "key": "80897726-0a42-4943-8e13-568688fd5ad3",
+    "name": "South Anne Arundel County (Edgewater)",
+    "id": "70079",
+    "district": "7620",
+    "state": "MD",
+    "country": "United States"
+  },
+  "tahoe-incline": {
+    "key": "ad66b0d6-4fb5-40fc-8119-ecceade5b73f",
+    "name": "Tahoe-Incline",
+    "id": "50115",
+    "district": "5190",
+    "state": "NV",
+    "country": "United States"
+  },
+  "truckee": {
+    "key": "b0015dd3-aeb8-4068-a425-6ccc3ca83b83",
+    "name": "Truckee",
+    "id": "556",
+    "district": "5190",
+    "state": "CA",
+    "country": "United States"
+  },
+  "truckee sunrise": {
+    "key": "d387458c-2fa2-4621-8e45-33297b3cdffb",
+    "name": "Truckee Sunrise",
+    "id": "29467",
+    "district": "5190",
+    "state": "CA",
+    "country": "United States"
+  },
+  "truckee, ca": {
+    "key": "b0015dd3-aeb8-4068-a425-6ccc3ca83b83",
+    "name": "Truckee",
+    "id": "556",
+    "district": "5190",
+    "state": "CA",
+    "country": "United States"
+  },
+  "washington": {
+    "key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0",
+    "name": "Washington, D.C.",
+    "id": "5851",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "washington, d.c.": {
+    "key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0",
+    "name": "Washington, D.C.",
+    "id": "5851",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "watford, canada": {
+    "key": "1cff426d-53ad-4849-93c6-bbe401d6d493",
+    "name": "Watford",
+    "id": "2895",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "watsonville, california": {
+    "key": "eeae7853-f24a-4bf9-8098-cedd9700d500",
+    "name": "Watsonville",
+    "id": "515",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "wiarton": {
+    "key": "36e86754-6c0b-44c9-9cff-46974241043a",
+    "name": "Wiarton",
+    "id": "2896",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "yarmouth": {
+    "key": "c26dca92-2f8f-4de7-bedd-2741893d5332",
+    "name": "Yarmouth",
+    "id": "6394",
+    "district": "7815",
+    "state": "NS",
+    "country": "Canada"
+  },
+  "cdguatemala, sur": {
+    "key": "80496173-bf4a-45d0-9fa2-754999899519",
+    "name": "Guatemala Sur",
+    "id": "7220",
+    "district": "4250",
+    "country": "Guatemala"
+  },
+  "guatemala sur": {
+    "key": "80496173-bf4a-45d0-9fa2-754999899519",
+    "name": "Guatemala Sur",
+    "id": "7220",
+    "district": "4250",
+    "country": "Guatemala"
+  },
+  "e-club of san diego global": {
+    "key": "9f1243ad-40dd-40a0-a75d-ef09217abb98",
+    "name": "E-Club of San Diego",
+    "id": "87469",
+    "district": "5340",
+    "state": "CA",
+    "country": "United States"
+  },
+  "rotary e-club san diego global": {
+    "key": "9f1243ad-40dd-40a0-a75d-ef09217abb98",
+    "name": "E-Club of San Diego",
+    "id": "87469",
+    "district": "5340",
+    "state": "CA",
+    "country": "United States"
+  },
+  "e-club of san diego": {
+    "key": "9f1243ad-40dd-40a0-a75d-ef09217abb98",
+    "name": "E-Club of San Diego",
+    "id": "87469",
+    "district": "5340",
+    "state": "CA",
+    "country": "United States"
+  },
+  "wairton, ontario canada": {
+    "key": "36e86754-6c0b-44c9-9cff-46974241043a",
+    "name": "Wiarton",
+    "id": "2896",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "rotary club of wiarton": {
+    "key": "36e86754-6c0b-44c9-9cff-46974241043a",
+    "name": "Wiarton",
+    "id": "2896",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "santa cruz": {
+    "key": "ec9220fa-fde5-4266-aaef-26b464bcd5c0",
+    "name": "Santa Cruz",
+    "id": "510",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "washington dc": {
+    "key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0",
+    "name": "Washington, D.C.",
+    "id": "5851",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "rc washington, d.c.": {
+    "key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0",
+    "name": "Washington, D.C.",
+    "id": "5851",
+    "district": "7620",
+    "state": "DC",
+    "country": "United States"
+  },
+  "asheville": {
+    "key": "b3b3dc27-dab1-4d07-855a-935390c81a93",
+    "name": "Asheville",
+    "id": "5996",
+    "district": "7670",
+    "state": "NC",
+    "country": "United States"
+  },
+  "asheville, nc": {
+    "key": "b3b3dc27-dab1-4d07-855a-935390c81a93",
+    "name": "Asheville",
+    "id": "5996",
+    "district": "7670",
+    "state": "NC",
+    "country": "United States"
+  },
+  "rc asheville, nc": {
+    "key": "b3b3dc27-dab1-4d07-855a-935390c81a93",
+    "name": "Asheville",
+    "id": "5996",
+    "district": "7670",
+    "state": "NC",
+    "country": "United States"
+  },
+  "test": {
+    "key": "23906224-735c-430f-a16b-5d9dab49b4a6",
+    "name": "Ca\u00e7ador-Sul Contestado",
+    "id": "71475",
+    "district": "4740",
+    "state": null,
+    "country": "Brazil"
+  }
+}
