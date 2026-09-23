@@ -1,69 +1,70 @@
-# Restore "Export to SPC" / "View on SPC" Links and Action Buttons
+# Implementation Plan: Streamline Public View & Restrict Maintenance Mode
 
-The user reported: `"I no longer have an export to spc link"`. This plan details why the SPC export link and action buttons disappeared and provides the technical changes to restore them across the application.
+Make Maintenance Mode strictly opt-in and hidden from standard public visitors, remove the "Edit Project" and "Export to SPC" action buttons from the default view, relocate the SPC link into the project's web links section, and display a clean sync indicator badge in the header metadata.
 
-## Root Cause Analysis
+## User Review Required
 
-1. **Edit Drawer Sync Actions Wiped on Fetch Failure**:
-   - In `main.js`, `loadProjectSyncStatus` only rendered action buttons (`🧪 SPC Dry Run`, `🚀 SPC Live Export`) inside the `try` block that fetched `BACKEND_URL + '/api/projects/.../sync-status'`.
-   - On GitHub Pages (`https://mrosen.github.io/`), `BACKEND_URL` is `window.location.origin`, which returns 404 for `/api/...`.
-   - In the `catch (err)` block, the code executed `actionsEl.innerHTML = '';`, completely erasing the SPC export buttons.
-2. **Maintainer Bar SPC Export Buttons Hidden on Static/GitHub Pages**:
-   - In `index.html`, `btn-spc-dry` and `btn-spc-live` had the CSS class `local-only-btn`.
-   - `applyMaintenanceModeUI` sets `el.style.display = 'none'` on all `.local-only-btn` elements when not on localhost, hiding the SPC Export buttons in Maintainer Mode on GitHub Pages.
-3. **Missing Direct "Export to SPC" Action in Project Detail View**:
-   - In `showDetail`, the project header only displayed `🌐 View on SPC` (if already exported).
-   - If a project was not yet exported, or if a maintainer wanted to trigger/re-run an export directly from the detail view, no button was rendered.
-4. **Local Orchestrator Process Had Halted**:
-   - The background Python orchestrator daemon had stopped due to a reload shutdown, causing requests to `http://localhost:8000` to fail until restarted.
+> [!IMPORTANT]
+> - **Default View for Public Users**: Maintenance Mode will be **OFF** by default for all visitors (both local and on GitHub Pages). Standard visitors will see a clean public interface with **no** "Maintainer Mode" button, **no** database status pill, **no** "Edit Project" button, and **no** "Export to SPC" button.
+> - **Accessing Maintenance Mode**: Maintainers can activate Maintenance Mode at any time using:
+>   1. Keyboard shortcut: `Ctrl+Shift+M` (or `Cmd+Shift+M` on Mac).
+>   2. URL query parameter: appending `?maint=true`, `?admin=true`, or `?edit=true` to the URL.
+>   3. Discreet trigger: double-clicking the club name in the top navigation bar.
+> - **SPC Link for Public Users**: When a project has been synced to Rotary SPC:
+>   1. A subtle, elegant metadata badge `✓ Synced to Rotary SPC ↗` appears alongside the project status/type badges in the header.
+>   2. The project's Rotary Service Project Center entry appears as one of the web links in the **"Attached Documents & Web Links"** section.
 
 ---
 
 ## Proposed Changes
 
-### 1. Robust SPC URL Extraction & Normalization
-#### [MODIFY] [main.js](file:///wsl.localhost/Ubuntu/home/msr/rcla_project_map/main.js)
-- Fix `normalizeSpcUrl(url, guid)` to support bare GUID strings and correctly prepend `https://spc.rotary.org/project?guid=`.
-- Add `getProjectSpcUrl(project)` helper to check `project.sync_status.spc.spc_url`, `project.sync_status.spc.spc_project_id`, `project.spc_url`, `project.spc_id`, and `project.project_links`.
+### Top Navigation & Maintenance Mode Defaults
 
-### 2. Project Detail View Header Actions
-#### [MODIFY] [main.js](file:///wsl.localhost/Ubuntu/home/msr/rcla_project_map/main.js)
+#### [MODIFY] [index.html](file:///home/msr/rcla_project_map/index.html)
+- Set `#btn-maint-toggle` and `#backend-status-indicator` to `display: none;` by default in HTML so they never flash or appear for regular visitors.
+- Add `ondblclick="toggleMaintenanceMode()"` to the navbar club title as a discreet maintainer fallback on devices without a keyboard.
+
+#### [MODIFY] [main.js](file:///home/msr/rcla_project_map/main.js)
+- In `checkMaintenanceMode()`: Default to `false` (remove the `hostname === 'localhost'` override so local and production behave identically for clean public preview).
+- In `applyMaintenanceModeUI()`:
+  - When `isMaintenanceMode` is `false`: Hide `#maintainer-panel`, hide `#btn-maint-toggle`, and hide `#backend-status-indicator`.
+  - When `isMaintenanceMode` is `true`: Show `#maintainer-panel`, show `#btn-maint-toggle` styled as `🛠️ Maint Mode ON (✕ Exit)`, and show `#backend-status-indicator`.
+
+---
+
+### Project Detail View & SPC Link Relocation
+
+#### [MODIFY] [main.js](file:///home/msr/rcla_project_map/main.js)
 - In `showDetail(idx)`:
-  - If project has an SPC link: render `🌐 View on SPC ↗` (opens Rotary SPC project page).
-  - In Maintainer Mode: render `🚀 Export to SPC` (or `🚀 Re-export to SPC`) button directly in the detail view header next to `✏️ Edit Project`.
-
-### 3. Edit Drawer Sync Actions & Status
-#### [MODIFY] [main.js](file:///wsl.localhost/Ubuntu/home/msr/rcla_project_map/main.js)
-- In `loadProjectSyncStatus(projectId)`:
-  - Add `renderSyncActions(projectId, spc)` that generates:
-    - `🌐 View on SPC ↗` link (if exported).
-    - `🧪 SPC Dry Run` button.
-    - `🚀 Export to SPC` / `🚀 Re-export to SPC` button.
-  - Optimistically render `renderSyncActions` in Step 1 immediately upon opening the drawer.
-  - Do NOT wipe out `actionsEl` in `catch` block on fetch failure; retain the action buttons and links.
-
-### 4. Maintainer Toolbar Buttons
-#### [MODIFY] [index.html](file:///wsl.localhost/Ubuntu/home/msr/rcla_project_map/index.html)
-- Remove `local-only-btn` from `btn-spc-dry` and `btn-spc-live` so they remain accessible whenever Maintainer Mode is enabled.
-
-### 5. Actionable Guidance for Static GitHub Pages
-#### [MODIFY] [main.js](file:///wsl.localhost/Ubuntu/home/msr/rcla_project_map/main.js)
-- In `triggerProjectSpcExport` and `triggerSpcExport`:
-  - When invoked from GitHub Pages, explain that live Playwright browser automation runs through the local orchestrator, and offer a one-click prompt to open `http://localhost:8000/?project={id}`.
-  - When invoked from `localhost:8000`, run the export immediately and stream logs.
+  - Make `editBtn` (`✏️ Edit Project`) visible **only** when `isMaintenanceMode` is `true`.
+  - Make `spcBadge` (`🚀 Export to SPC` / `🌐 Open SPC View ↗` maintainer action cluster) visible **only** when `isMaintenanceMode` is `true`.
+  - In the project meta badge row (next to Project Type and Status):
+    - If project has an SPC link (`getProjectSpcUrl(project)`): display a tasteful link badge:
+      `✓ Synced to Rotary SPC ↗`
+  - In `renderFilesAndLinksFromProject` and `renderFilesAndLinks`:
+    - Ensure that if `getProjectSpcUrl(project)` exists, the link `🌐 Rotary Service Project Center (SPC) ↗` is included in the project's **Attached Documents & Web Links** list as one of the standard web links.
 
 ---
 
 ## Verification Plan
 
 ### Automated / Syntax Verification
-- Validate `main.js` syntax: `node -c main.js`
-- Test endpoints against live orchestrator:
-  - `GET http://127.0.0.1:8000/api/projects/GG1633934/sync-status`
-  - `GET http://127.0.0.1:8000/api/status`
+- Run `node -c main.js` to ensure 0 syntax errors.
+- Test endpoint responses and build files.
 
 ### Manual Verification
-1. Inspect detail view for `GG1633934`: confirm `🌐 View on SPC ↗` and `🚀 Export to SPC` are visible.
-2. Inspect detail view for an unexported project (e.g. `GG1871794`): confirm `🚀 Export to SPC` appears in Maintainer Mode.
-3. Open Edit drawer: confirm `🌐 View on SPC ↗`, `🧪 SPC Dry Run`, and `🚀 Re-export to SPC` buttons are present.
-4. Test clicking export from static origin to verify the orchestrator guidance prompt.
+1. **Public View (Default)**:
+   - Load `http://localhost:8000/` without any query parameters or session state.
+   - Verify `#nav`: Shows only `Overview` and `Projects`. No maintainer button, no database indicator, no maintainer panel.
+   - Click a project (e.g. `GG2578692`):
+     - Confirm **NO** `✏️ Edit Project` button.
+     - Confirm **NO** `🚀 Export to SPC` button.
+     - Confirm `✓ Synced to Rotary SPC ↗` appears gracefully in the badge row.
+     - Scroll down to "Attached Documents & Web Links" and confirm `🌐 Rotary Service Project Center (SPC) ↗` is present among the web links.
+2. **Maintainer Mode Activation**:
+   - Press `Ctrl+Shift+M` (or visit `http://localhost:8000/?maint=true`):
+     - Confirm the maintainer panel opens at the top.
+     - Confirm `#btn-maint-toggle` appears in the navbar with `🛠️ Maint Mode ON (✕ Exit)`.
+     - Confirm `✏️ Edit Project` and `🚀 Re-export to SPC` / `🌐 Open SPC View ↗` appear in the detail header.
+   - Click `✕ Exit Maint`:
+     - Confirm UI seamlessly returns to the clean public view.

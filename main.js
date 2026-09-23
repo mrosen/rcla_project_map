@@ -201,7 +201,7 @@ function renderDetailSpcBadgeHtml(project) {
 function updateDetailSpcBadge(project) {
   var container = document.getElementById('detail-spc-badge');
   if (container) {
-    container.innerHTML = renderDetailSpcBadgeHtml(project);
+    container.innerHTML = isMaintenanceMode ? renderDetailSpcBadgeHtml(project) : '';
   }
 }
 
@@ -912,10 +912,14 @@ function showDetail(idx) {
   var rawText = getProjectSummaryText(project);
   var pStatus = (project.status || '').toLowerCase();
 
-  var editBtn = '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;" title="Edit project metadata, photos, documents and sync">✏️ Edit Project</button>';
+  var editBtn = isMaintenanceMode
+    ? '<button type="button" onclick="openEditForm(' + idx + ')" style="background:#d97706;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;" title="Edit project metadata, photos, documents and sync">✏️ Edit Project</button>'
+    : '';
 
-  // SPC Link Badge & Export Button - ALWAYS VISIBLE
-  var spcBadge = '<span id="detail-spc-badge" style="display:inline-flex;gap:6px;">' + renderDetailSpcBadgeHtml(project) + '</span>';
+  // SPC Export & Open View buttons - ONLY visible when in Maintenance Mode
+  var spcBadge = isMaintenanceMode
+    ? ('<span id="detail-spc-badge" style="display:inline-flex;gap:6px;">' + renderDetailSpcBadgeHtml(project) + '</span>')
+    : '';
 
 
   // Lead Brief Overview
@@ -1030,6 +1034,7 @@ function showDetail(idx) {
     + '      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
     + '        <span class="badge badge-type">' + pType + '</span>'
     + '        <span class="badge badge-' + pStatus + '">' + (project.status || '—') + '</span>'
+    + (getProjectSpcUrl(project) ? '        <a href="' + escapeHtml(getProjectSpcUrl(project)) + '" target="_blank" class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;" title="Official project entry on Rotary Service Project Center (SPC)">✓ Synced to Rotary SPC ↗</a>' : '')
     + '        <span style="color:#888;font-size:12px;">' + gid + '</span>'
     + '        <span style="color:#888;font-size:12px;">' + (project.start_date || project.start_year || '') + (project.end_date ? ' → ' + project.end_date : '') + '</span>'
     + '      </div>'
@@ -1114,6 +1119,15 @@ function renderFilesAndLinksFromProject(project, photoContainerId, docContainerI
     }
   });
 
+  var spcUrl = getProjectSpcUrl(project);
+  if (spcUrl && !seenLinks.has(spcUrl.toLowerCase())) {
+    seenLinks.add(spcUrl.toLowerCase());
+    links.push({
+      label: 'Rotary Service Project Center (SPC)',
+      url: spcUrl
+    });
+  }
+
   var images = assets.filter(function (a) {
     return a.file_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(a.filename);
   }).sort(function (a, b) {
@@ -1166,7 +1180,13 @@ function renderFilesAndLinksFromProject(project, photoContainerId, docContainerI
         var linkUrl = (l.url && l.url.indexOf('spc.rotary.org') !== -1) ? normalizeSpcUrl(l.url) : (l.url || '');
         a.href = linkUrl;
         a.target = '_blank';
-        a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || linkUrl);
+        var isSpc = linkUrl.indexOf('spc.rotary.org') !== -1 || (l.label && l.label.toLowerCase().indexOf('spc') !== -1);
+        var icon = isSpc ? '🌐' : '🔗';
+        var labelText = escapeHtml(l.label || linkUrl);
+        if (isSpc && !labelText.includes('↗')) {
+          labelText += ' ↗';
+        }
+        a.innerHTML = '<span class="file-icon">' + icon + '</span> ' + labelText;
         list.appendChild(a);
       });
     } else {
@@ -1177,7 +1197,25 @@ function renderFilesAndLinksFromProject(project, photoContainerId, docContainerI
 
 function renderFilesAndLinks(manifest, projectId, photoContainerId, docContainerId) {
   var rawFiles = manifest.files || [];
-  var links = manifest.links || [];
+  var links = (manifest.links || []).slice();
+
+  // If project has an SPC link, include it
+  var p = allProjects.find(function (item) {
+    return String(item.id || item.grant_id || '').trim().toLowerCase() === String(projectId || '').trim().toLowerCase();
+  });
+  var spcUrl = p ? getProjectSpcUrl(p) : '';
+  if (spcUrl) {
+    var hasSpc = links.some(function (l) {
+      return (l.url && l.url.toLowerCase() === spcUrl.toLowerCase()) ||
+             (l.url && l.url.indexOf('spc.rotary.org') !== -1);
+    });
+    if (!hasSpc) {
+      links.push({
+        label: 'Rotary Service Project Center (SPC)',
+        url: spcUrl
+      });
+    }
+  }
 
   var files = rawFiles.map(function (f) {
     if (typeof f === 'string') return f;
@@ -1219,9 +1257,16 @@ function renderFilesAndLinks(manifest, projectId, photoContainerId, docContainer
       });
       links.forEach(function (l) {
         var a = document.createElement('a');
-        a.href = l.url;
+        var linkUrl = (l.url && l.url.indexOf('spc.rotary.org') !== -1) ? normalizeSpcUrl(l.url) : (l.url || '');
+        a.href = linkUrl;
         a.target = '_blank';
-        a.innerHTML = '<span class="file-icon">🔗</span> ' + escapeHtml(l.label || l.url);
+        var isSpc = linkUrl.indexOf('spc.rotary.org') !== -1 || (l.label && l.label.toLowerCase().indexOf('spc') !== -1);
+        var icon = isSpc ? '🌐' : '🔗';
+        var labelText = escapeHtml(l.label || linkUrl);
+        if (isSpc && !labelText.includes('↗')) {
+          labelText += ' ↗';
+        }
+        a.innerHTML = '<span class="file-icon">' + icon + '</span> ' + labelText;
         list.appendChild(a);
       });
     } else {
@@ -3377,8 +3422,8 @@ function checkMaintenanceMode() {
   if (stored === 'true') return true;
   if (stored === 'false') return false;
 
-  // Local development defaults to true, production (github.io) defaults to false
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  // Always default to false so regular users never see maintainer mode references
+  return false;
 }
 
 function applyMaintenanceModeUI() {
@@ -3392,21 +3437,25 @@ function applyMaintenanceModeUI() {
   var toggleBtn = document.getElementById('btn-maint-toggle');
   if (toggleBtn) {
     if (isMaintenanceMode) {
+      toggleBtn.style.display = 'inline-flex';
       toggleBtn.style.background = '#d97706';
       toggleBtn.style.color = '#fff';
       toggleBtn.style.borderColor = '#b45309';
-      toggleBtn.innerHTML = '🛠️ Maint Mode ON';
+      toggleBtn.innerHTML = '🛠️ Maint Mode ON (✕ Exit)';
+      toggleBtn.title = 'Click to exit Maintenance Mode (Ctrl+Shift+M)';
     } else {
-      toggleBtn.style.background = '#1e293b';
-      toggleBtn.style.color = '#94a3b8';
-      toggleBtn.style.borderColor = '#334155';
-      toggleBtn.innerHTML = '🛠️ Maintainer Mode';
+      toggleBtn.style.display = 'none';
     }
+  }
+
+  var indicator = document.getElementById('backend-status-indicator');
+  if (indicator) {
+    indicator.style.display = isMaintenanceMode ? 'inline-flex' : 'none';
   }
 
   var localBtns = document.querySelectorAll('.local-only-btn');
   localBtns.forEach(function (el) {
-    el.style.display = isLocal ? '' : 'none';
+    el.style.display = (isLocal && isMaintenanceMode) ? '' : 'none';
   });
 }
 
