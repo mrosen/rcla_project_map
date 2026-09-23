@@ -16,3 +16,12 @@ When running with VS Code on Windows accessing this workspace via WSL UNC (`\\ws
 3. **Links Inside Workspace Markdown Files**:
    Inside markdown files committed to the repository (e.g. `walkthrough.md`, `implementation_plan.md`), use document-relative paths (`./<file>`) so they can be browsed seamlessly in both VS Code Markdown Preview and on GitHub.
 
+## Canonical Datastore Architecture (Supabase Single Source of Truth)
+- **Supabase PostgreSQL is the Sole Source of Truth**:
+  All project definitions, financials, details, narratives, coordinates, timelines, media assets, and partner lists reside in Supabase (`projects`, `project_links`, `project_assets`).
+- **No CSV Datastore Fallbacks or Ingestion**:
+  Legacy CSV files (`RCLA_Projects_v2.csv`, `RCLA_Projects.csv`, etc.) are obsolete historical artifacts. Code, scripts, and reasoning must NEVER read, query, update, or fall back to CSV files for project data.
+- **Source Documents Inform Supabase Directly**:
+  Any grant applications, PDF reports, or external spreadsheets are source material used to update Supabase directly. All application logic, APIs, and export tools must read exclusively from Supabase.
+
+

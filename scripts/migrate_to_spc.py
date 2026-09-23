@@ -12,7 +12,6 @@ Uses the exact REST API schema captured from Playwright trace:
 
 import asyncio
 import base64
-import csv
 import json
 import os
 import re
@@ -29,7 +28,6 @@ ENV_PATHS = [Path("/home/msr/grantcenter/.env"), Path(__file__).resolve().parent
 for p in ENV_PATHS:
     if p.exists():
         load_dotenv(p)
-CSV_PATH = Path("/home/msr/rcla_project_map/RCLA_Projects_v2.csv")
 STATE_PATH = Path("/home/msr/rcla_project_map/spc_migration_state.json")
 
 SUPABASE_URL = "https://rqhmsincnmxrgtipvkif.supabase.co"
@@ -409,37 +407,12 @@ def fetch_supabase_projects() -> list:
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode())
     except Exception as e:
-        print(f"Warning: Could not fetch from Supabase ({e}), loading local CSV.")
+        print(f"Error: Could not fetch from Supabase: {e}")
         return []
 
-def load_csv_data() -> dict:
-    if not CSV_PATH.exists():
-        return {}
-    with open(CSV_PATH, mode="r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        return {row.get("id", "").strip(): row for row in reader if row.get("id")}
-
 def build_project_list() -> list:
-    sb_projects = fetch_supabase_projects()
-    csv_dict = load_csv_data()
-
-    merged = []
-    if sb_projects:
-        for p in sb_projects:
-            pid = p.get("id", "").strip()
-            c_row = csv_dict.get(pid, {})
-            # Enrich with CSV specific fields or fallback
-            p["international_club_district"] = p.get("international_club_district") or c_row.get("internationalClub_district", "")
-            p["international_club_name"] = p.get("international_club_name") or c_row.get("internationalClub_name", "")
-            p["end_year"] = p.get("end_year") or c_row.get("end_year", "")
-            merged.append(p)
-    else:
-        # Fallback to pure CSV
-        for pid, c_row in csv_dict.items():
-            c_row["international_club_district"] = c_row.get("internationalClub_district", "")
-            c_row["international_club_name"] = c_row.get("internationalClub_name", "")
-            merged.append(c_row)
-    return merged
+    """Loads all projects directly from Supabase, the single source of truth."""
+    return fetch_supabase_projects()
 
 # --- Helper to Clean Text & Build Overviews ---
 def clean_text(s: str) -> str:
