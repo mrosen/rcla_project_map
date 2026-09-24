@@ -606,5 +606,69 @@
     "district": "4740",
     "state": null,
     "country": "Brazil"
+  },
+  "northfield (d5960)": {
+    "key": "bc4485ed-daef-494e-b006-97c0b22a4ee7",
+    "name": "Northfield",
+    "id": "2157",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "northfield": {
+    "key": "bc4485ed-daef-494e-b006-97c0b22a4ee7",
+    "name": "Northfield",
+    "id": "2157",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "glen ellen-kenwood": {
+    "key": "ab8dd3a1-54bb-4df7-8ee1-1960243b0deb",
+    "name": "Glen Ellen-Kenwood",
+    "id": "84883",
+    "district": "5130",
+    "state": "CA",
+    "country": "United States"
+  },
+  "watsonville": {
+    "key": "eeae7853-f24a-4bf9-8098-cedd9700d500",
+    "name": "Watsonville",
+    "id": "515",
+    "district": "5170",
+    "state": "CA",
+    "country": "United States"
+  },
+  "bluffton": {
+    "key": "ccc47820-8ab9-4812-8657-51ca97702514",
+    "name": "Bluffton",
+    "id": "25245",
+    "district": "7770",
+    "state": "SC",
+    "country": "United States"
+  },
+  "burnsville": {
+    "key": "9a8af1bd-00e5-4331-aa5c-28ccfa7fdbc5",
+    "name": "Burnsville",
+    "id": "2106",
+    "district": "5950",
+    "state": "MN",
+    "country": "United States"
+  },
+  "red wing": {
+    "key": "c813455f-e52f-4059-8545-26363152ee0f",
+    "name": "Red Wing",
+    "id": "23652",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "edina": {
+    "key": "d893ffa9-1c43-4ec5-997d-6c4be53fb189",
+    "name": "Edina",
+    "id": "2112",
+    "district": "5950",
+    "state": "MN",
+    "country": "United States"
   }
 }
