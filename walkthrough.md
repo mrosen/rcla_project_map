@@ -40,14 +40,18 @@ We have generated the standalone export package of Rotary contacts and leadershi
 
 ---
 
-## 💻 How to Use the Interactive Directory Viewer
+## 💻 How to Access the Interactive Directory Viewer
 
-You can use the viewer in either of two ways:
+You can access the directory in any of the following ways:
 
-1. **In Any Browser**:
-   Open **[contacts_directory.html](./contacts_directory.html)** directly in Chrome, Edge, or Firefox.
+1. **Directly via GitHub Pages**:
+   Navigate to **[https://mrosen.github.io/rcla_project_map/contacts_directory.html](https://mrosen.github.io/rcla_project_map/contacts_directory.html)**.
 2. **Via Local Server**:
    Navigate to **[http://localhost:8000/contacts_directory.html](http://localhost:8000/contacts_directory.html)** while your local server is active.
+3. **Local Filesystem**:
+   Open **[contacts_directory.html](./contacts_directory.html)** directly in any browser.
+
+*(Note: Per your request, the public top navigation button on the main project map has been removed to keep the directory accessed directly via URL).*
 
 ### Key Interactive Features:
 - **Instant Search**: Type any name, email, club name, country, district number, role keyword, or project title into the search box for real-time filtering.
