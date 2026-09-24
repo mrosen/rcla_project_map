@@ -1,16 +1,14 @@
 # Workspace Rules for Rotary Club of Lake Atitlán Project Map
 
 ## Markdown File Links & URI Formatting
-When running with VS Code on Windows accessing this workspace via WSL UNC (`\\wsl.localhost\Ubuntu\home\msr\rcla_project_map`):
+When running with VS Code on Windows accessing this workspace via mapped drive Z: (`z:\home\msr\rcla_project_map`):
 
 1. **Clickable Links in Chat Responses**:
-   Always format file links using the 2-slash UNC authority URI:
-   `[<filename>](file://wsl.localhost/Ubuntu/home/msr/rcla_project_map/<path-from-root>)`
-   *(Alternative accepted format: `file:///Ubuntu/home/msr/rcla_project_map/<path-from-root>`)*
+   Always format file links using the local drive Z: URI:
+   `[<filename>](file:///z:/home/msr/rcla_project_map/<path-from-root>)`
 
 2. **Prohibited Formats in Chat**:
-   - DO NOT use `file:///wsl.localhost/...` (VS Code prepends `\\wsl.localhost\`, causing `\\wsl.localhost\wsl.localhost\...`).
-   - DO NOT use `file:///home/msr/...` (omits the `Ubuntu` distribution share name, causing `\\wsl.localhost\home\...`).
+   - DO NOT use `file://wsl.localhost/...` or `file:///Ubuntu/...` as VS Code is mapped directly to drive Z:.
    - DO NOT use relative links (`./file.ext`) in chat messages (chat webviews cannot resolve relative filesystem paths).
 
 3. **Links Inside Workspace Markdown Files**:
