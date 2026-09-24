@@ -1005,8 +1005,22 @@ function showDetail(idx) {
     }
 
     // Cooperating Organizations / NGOs
-    var pOrgs = dObj.cooperating_organizations || [];
-    if (typeof pOrgs === 'string') pOrgs = pOrgs.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var rawOrgsList = dObj.cooperating_organizations || [];
+    if (typeof rawOrgsList === 'string') rawOrgsList = [rawOrgsList];
+    var pOrgs = [];
+    var seenOrgs = {};
+    rawOrgsList.forEach(function (item) {
+      if (typeof item === 'string') {
+        item.split(/[\n,]+/).forEach(function (s) {
+          var trimmed = s.trim();
+          var key = trimmed.toLowerCase();
+          if (trimmed && !seenOrgs[key]) {
+            seenOrgs[key] = true;
+            pOrgs.push(trimmed);
+          }
+        });
+      }
+    });
     if (pOrgs.length > 0) {
       detailsHtml += '<div style="margin-bottom:12px;font-size:12px;">'
         + '<strong style="color:#475569;">Partner Organizations / NGOs:</strong> '
@@ -1668,7 +1682,11 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
       var errLine = document.createElement('div');
       errLine.className = 'log-line';
       errLine.style.color = '#f87171';
-      errLine.textContent = '❌ Error triggering SPC export: ' + e.message;
+      var msg = e.message;
+      if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
+        msg += ' — Cannot reach orchestrator on http://localhost:8000. Ensure server is started (start_server.bat on Windows or ./start_server.sh on WSL).';
+      }
+      errLine.textContent = '❌ Error triggering SPC export: ' + msg;
       logDiv.appendChild(errLine);
     }
   }
@@ -1762,11 +1780,27 @@ window.getDetailsPayload = function () {
 
   // Parse comma or newline separated cooperating organizations
   var rawOrgs = (document.getElementById('edit-detail-coop-orgs') && document.getElementById('edit-detail-coop-orgs').value) || '';
-  var coopOrgs = rawOrgs.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+  var coopOrgs = [];
+  var seenCoop = {};
+  rawOrgs.split(/[\n,]+/).forEach(function (s) {
+    var trimmed = s.trim();
+    var key = trimmed.toLowerCase();
+    if (trimmed && !seenCoop[key]) {
+      seenCoop[key] = true;
+      coopOrgs.push(trimmed);
+    }
+  });
 
   var legacyPartner = (document.getElementById('edit-partner') && document.getElementById('edit-partner').value.trim()) || '';
-  if (legacyPartner && coopOrgs.indexOf(legacyPartner) === -1) {
-    coopOrgs.unshift(legacyPartner);
+  if (legacyPartner) {
+    legacyPartner.split(/[\n,]+/).forEach(function (s) {
+      var trimmed = s.trim();
+      var key = trimmed.toLowerCase();
+      if (trimmed && !seenCoop[key]) {
+        seenCoop[key] = true;
+        coopOrgs.push(trimmed);
+      }
+    });
   }
 
   return {
@@ -2262,6 +2296,25 @@ window.openEditForm = function (idx) {
   var endDateVal = p.end_date || '';
   var dObj = p.details || {};
 
+  var cleanCoopList = [];
+  var seenM = {};
+  var rawM = dObj.cooperating_organizations || [];
+  if (typeof rawM === 'string') rawM = [rawM];
+  if (rawM.length === 0 && p.partner) rawM = [p.partner];
+  rawM.forEach(function (item) {
+    if (typeof item === 'string') {
+      item.split(/[\n,]+/).forEach(function (s) {
+        var t = s.trim();
+        var k = t.toLowerCase();
+        if (t && !seenM[k]) {
+          seenM[k] = true;
+          cleanCoopList.push(t);
+        }
+      });
+    }
+  });
+  var cleanCoopStr = cleanCoopList.join(', ');
+
   rp.innerHTML = ''
     + '<div class="panel" id="edit-panel">'
     + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #d97706;padding-bottom:6px;">'
@@ -2396,7 +2449,7 @@ window.openEditForm = function (idx) {
     + '    </div>'
     + '    <div style="margin-bottom:4px;">'
     + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Cooperating Partner Organizations / NGOs (comma-separated)</label>'
-    + '      <input type="text" id="edit-detail-coop-orgs" placeholder="e.g. Mayan Families, Hospitalito Atitlán, Municipality of Santa Lucía Utatlán" value="' + escapeHtml(Array.isArray(dObj.cooperating_organizations) ? dObj.cooperating_organizations.join(', ') : (dObj.cooperating_organizations || (p.partner || ''))) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;">'
+    + '      <input type="text" id="edit-detail-coop-orgs" placeholder="e.g. Mayan Families, Hospitalito Atitlán, Municipality of Santa Lucía Utatlán" value="' + escapeHtml(cleanCoopStr) + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;box-sizing:border-box;">'
     + '      <span style="font-size:10px;color:#64748b;">Implementing partners, local NGOs, government entities, and community associations.</span>'
     + '    </div>'
     + '  </div>'
@@ -2431,7 +2484,7 @@ window.openEditForm = function (idx) {
     + '    </div>'
     + '    <div>'
     + '      <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Key Partner / NGO</label>'
-    + '      <input type="text" id="edit-partner" value="' + escapeHtml(p.partner || (dObj.cooperating_organizations && dObj.cooperating_organizations.join(', ')) || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
+    + '      <input type="text" id="edit-partner" value="' + escapeHtml(cleanCoopStr || p.partner || '') + '" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;">'
     + '    </div>'
     + '  </div>'
     + '  <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:4px;">Full Narrative & Historical Notes</label>'
@@ -3645,7 +3698,21 @@ window.triggerSpcExport = function (dryRun) {
   }
   window.toggleLogConsole(true);
   window.startLogPolling(20000);
-  fetch(BACKEND_URL + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' });
+  fetch(BACKEND_URL + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' })
+    .catch(function (e) {
+      var logDiv = document.getElementById('log-output');
+      if (logDiv) {
+        var errLine = document.createElement('div');
+        errLine.className = 'log-line';
+        errLine.style.color = '#f87171';
+        var msg = e.message;
+        if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
+          msg += ' — Cannot reach orchestrator on http://localhost:8000. Ensure server is started (start_server.bat on Windows or ./start_server.sh on WSL).';
+        }
+        errLine.textContent = '❌ Error triggering SPC export: ' + msg;
+        logDiv.appendChild(errLine);
+      }
+    });
 };
 
 window.toggleLogConsole = function (forceOpen) {
