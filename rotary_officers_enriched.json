@@ -1,7 +1,7 @@
 {
   "summary": {
     "total_enriched_districts": 22,
-    "total_enriched_clubs": 96
+    "total_enriched_clubs": 98
   },
   "enriched_districts": [
     {
@@ -1028,9 +1028,9 @@
     {
       "entity_type": "Club",
       "entity_name": "Anoka",
-      "club_id": "",
+      "club_id": "2141",
       "district_number": "5960",
-      "state": "",
+      "state": "MN",
       "country": "United States",
       "current_leader_name": "Club President (c/o DG Glenn R. Bowers)",
       "current_leader_role": "Current Club President (2025\u20132026)",
@@ -1363,7 +1363,7 @@
     {
       "entity_type": "Club",
       "entity_name": "Chapec\u00f3-Centro",
-      "club_id": "",
+      "club_id": "90385",
       "district_number": "4740",
       "state": "",
       "country": "Brazil",
@@ -1697,10 +1697,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Flint",
-      "club_id": "",
+      "club_id": "2904",
       "district_number": "6330",
-      "state": "",
-      "country": "Canada",
+      "state": "MI",
+      "country": "United States",
       "current_leader_name": "Club President (c/o DG Jeffrey Ferweda)",
       "current_leader_role": "Current Club President (2025\u20132026)",
       "current_leader_email": "dg@rotary6330.org",
@@ -2106,6 +2106,28 @@
     },
     {
       "entity_type": "Club",
+      "entity_name": "Guatemala Vista Hermosa",
+      "club_id": "51446",
+      "district_number": "4250",
+      "state": "",
+      "country": "Guatemala",
+      "current_leader_name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
+      "current_leader_role": "Current Club President (2025\u20132026)",
+      "current_leader_email": "distrito4250@gmail.com",
+      "leadership_term": "2025\u20132026",
+      "website": "https://rotary4250.org",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
       "entity_name": "Hermosa",
       "club_id": "",
       "district_number": "4250",
@@ -2281,7 +2303,7 @@
     {
       "entity_type": "Club",
       "entity_name": "Lajes",
-      "club_id": "",
+      "club_id": "9009",
       "district_number": "4740",
       "state": "",
       "country": "Brazil",
@@ -2387,9 +2409,9 @@
     {
       "entity_type": "Club",
       "entity_name": "London",
-      "club_id": "",
+      "club_id": "2875",
       "district_number": "6330",
-      "state": "",
+      "state": "ON",
       "country": "Canada",
       "current_leader_name": "Club President (c/o DG Jeffrey Ferweda)",
       "current_leader_role": "Current Club President (2025\u20132026)",
@@ -3017,6 +3039,28 @@
     },
     {
       "entity_type": "Club",
+      "entity_name": "Real de Minas-Tegucigalpa",
+      "club_id": "71257",
+      "district_number": "4250",
+      "state": "",
+      "country": "Honduras",
+      "current_leader_name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
+      "current_leader_role": "Current Club President (2025\u20132026)",
+      "current_leader_email": "distrito4250@gmail.com",
+      "leadership_term": "2025\u20132026",
+      "website": "https://rotary4250.org",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
       "entity_name": "Real de Minas\u2013Tegucigalpa",
       "club_id": "",
       "district_number": "",
@@ -3056,8 +3100,12 @@
       "leadership_term": "2025\u20132026",
       "website": "https://rotary5960.org",
       "gap_status": "No Contact",
-      "projects_count": 1,
+      "projects_count": 2,
       "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        },
         {
           "id": "GG2091778",
           "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
@@ -3738,9 +3786,9 @@
     {
       "entity_type": "Club",
       "entity_name": "Walkerton",
-      "club_id": "",
+      "club_id": "2894",
       "district_number": "6330",
-      "state": "",
+      "state": "ON",
       "country": "Canada",
       "current_leader_name": "Club President (c/o DG Jeffrey Ferweda)",
       "current_leader_role": "Current Club President (2025\u20132026)",
@@ -3813,7 +3861,7 @@
       "current_leader_email": "info@watfordrotary.org",
       "leadership_term": "2025\u20132026",
       "website": "https://watfordrotary.org",
-      "gap_status": "No Contact",
+      "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
         {
@@ -3852,11 +3900,15 @@
       "leadership_term": "2025\u20132026",
       "website": "https://rotarydistrict5170.org",
       "gap_status": "No Contact",
-      "projects_count": 2,
+      "projects_count": 3,
       "projects": [
         {
           "id": "DG_2016_WatsonVille",
           "title": "Sunspring installation G Shafer Clinic, SLT"
+        },
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
         },
         {
           "id": "GG2091778",

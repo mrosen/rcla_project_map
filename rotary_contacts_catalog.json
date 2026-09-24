@@ -1,10 +1,10 @@
 {
   "metadata": {
-    "generated_at": "2026-09-24T08:46:14.723607",
+    "generated_at": "2026-09-24T09:02:54.469100",
     "source": "Canonical Supabase records & Project PDF dossiers",
-    "total_master_contact_rows": 518,
+    "total_master_contact_rows": 522,
     "total_unique_individuals": 281,
-    "total_enriched_gap_entities": 118
+    "total_enriched_gap_entities": 120
   },
   "master_roster": [
     {
@@ -70,7 +70,7 @@
       "country": "Brazil",
       "district": "4740",
       "role": "DDF Authorizer",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -84,7 +84,7 @@
       "country": "Brazil",
       "district": "4740",
       "role": "DDF Authorizer",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -98,7 +98,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Rotarian DGN, District 6330; co-initiated project during February 2025 site visit",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -112,7 +112,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "DRFC Chair",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -126,7 +126,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "DRFC Chair",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -140,7 +140,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "DRFC Chair",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -154,7 +154,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "DDF Authorizer",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -168,7 +168,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "DRFC Chair",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -196,7 +196,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "International Primary Contact, Rotary Club of Mildmay",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -210,7 +210,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Club President / Signatory",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -294,7 +294,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "DDF Authorizer",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -308,7 +308,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "International Secondary Contact, Wiarton",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -322,7 +322,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "International Secondary Contact, Wiarton",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -336,7 +336,7 @@
       "country": "Canada",
       "district": "",
       "role": "Walkerton RC, international committee secondary contacts",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -350,7 +350,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Walkerton RC, international primary contact; prepared grant application and final reports",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -364,7 +364,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Club President / Signatory",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -378,7 +378,7 @@
       "country": "Canada",
       "district": "",
       "role": "Secondary Contact International, Rotary Club of Watford",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -392,7 +392,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "International Primary Contact, Rotary Club of Watford",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -406,7 +406,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Club President / Signatory",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -448,7 +448,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Club President / Signatory",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -462,7 +462,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "International Primary Contact; retired school principal, Rotary Club of Wiarton",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -546,7 +546,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "final Director/lead engineer, Agua del Pueblo (project close-out)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -756,7 +756,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "English for Customer Service instructor",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -770,7 +770,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "original Director, Agua del Pueblo (monitoring & evaluation)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -854,7 +854,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Executive Director, Amigos de Santa Cruz la Laguna",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -868,7 +868,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Executive Director, Amigos de Santa Cruz (since 2017); monitoring and evaluation lead",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -882,7 +882,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Executive Director, Amigos de Santa Cruz la Laguna",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -924,7 +924,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "successor Director, Agua del Pueblo (mid-project)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -966,7 +966,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Local instructor/consultant; designed courses and implemented business management support program",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -980,7 +980,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Market study design and sales strategy",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -1120,7 +1120,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "DISC 6330; co-initiated project; planning February 2026 site visit",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -1148,7 +1148,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Food workshop instructor",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -1190,7 +1190,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "(District 4250 DRFC) and **David Elliott** (District 6330 DRFC) \u2014 district authorizations",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -1288,7 +1288,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "DRFC Chair",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -1325,7 +1325,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1339,7 +1339,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1353,7 +1353,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1367,7 +1367,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1381,12 +1381,12 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "Lake Atitlan RC, host primary contact and club treasurer; managed all financial disbursements and bank records",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -1395,7 +1395,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1409,12 +1409,12 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Primary Contact; Treasurer, Rotary e-Club Lake Atitl\u00e1n",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -1423,12 +1423,12 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Primary Contact, Rotary Club of Lake Atitlan; project financial manager",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -1493,7 +1493,7 @@
     },
     {
       "name": "Clinton White",
-      "email": "clint@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1507,7 +1507,7 @@
     },
     {
       "name": "Clinton White",
-      "email": "clint@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1540,7 +1540,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -1554,7 +1554,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Lake Atitlan RC, host committee secondary contacts",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -1563,7 +1563,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1577,7 +1577,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1591,7 +1591,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1605,7 +1605,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1619,12 +1619,12 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "DDF Authorizer",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -1633,7 +1633,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1647,12 +1647,12 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -1661,7 +1661,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1731,7 +1731,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "dwight@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1759,7 +1759,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "dwight@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1806,7 +1806,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -1829,7 +1829,7 @@
     },
     {
       "name": "Emilio Crespo Morales",
-      "email": "emilio@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1857,7 +1857,7 @@
     },
     {
       "name": "Emilio Crespo Morales",
-      "email": "emilio@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -1904,7 +1904,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -1932,7 +1932,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Secondary Contact, Rotary Club of Lake Atitlan",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -2044,7 +2044,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -2100,7 +2100,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -2156,7 +2156,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -2198,7 +2198,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -2235,7 +2235,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -2249,12 +2249,12 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "DDF Authorizer",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -2263,12 +2263,12 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "DDF Authorizer",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -2277,7 +2277,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -2291,7 +2291,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -2305,7 +2305,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -2319,12 +2319,12 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
       "role": "Club President / Signatory",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -2333,7 +2333,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -2352,7 +2352,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -2361,7 +2361,7 @@
     },
     {
       "name": "Michelle Fajkus",
-      "email": "michelle@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -2380,7 +2380,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Committee Member",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -2394,7 +2394,7 @@
       "country": "Guatemala",
       "district": "",
       "role": "Secondary Contacts, Rotary Club of Lake Atitlan",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -2422,7 +2422,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Host Primary Contact, Rotary Club of Lake Atitlan",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -2520,7 +2520,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "(Lake Atitl\u00e1n RC) \u2014 host primary contact; resident in Guatemala; led day-to-day implementation and financial management",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -2646,7 +2646,7 @@
       "country": "Guatemala",
       "district": "4250",
       "role": "Club President / Signatory",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -2683,7 +2683,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2697,7 +2697,7 @@
     },
     {
       "name": "Candis Krummel",
-      "email": "candis@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2711,7 +2711,7 @@
     },
     {
       "name": "Clinton White",
-      "email": "clint@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2725,7 +2725,7 @@
     },
     {
       "name": "Clinton White",
-      "email": "clint@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2753,7 +2753,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2865,7 +2865,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2879,7 +2879,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -2893,7 +2893,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitl\u00e1n",
       "country": "Guatemala",
       "district": "4250",
@@ -3038,7 +3038,7 @@
       "country": "Honduras",
       "district": "4250",
       "role": "DRFC Chair",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -3052,7 +3052,7 @@
       "country": "Honduras",
       "district": "4250",
       "role": "DRFC Chair",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -3108,7 +3108,7 @@
       "country": "Honduras",
       "district": "4250",
       "role": "DRFC Chair",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -3332,7 +3332,7 @@
       "country": "United States",
       "district": "5960",
       "role": "DDF Authorizer",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -3752,7 +3752,7 @@
       "country": "United States",
       "district": "6330",
       "role": "DDF Authorizer",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -4256,7 +4256,7 @@
       "country": "United States",
       "district": "5960",
       "role": "Club President / Signatory",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -4270,7 +4270,7 @@
       "country": "United States",
       "district": "5960",
       "role": "(Northfield RC) \u2014 international primary contact; chemist and teacher; traveled to Guatemala twice for water testing and oversight",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -4298,7 +4298,7 @@
       "country": "United States",
       "district": "",
       "role": "(Northfield RC) \u2014 international committee members",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -4312,7 +4312,7 @@
       "country": "United States",
       "district": "",
       "role": "Rotary Foundation officer who approved budget reallocation (October 2025)",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -4480,7 +4480,7 @@
       "country": "United States",
       "district": "5960",
       "role": "DDF Authorizer",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -5012,7 +5012,7 @@
       "country": "Brazil",
       "district": "4740",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -5026,7 +5026,7 @@
       "country": "Brazil",
       "district": "4740",
       "role": "Governador Distrital (2025\u20132026)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -5040,7 +5040,7 @@
       "country": "Brazil",
       "district": "4740",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -5068,7 +5068,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "District Governor (2025\u20132026)",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -5082,7 +5082,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "District Governor (2025\u20132026)",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -5096,7 +5096,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "District Governor (2025\u20132026)",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -5110,7 +5110,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "District Governor (2025\u20132026)",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -5148,11 +5148,11 @@
     {
       "name": "Club President (c/o DG Jeffrey Ferweda)",
       "email": "dg@rotary6330.org",
-      "club": "Flint",
+      "club": "London",
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -5166,21 +5166,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2023",
-      "project_id": "GG2346063",
-      "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
-      "contact_type": "Enriched Current Officer (Club Gap)",
-      "notes": "Website: https://rotary6330.org"
-    },
-    {
-      "name": "Club President (c/o DG Jeffrey Ferweda)",
-      "email": "dg@rotary6330.org",
-      "club": "London",
-      "country": "Canada",
-      "district": "6330",
-      "role": "Current Club President (2025\u20132026)",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -5194,7 +5180,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -5208,7 +5194,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -5222,7 +5208,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -5278,7 +5264,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -5292,7 +5278,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -5306,7 +5292,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -5320,7 +5306,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -5334,7 +5320,7 @@
       "country": "Canada",
       "district": "6330",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -5456,11 +5442,25 @@
     {
       "name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
       "email": "distrito4250@gmail.com",
+      "club": "Guatemala Vista Hermosa",
+      "country": "Guatemala",
+      "district": "4250",
+      "role": "Current Club President (2025\u20132026)",
+      "date": "2022-12-19",
+      "project_id": "GG2346063",
+      "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
+      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
+      "contact_type": "Enriched Current Officer (Club Gap)",
+      "notes": "Website: https://rotary4250.org"
+    },
+    {
+      "name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
+      "email": "distrito4250@gmail.com",
       "club": "Hermosa",
       "country": "Guatemala",
       "district": "4250",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2023",
+      "date": "2022-12-19",
       "project_id": "GG2346063",
       "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
@@ -5478,6 +5478,20 @@
       "project_id": "GG2352598",
       "project_title": "Healthcare in Patantic & Sanika-ya",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2352598",
+      "contact_type": "Enriched Current Officer (Club Gap)",
+      "notes": "Website: https://rotary4250.org"
+    },
+    {
+      "name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
+      "email": "distrito4250@gmail.com",
+      "club": "Real de Minas-Tegucigalpa",
+      "country": "Honduras",
+      "district": "4250",
+      "role": "Current Club President (2025\u20132026)",
+      "date": "2018-03-19",
+      "project_id": "GG1867690",
+      "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
+      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
       "contact_type": "Enriched Current Officer (Club Gap)",
       "notes": "Website: https://rotary4250.org"
     },
@@ -5530,7 +5544,7 @@
       "country": "Honduras",
       "district": "4250",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024\u20132026",
+      "date": "2020-01",
       "project_id": "GG2459764",
       "project_title": "Amigos de Santa Cruz 2 / School tutoring Program",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2459764",
@@ -5544,7 +5558,7 @@
       "country": "Honduras",
       "district": "4250",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2024",
+      "date": "2025\u20132024",
       "project_id": "GG2567164",
       "project_title": "Amigos de Santa Cruz 3 / Economic Dev",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2567164",
@@ -5600,7 +5614,7 @@
       "country": "Honduras",
       "district": "4250",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2025",
+      "date": "2025-02",
       "project_id": "GG2684482",
       "project_title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2684482",
@@ -5670,7 +5684,7 @@
       "country": "United States",
       "district": "5960",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -6336,6 +6350,20 @@
       "notes": "Website: https://rotary5050.org"
     },
     {
+      "name": "Club President (c/o DG Jeffrey Ferweda)",
+      "email": "dg@rotary6330.org",
+      "club": "Flint",
+      "country": "United States",
+      "district": "6330",
+      "role": "Current Club President (2025\u20132026)",
+      "date": "2022-12-19",
+      "project_id": "GG2346063",
+      "project_title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
+      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2346063",
+      "contact_type": "Enriched Current Officer (Club Gap)",
+      "notes": "Website: https://rotary6330.org"
+    },
+    {
       "name": "Club President",
       "email": "rotary@rotarycluboffortcollins.org",
       "club": "Fort Collins",
@@ -6678,7 +6706,7 @@
       "country": "United States",
       "district": "5960",
       "role": "Current Club President (2025\u20132026)",
-      "date": "2018\u20132021",
+      "date": "2018-03-19",
       "project_id": "GG1867690",
       "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
@@ -6880,6 +6908,20 @@
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2574529",
       "contact_type": "Enriched Current Officer (Club Gap)",
       "notes": "Website: https://rotary5340.org"
+    },
+    {
+      "name": "Club President (c/o DG Glenn R. Bowers)",
+      "email": "grbowers53@gmail.com",
+      "club": "Red Wing",
+      "country": "United States",
+      "district": "5960",
+      "role": "Current Club President (2025\u20132026)",
+      "date": "2018-03-19",
+      "project_id": "GG1867690",
+      "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
+      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
+      "contact_type": "Enriched Current Officer (Club Gap)",
+      "notes": "Website: https://rotary5960.org"
     },
     {
       "name": "Club President (c/o DG Glenn R. Bowers)",
@@ -7224,6 +7266,20 @@
       "country": "United States",
       "district": "5170",
       "role": "Current Club President (2025\u20132026)",
+      "date": "2018-03-19",
+      "project_id": "GG1867690",
+      "project_title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
+      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1867690",
+      "contact_type": "Enriched Current Officer (Club Gap)",
+      "notes": "Website: https://rotarydistrict5170.org"
+    },
+    {
+      "name": "Club President (c/o DG Dr. Geeta Kadambi)",
+      "email": "admin@rotarydistrict5170.org",
+      "club": "Watsonville",
+      "country": "United States",
+      "district": "5170",
+      "role": "Current Club President (2025\u20132026)",
       "date": "2019\u20132020",
       "project_id": "GG2091778",
       "project_title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas",
@@ -7325,7 +7381,7 @@
         "DDF Authorizer"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -7443,7 +7499,7 @@
     },
     {
       "name": "Armand Boissy",
-      "email": "armand@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -7460,11 +7516,12 @@
         "2016-08-22",
         "2019\u20132020",
         "2019\u20132022",
+        "2020-01",
         "2020\u20132021",
+        "2022-12-19",
         "2023",
         "2023\u20132024",
-        "2024",
-        "2024\u20132026"
+        "2025\u20132024"
       ],
       "projects_count": 9,
       "projects": [
@@ -7670,7 +7727,7 @@
         "Walkerton RC, international committee secondary contacts"
       ],
       "dates": [
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -7738,7 +7795,7 @@
     },
     {
       "name": "Candis Krummel",
-      "email": "candis@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -7813,7 +7870,7 @@
         "final Director/lead engineer, Agua del Pueblo (project close-out)"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -8111,7 +8168,7 @@
     },
     {
       "name": "Clinton White",
-      "email": "clint@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -8221,23 +8278,25 @@
         "2015",
         "2015\u20132017",
         "2015\u20132018",
+        "2018-03-19",
         "2018\u20132020",
         "2019",
         "2019\u20132020",
         "2019\u20132022",
+        "2020-01",
         "2020\u20132021",
         "2022-04-15",
+        "2022-12-19",
         "2023",
         "2023\u20132024",
-        "2024",
         "2024-07-09",
-        "2024\u20132026",
-        "2025",
+        "2025-02",
         "2025-09-01",
+        "2025\u20132024",
         "2026-02-02",
         "2026-07-15"
       ],
-      "projects_count": 21,
+      "projects_count": 22,
       "projects": [
         "[GG1415576] Potable Water for Multiple Communities (Sawyer Filters)",
         "[GG1525485] Unlocking the Girl Effect \u2014 Mayan Women Scholarships",
@@ -8245,6 +8304,7 @@
         "[GG1526673] X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)",
         "[GG1529575] SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT",
         "[GG1865581] Young Mayan Women as Engines of Economic Growth \u2014 Colegio Impacto",
+        "[GG1867690] Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
         "[GG1870757] Maternal Health, Tecpan Chimaltenango",
         "[GG1985748] David Lamont School in Tzanchaj",
         "[GG2013637] Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA",
@@ -8275,14 +8335,16 @@
       "dates": [
         "2015\u20132018",
         "2016",
+        "2018-03-19",
         "2019\u20132020",
         "2020\u20132021",
         "2024-07-09"
       ],
-      "projects_count": 5,
+      "projects_count": 6,
       "projects": [
         "[DG_2016_WatsonVille] Sunspring installation G Shafer Clinic, SLT",
         "[GG1529575] SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT",
+        "[GG1867690] Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
         "[GG2013637] Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA",
         "[GG2091778] Water & Sanitation in Santa Lucia Utatlan and San Andreas",
         "[GG2570080] Hospitalito Atitlan - Mothers and Infants"
@@ -8299,7 +8361,7 @@
         "Current Club President (2025\u20132026)"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2023"
       ],
       "projects_count": 2,
@@ -8337,7 +8399,7 @@
         "Current Club President (2025\u20132026)"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019",
         "2019\u20132020",
         "2019\u20132024"
@@ -8372,17 +8434,17 @@
     {
       "name": "Club President (c/o DG Jeffrey Ferweda)",
       "email": "dg@rotary6330.org",
-      "club": "Flint",
+      "club": "London",
       "country": "Canada",
       "district": "6330",
       "roles": [
         "Current Club President (2025\u20132026)"
       ],
       "dates": [
-        "2023",
-        "2024",
-        "2024\u20132026",
-        "2025",
+        "2020-01",
+        "2022-12-19",
+        "2025-02",
+        "2025\u20132024",
         "2026-02-02"
       ],
       "projects_count": 5,
@@ -8651,7 +8713,7 @@
         "DDF Authorizer"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -8687,9 +8749,9 @@
         "DRFC Chair"
       ],
       "dates": [
-        "2023",
-        "2024",
-        "2024\u20132026"
+        "2020-01",
+        "2022-12-19",
+        "2025\u20132024"
       ],
       "projects_count": 3,
       "projects": [
@@ -8710,7 +8772,7 @@
       ],
       "dates": [
         "2019\u20132024",
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 2,
       "projects": [
@@ -8729,7 +8791,7 @@
         "Lake Atitlan RC, host committee secondary contacts"
       ],
       "dates": [
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -8819,7 +8881,7 @@
         "Rotarian DGN, District 6330; co-initiated project during February 2025 site visit"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -8873,7 +8935,7 @@
         "Current Club President (2025\u20132026)"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019\u20132020"
       ],
       "projects_count": 2,
@@ -8911,7 +8973,7 @@
         "Walkerton RC, international primary contact; prepared grant application and final reports"
       ],
       "dates": [
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -9068,7 +9130,7 @@
     },
     {
       "name": "Duncan Aitken",
-      "email": "duncan@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -9085,9 +9147,10 @@
         "2019",
         "2019\u20132022",
         "2019\u20132024",
+        "2020-01",
         "2022-04-15",
+        "2022-12-19",
         "2023",
-        "2024\u20132026",
         "2025-09-01",
         "2026"
       ],
@@ -9147,7 +9210,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "dwight@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -9208,7 +9271,7 @@
         "English for Customer Service instructor"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -9244,8 +9307,8 @@
         "Host Committee Member"
       ],
       "dates": [
-        "2024",
-        "2025-08-31"
+        "2025-08-31",
+        "2025\u20132024"
       ],
       "projects_count": 2,
       "projects": [
@@ -9264,7 +9327,7 @@
         "Governador Distrital (2025\u20132026)"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -9274,7 +9337,7 @@
     },
     {
       "name": "Emilio Crespo Morales",
-      "email": "emilio@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -9328,7 +9391,7 @@
         "original Director, Agua del Pueblo (monitoring & evaluation)"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -9346,7 +9409,7 @@
         "International Primary Contact, Rotary Club of Mildmay"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -9437,7 +9500,7 @@
         "DRFC Chair"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019",
         "2019\u20132024"
       ],
@@ -9513,7 +9576,7 @@
         "International Secondary Contact, Wiarton"
       ],
       "dates": [
-        "2024\u20132026"
+        "2020-01"
       ],
       "projects_count": 1,
       "projects": [
@@ -9696,7 +9759,7 @@
         "DRFC Chair"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019\u20132020"
       ],
       "projects_count": 2,
@@ -9716,7 +9779,7 @@
         "Host Committee Member"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019\u20132024"
       ],
       "projects_count": 2,
@@ -9737,8 +9800,8 @@
         "Secondary Contact, Rotary Club of Lake Atitlan"
       ],
       "dates": [
-        "2024",
-        "2024-07-09"
+        "2024-07-09",
+        "2025\u20132024"
       ],
       "projects_count": 2,
       "projects": [
@@ -9829,7 +9892,7 @@
         "Club President / Signatory"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -9847,10 +9910,10 @@
         "District Governor (2025\u20132026)"
       ],
       "dates": [
-        "2023",
-        "2024",
-        "2024\u20132026",
-        "2025",
+        "2020-01",
+        "2022-12-19",
+        "2025-02",
+        "2025\u20132024",
         "2026-02-02"
       ],
       "projects_count": 5,
@@ -9963,7 +10026,7 @@
         "Executive Director, Amigos de Santa Cruz la Laguna"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -9982,8 +10045,8 @@
         "Executive Director, Amigos de Santa Cruz la Laguna"
       ],
       "dates": [
-        "2023",
-        "2024\u20132026"
+        "2020-01",
+        "2022-12-19"
       ],
       "projects_count": 2,
       "projects": [
@@ -10229,11 +10292,11 @@
         "DRFC Chair"
       ],
       "dates": [
-        "2024",
+        "2020-01",
         "2024-07-09",
-        "2024\u20132026",
-        "2025",
+        "2025-02",
         "2025-09-01",
+        "2025\u20132024",
         "2026-02-02",
         "2026-07-15"
       ],
@@ -10279,7 +10342,7 @@
         "successor Director, Agua del Pueblo (mid-project)"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -10297,7 +10360,7 @@
         "Club President / Signatory"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -10333,7 +10396,7 @@
         "(District 4250 DRFC) and **David Elliott** (District 6330 DRFC) \u2014 district authorizations"
       ],
       "dates": [
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -10352,6 +10415,7 @@
         "DRFC Chair"
       ],
       "dates": [
+        "2022-12-19",
         "2023"
       ],
       "projects_count": 2,
@@ -10451,7 +10515,7 @@
         "DDF Authorizer"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -10505,7 +10569,7 @@
         "Local instructor/consultant; designed courses and implemented business management support program"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -10523,7 +10587,7 @@
         "Market study design and sales strategy"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -10762,7 +10826,7 @@
         "Secondary Contact International, Rotary Club of Watford"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -10880,7 +10944,7 @@
         "Rotary Foundation officer who approved budget reallocation (October 2025)"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -10970,6 +11034,7 @@
         "Host Committee Member"
       ],
       "dates": [
+        "2022-12-19",
         "2023"
       ],
       "projects_count": 2,
@@ -11064,11 +11129,11 @@
       "dates": [
         "2014\u20132017",
         "2018",
+        "2018-03-19",
         "2018\u20132020",
-        "2018\u20132021",
         "2019\u20132020",
+        "2020-01",
         "2020\u20132021",
-        "2024\u20132026",
         "2025-08-31",
         "2026-02-02"
       ],
@@ -11132,9 +11197,9 @@
         "Host Committee Member"
       ],
       "dates": [
-        "2024",
         "2024-07-09",
-        "2025-08-31"
+        "2025-08-31",
+        "2025\u20132024"
       ],
       "projects_count": 3,
       "projects": [
@@ -11190,7 +11255,7 @@
         "DDF Authorizer"
       ],
       "dates": [
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -11218,7 +11283,7 @@
     },
     {
       "name": "Michael Rosen",
-      "email": "mrosen@lakeatitlanrotary.org",
+      "email": "michael.rosen@gmail.com",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -11233,14 +11298,14 @@
         "Project Shepherd"
       ],
       "dates": [
+        "2020-01",
         "2022-04-15",
         "2023",
-        "2024",
         "2024-07-09",
-        "2024\u20132026",
-        "2025",
+        "2025-02",
         "2025-08-31",
         "2025-09-01",
+        "2025\u20132024",
         "2026",
         "2026-02-02",
         "2026-07-15"
@@ -11281,7 +11346,7 @@
     },
     {
       "name": "Michelle Fajkus",
-      "email": "michelle@lakeatitlanrotary.org",
+      "email": "",
       "club": "Lake Atitlan",
       "country": "Guatemala",
       "district": "4250",
@@ -11290,7 +11355,7 @@
         "Rotary Club of Lake Atitl\u00e1n; host primary contact"
       ],
       "dates": [
-        "2025",
+        "2025-02",
         "2026-02-02"
       ],
       "projects_count": 2,
@@ -11400,7 +11465,7 @@
         "Host Committee Member"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -11418,7 +11483,7 @@
         "Secondary Contacts, Rotary Club of Lake Atitlan"
       ],
       "dates": [
-        "2025"
+        "2025-02"
       ],
       "projects_count": 1,
       "projects": [
@@ -11508,7 +11573,7 @@
         "Club President / Signatory"
       ],
       "dates": [
-        "2024\u20132026"
+        "2020-01"
       ],
       "projects_count": 1,
       "projects": [
@@ -11654,8 +11719,8 @@
         "Rotary Club of Wiarton; international primary contact; project champion who visited Guatemala in 2020, 2023, 2024, and 2025 to build the partnership"
       ],
       "dates": [
-        "2024\u20132026",
-        "2025",
+        "2020-01",
+        "2025-02",
         "2026-02-02"
       ],
       "projects_count": 3,
@@ -11748,7 +11813,7 @@
         "(Northfield RC) \u2014 international committee members"
       ],
       "dates": [
-        "2018\u20132021"
+        "2018-03-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -11874,7 +11939,7 @@
         "International Secondary Contact, Wiarton"
       ],
       "dates": [
-        "2024\u20132026"
+        "2020-01"
       ],
       "projects_count": 1,
       "projects": [
@@ -12018,7 +12083,7 @@
         "Food workshop instructor"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -12093,7 +12158,7 @@
       ],
       "dates": [
         "2022-04-15",
-        "2025",
+        "2025-02",
         "2026-02-02"
       ],
       "projects_count": 3,
@@ -12176,8 +12241,8 @@
         "DRFC Chair"
       ],
       "dates": [
-        "2024\u20132026",
-        "2025",
+        "2020-01",
+        "2025-02",
         "2026-02-02"
       ],
       "projects_count": 3,
@@ -12421,7 +12486,7 @@
         "International committee, RC Lake Atitlan"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019\u20132020",
         "2020\u20132021",
         "2022-04-15"
@@ -12481,7 +12546,7 @@
         "Club President / Signatory"
       ],
       "dates": [
-        "2023"
+        "2022-12-19"
       ],
       "projects_count": 1,
       "projects": [
@@ -12500,7 +12565,7 @@
         "International primary contact, Northfield RC, District 5960; PhD Chemist; volunteer traveler; water quality and chlorination consultant; financial co-manager throughout the project"
       ],
       "dates": [
-        "2018\u20132021",
+        "2018-03-19",
         "2019\u20132020"
       ],
       "projects_count": 2,
@@ -12538,7 +12603,7 @@
         "International Primary Contact, Rotary Club of Watford"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -12610,7 +12675,7 @@
         "Club President / Signatory"
       ],
       "dates": [
-        "2024"
+        "2025\u20132024"
       ],
       "projects_count": 1,
       "projects": [
@@ -12658,8 +12723,8 @@
         "2015\u20132018",
         "2016-08-22",
         "2018",
+        "2018-03-19",
         "2018\u20132020",
-        "2018\u20132021",
         "2019"
       ],
       "projects_count": 9,
@@ -13033,18 +13098,6 @@
       "website": "https://rotarycalgaryheritagepark.org"
     },
     {
-      "entity_name": "Flint",
-      "entity_type": "Club",
-      "country": "Canada",
-      "district_number": "6330",
-      "projects_supported": "[GG2346063] Amigos de Santa Cruz 1 / Childhood education and basic business skills",
-      "current_leader_name": "Club President (c/o DG Jeffrey Ferweda)",
-      "current_leader_role": "Current Club President (2025\u20132026)",
-      "current_leader_email": "dg@rotary6330.org",
-      "leadership_term": "2025\u20132026",
-      "website": "https://rotary6330.org"
-    },
-    {
       "entity_name": "London",
       "entity_type": "Club",
       "country": "Canada",
@@ -13165,6 +13218,18 @@
       "website": "https://rotary4250.org"
     },
     {
+      "entity_name": "Guatemala Vista Hermosa",
+      "entity_type": "Club",
+      "country": "Guatemala",
+      "district_number": "4250",
+      "projects_supported": "[GG2346063] Amigos de Santa Cruz 1 / Childhood education and basic business skills",
+      "current_leader_name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
+      "current_leader_role": "Current Club President (2025\u20132026)",
+      "current_leader_email": "distrito4250@gmail.com",
+      "leadership_term": "2025\u20132026",
+      "website": "https://rotary4250.org"
+    },
+    {
       "entity_name": "Hermosa",
       "entity_type": "Club",
       "country": "Guatemala",
@@ -13187,6 +13252,18 @@
       "current_leader_email": "",
       "leadership_term": "2025\u20132026",
       "website": ""
+    },
+    {
+      "entity_name": "Real de Minas-Tegucigalpa",
+      "entity_type": "Club",
+      "country": "Honduras",
+      "district_number": "4250",
+      "projects_supported": "[GG1867690] Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
+      "current_leader_name": "Club President (c/o DG Diana Marie Brown Mu\u00f1oz)",
+      "current_leader_role": "Current Club President (2025\u20132026)",
+      "current_leader_email": "distrito4250@gmail.com",
+      "leadership_term": "2025\u20132026",
+      "website": "https://rotary4250.org"
     },
     {
       "entity_name": "Tegucigalpa",
@@ -13541,7 +13618,7 @@
       "entity_type": "Club",
       "country": "United States",
       "district_number": "5170",
-      "projects_supported": "[DG_2016_WatsonVille] Sunspring installation G Shafer Clinic, SLT; [GG2091778] Water & Sanitation in Santa Lucia Utatlan and San Andreas",
+      "projects_supported": "[DG_2016_WatsonVille] Sunspring installation G Shafer Clinic, SLT; [GG1867690] Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n; [GG2091778] Water & Sanitation in Santa Lucia Utatlan and San Andreas",
       "current_leader_name": "Club President (c/o DG Dr. Geeta Kadambi)",
       "current_leader_role": "Current Club President (2025\u20132026)",
       "current_leader_email": "admin@rotarydistrict5170.org",
@@ -13805,7 +13882,7 @@
       "entity_type": "Club",
       "country": "United States",
       "district_number": "5960",
-      "projects_supported": "[GG2091778] Water & Sanitation in Santa Lucia Utatlan and San Andreas",
+      "projects_supported": "[GG1867690] Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n; [GG2091778] Water & Sanitation in Santa Lucia Utatlan and San Andreas",
       "current_leader_name": "Club President (c/o DG Glenn R. Bowers)",
       "current_leader_role": "Current Club President (2025\u20132026)",
       "current_leader_email": "grbowers53@gmail.com",
@@ -13835,6 +13912,18 @@
       "current_leader_email": "info@rochesterrisersrotary.org",
       "leadership_term": "2025\u20132026",
       "website": "https://rochesterrisersrotary.org"
+    },
+    {
+      "entity_name": "Flint",
+      "entity_type": "Club",
+      "country": "United States",
+      "district_number": "6330",
+      "projects_supported": "[GG2346063] Amigos de Santa Cruz 1 / Childhood education and basic business skills",
+      "current_leader_name": "Club President (c/o DG Jeffrey Ferweda)",
+      "current_leader_role": "Current Club President (2025\u20132026)",
+      "current_leader_email": "dg@rotary6330.org",
+      "leadership_term": "2025\u20132026",
+      "website": "https://rotary6330.org"
     },
     {
       "entity_name": "Glenview-Sunrise",

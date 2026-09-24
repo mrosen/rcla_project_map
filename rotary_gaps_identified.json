@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_participating_clubs": 132,
+    "total_participating_clubs": 134,
     "clubs_covered_with_email": 6,
-    "total_club_gaps": 124,
-    "club_gaps_no_contact": 45,
+    "total_club_gaps": 126,
+    "club_gaps_no_contact": 47,
     "club_gaps_missing_email": 79,
     "total_participating_districts": 25,
     "districts_covered_with_email": 3,
@@ -127,10 +127,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Anoka",
-      "club_id": "",
+      "club_id": "2141",
       "district": "5960",
-      "state": "",
-      "country": "",
+      "state": "MN",
+      "country": "United States",
       "gap_status": "Missing Email",
       "projects_count": 3,
       "projects": [
@@ -456,10 +456,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Chapec\u00f3-Centro",
-      "club_id": "",
+      "club_id": "90385",
       "district": "4740",
       "state": "",
-      "country": "",
+      "country": "Brazil",
       "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
@@ -900,10 +900,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Flint",
-      "club_id": "",
+      "club_id": "2904",
       "district": "6330",
-      "state": "",
-      "country": "",
+      "state": "MI",
+      "country": "United States",
       "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
@@ -1261,6 +1261,23 @@
     },
     {
       "entity_type": "Club",
+      "entity_name": "Guatemala Vista Hermosa",
+      "club_id": "51446",
+      "district": "4250",
+      "state": "",
+      "country": "Guatemala",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
       "entity_name": "Hermosa",
       "club_id": "",
       "district": "4250",
@@ -1411,10 +1428,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Lajes",
-      "club_id": "",
+      "club_id": "9009",
       "district": "4740",
       "state": "",
-      "country": "",
+      "country": "Brazil",
       "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
@@ -1497,10 +1514,10 @@
     {
       "entity_type": "Club",
       "entity_name": "London",
-      "club_id": "",
+      "club_id": "2875",
       "district": "6330",
-      "state": "",
-      "country": "",
+      "state": "ON",
+      "country": "Canada",
       "gap_status": "Missing Email",
       "projects_count": 3,
       "projects": [
@@ -1669,23 +1686,6 @@
       "district": "6330",
       "state": "ON",
       "country": "Canada",
-      "gap_status": "No Contact",
-      "projects_count": 1,
-      "projects": [
-        {
-          "id": "GG2684482",
-          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
-        }
-      ],
-      "existing_contacts": []
-    },
-    {
-      "entity_type": "Club",
-      "entity_name": "Mildmay",
-      "club_id": "",
-      "district": "6330",
-      "state": "",
-      "country": "",
       "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
@@ -1706,6 +1706,23 @@
           "project_id": "GG2684482"
         }
       ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Mildmay",
+      "club_id": "2881",
+      "district": "6330",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2684482",
+          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
+        }
+      ],
+      "existing_contacts": []
     },
     {
       "entity_type": "Club",
@@ -2090,10 +2107,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Prior Lake",
-      "club_id": "",
+      "club_id": "2163",
       "district": "5960",
-      "state": "",
-      "country": "",
+      "state": "MN",
+      "country": "United States",
       "gap_status": "Missing Email",
       "projects_count": 2,
       "projects": [
@@ -2144,6 +2161,23 @@
     },
     {
       "entity_type": "Club",
+      "entity_name": "Real de Minas-Tegucigalpa",
+      "club_id": "71257",
+      "district": "4250",
+      "state": "",
+      "country": "Honduras",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
       "entity_name": "Real de Minas\u2013Tegucigalpa",
       "club_id": "",
       "district": "",
@@ -2173,8 +2207,12 @@
       "state": "MN",
       "country": "United States",
       "gap_status": "No Contact",
-      "projects_count": 1,
+      "projects_count": 2,
       "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        },
         {
           "id": "GG2091778",
           "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
@@ -2850,10 +2888,10 @@
     {
       "entity_type": "Club",
       "entity_name": "Walkerton",
-      "club_id": "",
+      "club_id": "2894",
       "district": "6330",
-      "state": "",
-      "country": "",
+      "state": "ON",
+      "country": "Canada",
       "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
@@ -2910,23 +2948,6 @@
       "district": "6330",
       "state": "ON",
       "country": "Canada",
-      "gap_status": "No Contact",
-      "projects_count": 1,
-      "projects": [
-        {
-          "id": "GG2567164",
-          "title": "Amigos de Santa Cruz 3 / Economic Dev"
-        }
-      ],
-      "existing_contacts": []
-    },
-    {
-      "entity_type": "Club",
-      "entity_name": "Watford",
-      "club_id": "",
-      "district": "6330",
-      "state": "",
-      "country": "",
       "gap_status": "Missing Email",
       "projects_count": 1,
       "projects": [
@@ -2955,6 +2976,23 @@
     },
     {
       "entity_type": "Club",
+      "entity_name": "Watford",
+      "club_id": "2895",
+      "district": "6330",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
       "entity_name": "Watsonville",
       "club_id": "515",
       "district": "5170",
@@ -2978,8 +3016,12 @@
       "state": "CA",
       "country": "United States",
       "gap_status": "No Contact",
-      "projects_count": 1,
+      "projects_count": 2,
       "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        },
         {
           "id": "GG2091778",
           "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
@@ -4010,67 +4052,39 @@
     {
       "district": "4250",
       "contacts_with_email": [
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Candis Krummel <candis@lakeatitlanrotary.org>",
+        "Michael Rosen <michael.rosen@gmail.com>",
+        "Michael Rosen <michael.rosen@gmail.com>",
         "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
         "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
         "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
         "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
-        "Clinton White <clint@lakeatitlanrotary.org>",
-        "Emilio Crespo Morales <emilio@lakeatitlanrotary.org>",
         "William Boegel <drboegel@gmail.com>",
-        "Emilio Crespo Morales <emilio@lakeatitlanrotary.org>",
-        "Dwight Mara-Poage <dwight@lakeatitlanrotary.org>",
         "William Boegel <drboegel@gmail.com>",
-        "Dwight Mara-Poage <dwight@lakeatitlanrotary.org>",
         "Dr. Bruce Clemens (PhD) <bruce.wayne.clemens@gmail.com>",
         "Joe Wakely <joe.wakely@gmail.com>",
         "William Boegel <drboegel@gmail.com>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
         "William Boegel <drboegel@gmail.com>",
         "Terrence Wakely <joe.wakely@gmail.com>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
         "William Boegel <drboegel@gmail.com>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
         "Terrence Wakely <joe.wakely@gmail.com>",
         "Terrence Wakely <joe.wakely@gmail.com>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
         "Joe Wakely <joe.wakely@gmail.com>",
         "Shad Qudsi <shad@atitlanorganics.com>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
         "Terrence Wakely <joe.wakely@gmail.com>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Clinton White <clint@lakeatitlanrotary.org>",
+        "Michael Rosen <michael.rosen@gmail.com>",
+        "Michael Rosen <michael.rosen@gmail.com>",
+        "Michael Rosen <michael.rosen@gmail.com>",
+        "Michael Rosen <michael.rosen@gmail.com>",
         "Bruce Clemens <bruce.wayne.clemens@gmail.com>",
-        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Clinton White <clint@lakeatitlanrotary.org>",
+        "Michael Rosen <michael.rosen@gmail.com>",
+        "Michael Rosen <michael.rosen@gmail.com>",
         "Bruce Clemens <bruce.wayne.clemens@gmail.com>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Michael Rosen <michael.rosen@gmail.com>",
         "Shad Qudsi <shad@atitlanorganics.com>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Michelle Fajkus <michelle@lakeatitlanrotary.org>",
+        "Michael Rosen <michael.rosen@gmail.com>",
         "Bruce Clemens <bruce.wayne.clemens@gmail.com>",
-        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
-        "Shad Qudsi <shad@atitlanorganics.com>",
-        "Clinton White <clint@lakeatitlanrotary.org>",
-        "Armand Boissy <armand@lakeatitlanrotary.org>"
+        "Michael Rosen <michael.rosen@gmail.com>",
+        "Shad Qudsi <shad@atitlanorganics.com>"
       ]
     },
     {
