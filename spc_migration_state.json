@@ -96,5 +96,33 @@
     "action": "created",
     "migrated_at": "2026-09-23T21:44:44.356511",
     "spc_url": "https://spc.rotary.org/project?guid=215b8869-f5aa-422f-b4f2-3de0022ff0c5"
+  },
+  "GG2684482": {
+    "spc_id": "7b79db14-45f7-48a2-af17-0e2d822aa0b6",
+    "title": "Agroecological Vegetable Production in Santa Cruz La Laguna",
+    "action": "updated",
+    "migrated_at": "2026-09-24T08:24:41.991069",
+    "spc_url": "https://spc.rotary.org/project?guid=7b79db14-45f7-48a2-af17-0e2d822aa0b6"
+  },
+  "GG2346063": {
+    "spc_id": "e509793a-b32a-467a-a40a-5919a005b8f7",
+    "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
+    "action": "created",
+    "migrated_at": "2026-09-24T08:34:23.103788",
+    "spc_url": "https://spc.rotary.org/project?guid=e509793a-b32a-467a-a40a-5919a005b8f7"
+  },
+  "GG2459764": {
+    "spc_id": "34e10eb0-632a-444b-b8ef-62774e73eaff",
+    "title": "Amigos de Santa Cruz 2 / School tutoring Program",
+    "action": "created",
+    "migrated_at": "2026-09-24T08:34:53.268481",
+    "spc_url": "https://spc.rotary.org/project?guid=34e10eb0-632a-444b-b8ef-62774e73eaff"
+  },
+  "GG2567164": {
+    "spc_id": "434f5089-4d27-46ee-870f-223ec48c21a2",
+    "title": "Amigos de Santa Cruz 3 / Economic Dev",
+    "action": "created",
+    "migrated_at": "2026-09-24T08:36:16.902569",
+    "spc_url": "https://spc.rotary.org/project?guid=434f5089-4d27-46ee-870f-223ec48c21a2"
   }
 }

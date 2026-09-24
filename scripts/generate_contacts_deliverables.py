@@ -930,7 +930,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
           `"${{(c.district || '').replace(/"/g, '""')}}"`,
           `"${{(c.role || '').replace(/"/g, '""')}}"`,
           `"${{(c.date || '').replace(/"/g, '""')}}"`,
-          `"[${{c.project_id}}] ${{c.project_title}}".replace(/"/g, '""')`,
+          `"${{(`[${{c.project_id}}] ${{c.project_title}}`).replace(/"/g, '""')}}"`,
           `"${{(c.archive_link || '').replace(/"/g, '""')}}"`,
           `"${{(c.contact_type || '').replace(/"/g, '""')}}"`
         ];

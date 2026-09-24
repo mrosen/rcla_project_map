@@ -625,7 +625,7 @@
           `"${(c.district || '').replace(/"/g, '""')}"`,
           `"${(c.role || '').replace(/"/g, '""')}"`,
           `"${(c.date || '').replace(/"/g, '""')}"`,
-          `"[${c.project_id}] ${c.project_title}".replace(/"/g, '""')`,
+          `"${(`[${c.project_id}] ${c.project_title}`).replace(/"/g, '""')}"`,
           `"${(c.archive_link || '').replace(/"/g, '""')}"`,
           `"${(c.contact_type || '').replace(/"/g, '""')}"`
         ];

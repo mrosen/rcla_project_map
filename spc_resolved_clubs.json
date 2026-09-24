@@ -710,5 +710,77 @@
     "district": "4740",
     "state": null,
     "country": "Brazil"
+  },
+  "rotary club of mildmay (d6330)": {
+    "key": "316909fd-7a66-4f64-83de-69b7e935ac67",
+    "name": "Mildmay",
+    "id": "2881",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "mildmay": {
+    "key": "316909fd-7a66-4f64-83de-69b7e935ac67",
+    "name": "Mildmay",
+    "id": "2881",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "rotary club of walkerton (d6330)": {
+    "key": "1eed4538-6888-408b-874e-61bc18330473",
+    "name": "Walkerton",
+    "id": "2894",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "walkerton": {
+    "key": "1eed4538-6888-408b-874e-61bc18330473",
+    "name": "Walkerton",
+    "id": "2894",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "london": {
+    "key": "f77ccf49-c498-4911-89fe-67ff469d448c",
+    "name": "London",
+    "id": "2875",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "flint": {
+    "key": "5b70bcfa-5ade-457a-b717-9aa56fa99f2e",
+    "name": "Flint",
+    "id": "2904",
+    "district": "6330",
+    "state": "MI",
+    "country": "United States"
+  },
+  "guatemala vista hermosa": {
+    "key": "6bb9cec5-7d72-4c09-bae8-ea4e438b3eca",
+    "name": "Guatemala Vista Hermosa",
+    "id": "51446",
+    "district": "4250",
+    "state": null,
+    "country": "Guatemala"
+  },
+  "rotary club of watford (d6330)": {
+    "key": "1cff426d-53ad-4849-93c6-bbe401d6d493",
+    "name": "Watford",
+    "id": "2895",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
+  },
+  "watford": {
+    "key": "1cff426d-53ad-4849-93c6-bbe401d6d493",
+    "name": "Watford",
+    "id": "2895",
+    "district": "6330",
+    "state": "ON",
+    "country": "Canada"
   }
 }
