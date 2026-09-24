@@ -1,0 +1,4093 @@
+{
+  "summary": {
+    "total_participating_clubs": 132,
+    "clubs_covered_with_email": 6,
+    "total_club_gaps": 124,
+    "club_gaps_no_contact": 45,
+    "club_gaps_missing_email": 79,
+    "total_participating_districts": 25,
+    "districts_covered_with_email": 3,
+    "total_district_gaps": 22,
+    "district_gaps_no_contact": 5,
+    "district_gaps_missing_email": 17
+  },
+  "club_gaps": [
+    {
+      "entity_type": "Club",
+      "entity_name": "(Centennial)",
+      "club_id": "",
+      "district": "5440",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Mike Oakes Greeley",
+          "role": "Club President / Signatory",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Greeley",
+          "role": "Primary International Contact",
+          "project_id": "GG1525485"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "(Pioneer)",
+      "club_id": "",
+      "district": "5190",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Roberta Pickett Amador Upcountry",
+          "role": "DRFC Chair",
+          "project_id": "GG2570080"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Annapolis",
+      "club_id": "5853",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        },
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        },
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Lydia Hohman",
+          "role": "International primary contact, RC Annapolis, District 7620",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "Luisa Gil, Debra McGhee, Philip Reynolds",
+          "role": "International committee secondary contacts, RC Annapolis",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "Robert Young",
+          "role": "Legal agreement signatory, RC Annapolis",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "John Wojcik",
+          "role": "International primary contact, RC Annapolis",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Sue Weber",
+          "role": "DDF Authorizer",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Daniel Hurley",
+          "role": "International secondary contact, RC Annapolis",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Lydia Hohman",
+          "role": "International secondary contact, RC Annapolis",
+          "project_id": "GG2578692"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Anoka",
+      "club_id": "",
+      "district": "5960",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        },
+        {
+          "id": "GG1870757",
+          "title": "Maternal Health, Tecpan Chimaltenango"
+        },
+        {
+          "id": "GG1873788",
+          "title": "Stoves in San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Gary Campbell",
+          "role": "DDF Authorizer",
+          "project_id": "GG1867690"
+        },
+        {
+          "name": "Gary Campbell",
+          "role": "DRFC Chair",
+          "project_id": "GG1870757"
+        },
+        {
+          "name": "Gary Campbell",
+          "role": "DDF Authorizer",
+          "project_id": "GG1873788"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Asheville",
+      "club_id": "5996",
+      "district": "7670",
+      "state": "NC",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1985748",
+          "title": "David Lamont School in Tzanchaj"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Asheville",
+      "club_id": "5996",
+      "district": "7670",
+      "state": "NC",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1985748",
+          "title": "David Lamont School in Tzanchaj"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "William Rawlings",
+          "role": "Rotary Club of Asheville, international primary contact; led application writing, liaison with Rotary International",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Carol King",
+          "role": "DRFC Chair",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Sophia Ungert",
+          "role": "Club President / Signatory",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Nancy Brooks",
+          "role": "Rotary Club of Asheville; financial auditor for both the district and club",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Sharon LeDuc",
+          "role": "Rotary Club of Asheville; progress report writing and club communications",
+          "project_id": "GG1985748"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Baltimore",
+      "club_id": "5855",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        },
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Belize",
+      "club_id": "",
+      "district": "4250",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 4,
+      "projects": [
+        {
+          "id": "GG1985748",
+          "title": "David Lamont School in Tzanchaj"
+        },
+        {
+          "id": "GG2013637",
+          "title": "Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA"
+        },
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        },
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Marcelo Coyi",
+          "role": "DRFC Chair",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Marcelo Coyi",
+          "role": "DRFC Chair",
+          "project_id": "GG2013637"
+        },
+        {
+          "name": "Marcelo Coyi",
+          "role": "DRFC Chair",
+          "project_id": "GG2091778"
+        },
+        {
+          "name": "Marcelo Coyi",
+          "role": "DRFC Chair",
+          "project_id": "GG2125241"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Bluffton",
+      "club_id": "25245",
+      "district": "7770",
+      "state": "SC",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Bourne-Sandwich",
+      "club_id": "",
+      "district": "7950",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1415576",
+          "title": "Potable Water for Multiple Communities (Sawyer Filters)"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Gregory Roche",
+          "role": "DRFC Chair",
+          "project_id": "GG1415576"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Breakfast",
+      "club_id": "",
+      "district": "5440",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        },
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Nancy Pettus Jackson Hole",
+          "role": "DRFC Chair",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Charles Rutenberg Fort Collins-",
+          "role": "DRFC Chair",
+          "project_id": "GG2125241"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Burnsville",
+      "club_id": "2106",
+      "district": "5950",
+      "state": "MN",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Calgary Heritage Park",
+      "club_id": "51727",
+      "district": "5360",
+      "state": "AB",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Capitol Hill (Washington, DC)",
+      "club_id": "63814",
+      "district": "7620",
+      "state": "DC",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Carroll Creek (Frederick)",
+      "club_id": "29713",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Ca\u00e7ador-Sul Contestado",
+      "club_id": "71475",
+      "district": "4740",
+      "state": "",
+      "country": "Brazil",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "BarAlto",
+          "title": "Bar Alto"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Chapec\u00f3-Centro",
+      "club_id": "",
+      "district": "4740",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Darci Campo",
+          "role": "DDF Authorizer",
+          "project_id": "GG1867690"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "College Park",
+      "club_id": "5864",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Naumaan Hamid",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570516"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Corral de Tierra",
+      "club_id": "24749",
+      "district": "5230",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Cupertino",
+      "club_id": "",
+      "district": "5170",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Savita Vaidhyanathan",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570080"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "D.C.",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "DC)",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Diego",
+      "club_id": "",
+      "district": "5340",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Maureen Duncan E-Club of San",
+          "role": "DRFC Chair",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "Amanda Wirtz Rosolowski E-Club of San",
+          "role": "Club President / Signatory",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "E-Club of San",
+          "role": "Primary International Contact",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Diego)",
+      "club_id": "",
+      "district": "5340",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Michael Whitehurst Point Loma (San",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "District 4250 DRFC",
+      "club_id": "",
+      "district": "4250",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Julio Grazioso",
+          "role": "(District 4250 DRFC) and **David Elliott** (District 6330 DRFC) \u2014 district authorizations",
+          "project_id": "GG2346063"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Dupont Circle Washington",
+      "club_id": "84311",
+      "district": "7620",
+      "state": "DC",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "E-Club of San Diego",
+      "club_id": "87469",
+      "district": "5340",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "E-Club of San Diego",
+      "club_id": "87469",
+      "district": "5340",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "E-Club of San Diego",
+      "club_id": "87469",
+      "district": "5340",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Maureen Duncan",
+          "role": "Primary International Contact",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Edina",
+      "club_id": "2112",
+      "district": "5950",
+      "state": "MN",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Eugene-Delta",
+      "club_id": "",
+      "district": "5110",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1871794",
+          "title": "X-ray Fluoroscopy, Hosp Schafer, San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Claudette McWilliams",
+          "role": "DDF Authorizer",
+          "project_id": "GG1871794"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Evergreen",
+      "club_id": "4076",
+      "district": "6880",
+      "state": "AL",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1865581",
+          "title": "Young Mayan Women as Engines of Economic Growth \u2014 Colegio Impacto"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Alan Steger",
+          "role": "Rotary Club of Evergreen, International Primary Contact",
+          "project_id": "GG1865581"
+        },
+        {
+          "name": "Laurence Caine",
+          "role": "Club President / Signatory",
+          "project_id": "GG1865581"
+        },
+        {
+          "name": "Theodore (Ted) Ning",
+          "role": "RC Evergreen, founder of Starfish One-by-One; 20+ years in Solol\u00e1",
+          "project_id": "GG1865581"
+        },
+        {
+          "name": "Robert Rose, Jim Kreider",
+          "role": "RC Evergreen, International Committee",
+          "project_id": "GG1865581"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Ferndale",
+      "club_id": "191",
+      "district": "5050",
+      "state": "WA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1526673",
+          "title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)"
+        },
+        {
+          "id": "GG1871794",
+          "title": "X-ray Fluoroscopy, Hosp Schafer, San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Mark Miller",
+          "role": "& **Gary Meyer** \u2014 International committee secondary contacts, Greater Bend",
+          "project_id": "GG1871794"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Ferndale",
+      "club_id": "",
+      "district": "5050",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526673",
+          "title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Bryan Hennessy",
+          "role": "International primary contact, Ferndale RC, District 5050",
+          "project_id": "GG1526673"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Fidalgo Island",
+      "club_id": "",
+      "district": "5050",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526673",
+          "title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Pam Estvold",
+          "role": "Club President / Signatory",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Stephen Miller",
+          "role": "Fidalgo Island RC; orthopedic/podiatric surgeon leading annual mission teams",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Walter Guterbock",
+          "role": "Fidalgo Island RC; international committee",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Blair Estenson",
+          "role": "Fidalgo Island RC; authorized progress report",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Peter Martin",
+          "role": "Fidalgo Island RC; authorized final report",
+          "project_id": "GG1526673"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Flint",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Michael Chaffee",
+          "role": "DDF Authorizer",
+          "project_id": "GG2346063"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Fort Collins",
+      "club_id": "1100",
+      "district": "5440",
+      "state": "CO",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "John Trone",
+          "role": "Fort Collins Rotary Club; International Primary Contact; financial manager",
+          "project_id": "GG2125241"
+        },
+        {
+          "name": "Gloria Gleave",
+          "role": "Fort Collins RC; International Secondary Contact",
+          "project_id": "GG2125241"
+        },
+        {
+          "name": "Richard Fisher",
+          "role": "Fort Collins RC; International Secondary Contact",
+          "project_id": "GG2125241"
+        },
+        {
+          "name": "Steve Kane",
+          "role": "Fort Collins RC Treasurer; co-approved fund transfers",
+          "project_id": "GG2125241"
+        },
+        {
+          "name": "Randall Kurtz",
+          "role": "Fort Collins RC; Sponsor authorization signatory",
+          "project_id": "GG2125241"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Fort Collins",
+      "club_id": "1100",
+      "district": "5440",
+      "state": "CO",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Fort Collins Breakfast",
+      "club_id": "",
+      "district": "5440",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Charles Rutenberg",
+          "role": "Fort Collins Breakfast RC; DRFC Chair, District 5440",
+          "project_id": "GG2125241"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Fort Collins-Breakfast",
+      "club_id": "26298",
+      "district": "5440",
+      "state": "CO",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Gilroy",
+      "club_id": "",
+      "district": "5170",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1529575",
+          "title": "SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Susan Valenta",
+          "role": "DDF Authorizer",
+          "project_id": "GG1529575"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Glen Ellen-Kenwood",
+      "club_id": "84883",
+      "district": "5130",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Glenview-Sunrise",
+      "club_id": "26025",
+      "district": "6440",
+      "state": "IL",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Greater Bend",
+      "club_id": "",
+      "district": "5110",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1871794",
+          "title": "X-ray Fluoroscopy, Hosp Schafer, San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "A.J. Garis",
+          "role": "International primary contact, Rotary Club of Greater Bend; project originator and financial manager",
+          "project_id": "GG1871794"
+        },
+        {
+          "name": "Carolyn Jarschke",
+          "role": "Club President / Signatory",
+          "project_id": "GG1871794"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Greater Rochester",
+      "club_id": "",
+      "district": "5960",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1873788",
+          "title": "Stoves in San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Michael Becker",
+          "role": "DDF Authorizer",
+          "project_id": "GG1873788"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Greeley (Centennial)",
+      "club_id": "1106",
+      "district": "5440",
+      "state": "CO",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Thomas Dunn",
+          "role": "International primary contact, Greeley Centennial RC",
+          "project_id": "GG1525485"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Greeley Centennial",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Mike Oakes",
+          "role": "International secondary contact, Greeley Centennial RC",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Brenda Dones",
+          "role": "International secondary contact, Greeley Centennial RC",
+          "project_id": "GG1525485"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Guatemala Norte",
+      "club_id": "",
+      "district": "4250",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 5,
+      "projects": [
+        {
+          "id": "GG1415576",
+          "title": "Potable Water for Multiple Communities (Sawyer Filters)"
+        },
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        },
+        {
+          "id": "GG1526219",
+          "title": "Mayan Power and Light \u2014 Women's Solar Businesses"
+        },
+        {
+          "id": "GG1526673",
+          "title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)"
+        },
+        {
+          "id": "GG1529575",
+          "title": "SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Carlos Andrade Morales",
+          "role": "DRFC Chair",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "Carlos Andrade Morales",
+          "role": "DRFC Chair",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Carlos Andrade Morales",
+          "role": "DRFC Chair",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Carlos Andrade Morales",
+          "role": "DRFC Chair",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Carlos Andrade Morales",
+          "role": "DRFC Chair",
+          "project_id": "GG1529575"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Guatemala Sur",
+      "club_id": "7220",
+      "district": "4250",
+      "state": "",
+      "country": "Guatemala",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "Rostock_Patanatic",
+          "title": "San Luis School Patanatic / Rostock Germany"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Hermosa",
+      "club_id": "",
+      "district": "4250",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        },
+        {
+          "id": "GG2352598",
+          "title": "Healthcare in Patantic & Sanika-ya"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Julio Grazioso Guatemala Vista",
+          "role": "DRFC Chair",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "Julio Grazioso Guatemala Vista",
+          "role": "DDF Authorizer",
+          "project_id": "GG2352598"
+        },
+        {
+          "name": "Carolina Corzo Guatemala Vista",
+          "role": "DDF Authorizer",
+          "project_id": "GG2352598"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Hingham",
+      "club_id": "6661",
+      "district": "7950",
+      "state": "MA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1415576",
+          "title": "Potable Water for Multiple Communities (Sawyer Filters)"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "August Muller",
+          "role": "International primary contact, Rotary Club of Hingham, District 7950",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "Robert MacCallum",
+          "role": "Club President / Signatory",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "David Powers",
+          "role": "International secondary contact, Hingham RC",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "Carolyn Kennedy",
+          "role": "International secondary contact, Hingham RC",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "Dewitt Delawter",
+          "role": "Hingham RC; authorized both grant reports (2016, 2017)",
+          "project_id": "GG1415576"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Howard West",
+      "club_id": "86245",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Geetha Jayaram",
+          "role": "DRFC Chair",
+          "project_id": "GG2570516"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Kennebunk",
+      "club_id": "",
+      "district": "7780",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Robert MacKenzie",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Kimberley",
+      "club_id": "",
+      "district": "5080",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526219",
+          "title": "Mayan Power and Light \u2014 Women's Solar Businesses"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Vlad Sasarman",
+          "role": "DRFC Chair",
+          "project_id": "GG1526219"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Lajes",
+      "club_id": "",
+      "district": "4740",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Afonso M\u00fcller",
+          "role": "DDF Authorizer",
+          "project_id": "GG1867690"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Lake Shore-Severna Park",
+      "club_id": "5878",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Lakeport",
+      "club_id": "388",
+      "district": "5130",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jennifer Strong",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570516"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Livermore Valley",
+      "club_id": "",
+      "district": "5170",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "GF Duerig",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570080"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "London",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        },
+        {
+          "id": "GG2459764",
+          "title": "Amigos de Santa Cruz 2 / School tutoring Program"
+        },
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "David Elliott",
+          "role": "DRFC Chair",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "David Elliott",
+          "role": "DRFC Chair",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "David Elliott",
+          "role": "DRFC Chair",
+          "project_id": "GG2567164"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Loveland",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "James Epstein",
+          "role": "Sponsor authorization on final report, Loveland RC",
+          "project_id": "GG1525485"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Marysville",
+      "club_id": "",
+      "district": "5050",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526673",
+          "title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Lawrence Jubie",
+          "role": "DRFC Chair",
+          "project_id": "GG1526673"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Meaford",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG2459764",
+          "title": "Amigos de Santa Cruz 2 / School tutoring Program"
+        },
+        {
+          "id": "GG2684482",
+          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Sonja Glass",
+          "role": "DDF Authorizer",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Sonja Glass",
+          "role": "DRFC Chair",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Sonja Glass",
+          "role": "DRFC Chair",
+          "project_id": "GG2684872"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Medford",
+      "club_id": "",
+      "district": "5110",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1871794",
+          "title": "X-ray Fluoroscopy, Hosp Schafer, San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Charles Root",
+          "role": "DDF Authorizer",
+          "project_id": "GG1871794"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Metro Bethesda",
+      "club_id": "71574",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Mildmay",
+      "club_id": "2881",
+      "district": "6330",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2684482",
+          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Mildmay",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2684482",
+          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Erin Wettlaufer",
+          "role": "International Primary Contact, Rotary Club of Mildmay",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Julia Gutscher",
+          "role": "Club President / Signatory",
+          "project_id": "GG2684482"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Mill Valley",
+      "club_id": "393",
+      "district": "5150",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1633934",
+          "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Nelson",
+      "club_id": "240",
+      "district": "5080",
+      "state": "BC",
+      "country": "Canada",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526219",
+          "title": "Mayan Power and Light \u2014 Women's Solar Businesses"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Ted Steacy",
+          "role": "International primary contact, Nelson Rotary Club, District 5080",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Norman McCarvell",
+          "role": "DDF Authorizer",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Bob Hargreaves",
+          "role": "International secondary contact; in-country liaison in Guatemala during project",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Colleen Driscoll",
+          "role": "International secondary contact, Nelson",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "John Ferguson",
+          "role": "Nelson Rotary Club; authorized both progress and final reports",
+          "project_id": "GG1526219"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Nevada City",
+      "club_id": "",
+      "district": "5190",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Dennis Geare",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570080"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Northfield",
+      "club_id": "2157",
+      "district": "5960",
+      "state": "MN",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        },
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Northfield RC",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Ragh Singh & Charles Cogan",
+          "role": "(Northfield RC) \u2014 international committee members",
+          "project_id": "GG1867690"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Oakland",
+      "club_id": "496",
+      "district": "5170",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Oakville",
+      "club_id": "4707",
+      "district": "7080",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "October 2025",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Maria Emig",
+          "role": "Rotary Foundation officer who approved budget reallocation (October 2025)",
+          "project_id": "GG2567164"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Pacifica",
+      "club_id": "398",
+      "district": "5150",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1633934",
+          "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Patrick Hall",
+          "role": "International primary contact, Pacifica RC",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "James Renfro",
+          "role": "DDF Authorizer",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "Steven Wright",
+          "role": "International secondary contact, Pacifica RC",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "Wendy Santiago",
+          "role": "International secondary contact, Pacifica RC",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "Linda Jonas",
+          "role": "International secondary contact, Pacifica RC",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "Carl Schwab",
+          "role": "Sponsor authorization, Pacifica RC",
+          "project_id": "GG1633934"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Parker",
+      "club_id": "",
+      "district": "5450",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1865581",
+          "title": "Young Mayan Women as Engines of Economic Growth \u2014 Colegio Impacto"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Gail Lehrmann",
+          "role": "DRFC Chair",
+          "project_id": "GG1865581"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Parole (Annapolis)",
+      "club_id": "23264",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        },
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Barbara Chamberlain- Skinner",
+          "role": "DRFC Chair",
+          "project_id": "GG2578692"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Passport",
+      "club_id": "",
+      "district": "5170",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2013637",
+          "title": "Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Ramesh Hariharan Silicon Valley",
+          "role": "DDF Authorizer",
+          "project_id": "GG2013637"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Petaluma",
+      "club_id": "399",
+      "district": "5130",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        },
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Petaluma Valley",
+      "club_id": "400",
+      "district": "5130",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        },
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        },
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jim O'Grady",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570516"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Portsmouth",
+      "club_id": "",
+      "district": "7780",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Aileen Dugan",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Prior Lake",
+      "club_id": "",
+      "district": "5960",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        },
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "J. Kyle Haugen",
+          "role": "DDF Authorizer",
+          "project_id": "GG1867690"
+        },
+        {
+          "name": "J. Kyle Haugen",
+          "role": "DRFC Chair",
+          "project_id": "GG2091778"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Rancho Santa Fe",
+      "club_id": "",
+      "district": "5340",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Luis Carranza",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Real de Minas\u2013Tegucigalpa",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Julio Villalta Rivera",
+          "role": "Sponsor authorization on final report, Real de Minas\u2013Tegucigalpa RC",
+          "project_id": "GG1525485"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Red Wing",
+      "club_id": "23652",
+      "district": "5960",
+      "state": "MN",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Reno Central",
+      "club_id": "21034",
+      "district": "5190",
+      "state": "NV",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Rochester",
+      "club_id": "2164",
+      "district": "5960",
+      "state": "MN",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1873788",
+          "title": "Stoves in San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Alison Good",
+          "role": "& **Phil Karsell** \u2014 Rochester club, international secondary contacts",
+          "project_id": "GG1873788"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Rochester",
+      "club_id": "",
+      "district": "5960",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1873788",
+          "title": "Stoves in San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Ashok Patel",
+          "role": "(Rochester Rotary, D5960) \u2014 International primary contact; Mayo Clinic pulmonologist; project lead",
+          "project_id": "GG1873788"
+        },
+        {
+          "name": "Sara Gilliland",
+          "role": "DDF Authorizer",
+          "project_id": "GG1873788"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Rochester Risers",
+      "club_id": "25242",
+      "district": "5960",
+      "state": "MN",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1870757",
+          "title": "Maternal Health, Tecpan Chimaltenango"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Rockville",
+      "club_id": "5890",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "San Francisco",
+      "club_id": "",
+      "district": "5150",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1633934",
+          "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Riki Intner Fisherman's Wharf-",
+          "role": "DDF Authorizer",
+          "project_id": "GG1633934"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "San Francisco Chinatown",
+      "club_id": "79931",
+      "district": "5150",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "DG_2016_SanFranRotaryChinatown",
+          "title": "Sunspring Installation San Lucas Toliman"
+        },
+        {
+          "id": "DG_2020_SanFranChinaTown",
+          "title": "Wallspring installation Novillero"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "San Mateo County",
+      "club_id": "",
+      "district": "5150",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1633934",
+          "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jeri Fujimoto Peninsula Starlight-",
+          "role": "DDF Authorizer",
+          "project_id": "GG1633934"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "San Rafael Marin Evening",
+      "club_id": "85885",
+      "district": "5150",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1633934",
+          "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Santa Cruz",
+      "club_id": "510",
+      "district": "5170",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "DG_2020_SantaCruz",
+          "title": "Sunspring installation Santa Lucia Utatlan"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Santa Cruz",
+      "club_id": "510",
+      "district": "5170",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1529575",
+          "title": "SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jim Zenner",
+          "role": "International committee, Santa Cruz; general project manager, secured donations, arranged SunSpring procurement",
+          "project_id": "GG1529575"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Santa Cruz",
+      "club_id": "510",
+      "district": "5170",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1529575",
+          "title": "SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT"
+        },
+        {
+          "id": "GG2013637",
+          "title": "Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Larry Wallerstein",
+          "role": "International primary contact, Rotary Club of Santa Cruz",
+          "project_id": "GG1529575"
+        },
+        {
+          "name": "Russell Hobbs",
+          "role": "DRFC Chair",
+          "project_id": "GG2013637"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Shawnee",
+      "club_id": "",
+      "district": "5710",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2352598",
+          "title": "Healthcare in Patantic & Sanika-ya"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Stephanie Meyer",
+          "role": "DDF Authorizer",
+          "project_id": "GG2352598"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Silicon Valley Passport",
+      "club_id": "",
+      "district": "5170",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2013637",
+          "title": "Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Ramesh Hariharan",
+          "role": "DDF authorization, RC Silicon Valley Passport, D5170",
+          "project_id": "GG2013637"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "South Anne Arundel County (Edgewater)",
+      "club_id": "70079",
+      "district": "7620",
+      "state": "MD",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Stratford",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Katherine Hahn",
+          "role": "DDF Authorizer",
+          "project_id": "GG2567164"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Tahoe-Incline",
+      "club_id": "50115",
+      "district": "5190",
+      "state": "NV",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Tegucigalpa",
+      "club_id": "",
+      "district": "4250",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1865581",
+          "title": "Young Mayan Women as Engines of Economic Growth \u2014 Colegio Impacto"
+        },
+        {
+          "id": "GG1870757",
+          "title": "Maternal Health, Tecpan Chimaltenango"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Julio Villalta Rivera Real de Minas-",
+          "role": "DRFC Chair",
+          "project_id": "GG1865581"
+        },
+        {
+          "name": "Julio Villalta Rivera Real de Minas-",
+          "role": "DRFC Chair",
+          "project_id": "GG1870757"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Topeka",
+      "club_id": "1634",
+      "district": "5710",
+      "state": "KS",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2352598",
+          "title": "Healthcare in Patantic & Sanika-ya"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Topeka South",
+      "club_id": "",
+      "district": "5710",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2352598",
+          "title": "Healthcare in Patantic & Sanika-ya"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Faron Barr",
+          "role": "International Primary Contact, Topeka South RC, District 5710",
+          "project_id": "GG2352598"
+        },
+        {
+          "name": "Angela Dailey & Jessica Lehnherr",
+          "role": "International Committee Secondary Contacts, Topeka South RC",
+          "project_id": "GG2352598"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Truckee",
+      "club_id": "556",
+      "district": "5190",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jon Gresley",
+          "role": "International primary contact, Rotary Club of Truckee, District 5190",
+          "project_id": "GG2570080"
+        },
+        {
+          "name": "Janet Van Gelder",
+          "role": "International secondary contact, RC Truckee",
+          "project_id": "GG2570080"
+        },
+        {
+          "name": "Gudrun Dybdal",
+          "role": "International secondary contact, RC Truckee",
+          "project_id": "GG2570080"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Truckee",
+      "club_id": "556",
+      "district": "5190",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Truckee Sunrise",
+      "club_id": "29467",
+      "district": "5190",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Upper Arlington",
+      "club_id": "3694",
+      "district": "6690",
+      "state": "OH",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1410846",
+          "title": "Mayan Families Guatemala Trade School"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Upper Arlington",
+      "club_id": "",
+      "district": "6690",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1410846",
+          "title": "Mayan Families Guatemala Trade School"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Steve Sandbo",
+          "role": "International primary contact, Upper Arlington RC",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "Price Finley",
+          "role": "Club President / Signatory",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "James Winfree",
+          "role": "International secondary contact, Upper Arlington RC",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "Edward Clark",
+          "role": "Upper Arlington RC sponsor authorizer (progress report)",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "Bill Cloyd",
+          "role": "Upper Arlington RC sponsor authorizer (final report)",
+          "project_id": "GG1410846"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Usula",
+      "club_id": "",
+      "district": "4250",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 7,
+      "projects": [
+        {
+          "id": "GG2459764",
+          "title": "Amigos de Santa Cruz 2 / School tutoring Program"
+        },
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        },
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        },
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        },
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        },
+        {
+          "id": "GG2684482",
+          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2570080"
+        },
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Jos\u00e9 Interiano Torre",
+          "role": "DRFC Chair",
+          "project_id": "GG2684872"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Valley",
+      "club_id": "",
+      "district": "5170",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1529575",
+          "title": "SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Cecelia Babkirk eClub of Silicon",
+          "role": "DRFC Chair",
+          "project_id": "GG1529575"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Walkerton",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Donald Moore",
+          "role": "Walkerton RC, international primary contact; prepared grant application and final reports",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "Tim Mancell",
+          "role": "Club President / Signatory",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "Bonnelyne Noble (Park) & Adam Hofmann",
+          "role": "Walkerton RC, international committee secondary contacts",
+          "project_id": "GG2346063"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Washington, D.C.",
+      "club_id": "5851",
+      "district": "7620",
+      "state": "DC",
+      "country": "United States",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Mandy Granger Dupont Circle",
+          "role": "DDF Authorizer",
+          "project_id": "GG2578692"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Watford",
+      "club_id": "2895",
+      "district": "6330",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Watford",
+      "club_id": "",
+      "district": "6330",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Trudy Morris",
+          "role": "International Primary Contact, Rotary Club of Watford",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "Wayne Morris",
+          "role": "Club President / Signatory",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "Maggie Connell",
+          "role": "Secondary Contact International, Rotary Club of Watford",
+          "project_id": "GG2567164"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Watsonville",
+      "club_id": "515",
+      "district": "5170",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "DG_2016_WatsonVille",
+          "title": "Sunspring installation G Shafer Clinic, SLT"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Watsonville",
+      "club_id": "515",
+      "district": "5170",
+      "state": "CA",
+      "country": "United States",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Westerville Sunrise",
+      "club_id": "",
+      "district": "6690",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1410846",
+          "title": "Mayan Families Guatemala Trade School"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "David Kott",
+          "role": "DDF Authorizer",
+          "project_id": "GG1410846"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Whitehall-Bexley",
+      "club_id": "",
+      "district": "6690",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1410846",
+          "title": "Mayan Families Guatemala Trade School"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Bart Mahoney",
+          "role": "DDF Authorizer",
+          "project_id": "GG1410846"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Wiarton",
+      "club_id": "2896",
+      "district": "6330",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        },
+        {
+          "id": "GG2459764",
+          "title": "Amigos de Santa Cruz 2 / School tutoring Program"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Glenda Jamieson",
+          "role": "International Secondary Contact, Wiarton",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Robert Carson",
+          "role": "International Secondary Contact, Wiarton",
+          "project_id": "GG2459764"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Wiarton",
+      "club_id": "2896",
+      "district": "6330",
+      "state": "ON",
+      "country": "Canada",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2459764",
+          "title": "Amigos de Santa Cruz 2 / School tutoring Program"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Patricia Cavan",
+          "role": "International Primary Contact; retired school principal, Rotary Club of Wiarton",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Nora Walden",
+          "role": "Club President / Signatory",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Patricia Cavan",
+          "role": "Rotary Club of Wiarton; international primary contact; project champion who visited Guatemala in 2020, 2023, 2024, and 2025 to build the partnership",
+          "project_id": "GG2684872"
+        },
+        {
+          "name": "George Gordon",
+          "role": "Club President / Signatory",
+          "project_id": "GG2684872"
+        },
+        {
+          "name": "George Gordon & Donna Rudell",
+          "role": "Rotary Club of Wiarton; international secondary contacts",
+          "project_id": "GG2684872"
+        }
+      ]
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "Yarmouth",
+      "club_id": "6394",
+      "district": "7815",
+      "state": "NS",
+      "country": "Canada",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "Club",
+      "entity_name": "named in application narrative",
+      "club_id": "",
+      "district": "",
+      "state": "",
+      "country": "",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526219",
+          "title": "Mayan Power and Light \u2014 Women's Solar Businesses"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Norma Bayan",
+          "role": "Starfish One by One program director (named in application narrative)",
+          "project_id": "GG1526219"
+        }
+      ]
+    }
+  ],
+  "district_gaps": [
+    {
+      "entity_type": "District",
+      "entity_name": "District 4740",
+      "district": "4740",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1867690",
+          "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Afonso M\u00fcller",
+          "role": "DDF Authorizer",
+          "project_id": "GG1867690"
+        },
+        {
+          "name": "Darci Campo",
+          "role": "DDF Authorizer",
+          "project_id": "GG1867690"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5050",
+      "district": "5050",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG1526673",
+          "title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)"
+        },
+        {
+          "id": "GG1871794",
+          "title": "X-ray Fluoroscopy, Hosp Schafer, San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Bryan Hennessy",
+          "role": "International primary contact, Ferndale RC, District 5050",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Lawrence Jubie",
+          "role": "DRFC Chair",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Pam Estvold",
+          "role": "Club President / Signatory",
+          "project_id": "GG1526673"
+        },
+        {
+          "name": "Mark Miller",
+          "role": "& **Gary Meyer** \u2014 International committee secondary contacts, Greater Bend",
+          "project_id": "GG1871794"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5080",
+      "district": "5080",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1526219",
+          "title": "Mayan Power and Light \u2014 Women's Solar Businesses"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Ted Steacy",
+          "role": "International primary contact, Nelson Rotary Club, District 5080",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Vlad Sasarman",
+          "role": "DRFC Chair",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Norman McCarvell",
+          "role": "DDF Authorizer",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Bob Hargreaves",
+          "role": "International secondary contact; in-country liaison in Guatemala during project",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Colleen Driscoll",
+          "role": "International secondary contact, Nelson",
+          "project_id": "GG1526219"
+        },
+        {
+          "name": "Norman McCarvell & Vlad Sasarman",
+          "role": "DDF authorizations, District 5080",
+          "project_id": "GG1526219"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5110",
+      "district": "5110",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1871794",
+          "title": "X-ray Fluoroscopy, Hosp Schafer, San Lucas"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "A.J. Garis",
+          "role": "International primary contact, Rotary Club of Greater Bend; project originator and financial manager",
+          "project_id": "GG1871794"
+        },
+        {
+          "name": "Charles Root",
+          "role": "DDF Authorizer",
+          "project_id": "GG1871794"
+        },
+        {
+          "name": "Claudette McWilliams",
+          "role": "DDF Authorizer",
+          "project_id": "GG1871794"
+        },
+        {
+          "name": "Carolyn Jarschke",
+          "role": "Club President / Signatory",
+          "project_id": "GG1871794"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5130",
+      "district": "5130",
+      "gap_status": "Missing Email",
+      "projects_count": 2,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        },
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jennifer Strong",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "Jim O'Grady",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570516"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5150",
+      "district": "5150",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1633934",
+          "title": "Namaste Microloans \u2014 Women Entrepreneurs, Boca Costa"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Patrick Hall",
+          "role": "International primary contact, Pacifica RC",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "Jeri Fujimoto Peninsula Starlight-",
+          "role": "DDF Authorizer",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "Riki Intner Fisherman's Wharf-",
+          "role": "DDF Authorizer",
+          "project_id": "GG1633934"
+        },
+        {
+          "name": "James Renfro",
+          "role": "DDF Authorizer",
+          "project_id": "GG1633934"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5190",
+      "district": "5190",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Jon Gresley",
+          "role": "International primary contact, Rotary Club of Truckee, District 5190",
+          "project_id": "GG2570080"
+        },
+        {
+          "name": "Roberta Pickett Amador Upcountry",
+          "role": "DRFC Chair",
+          "project_id": "GG2570080"
+        },
+        {
+          "name": "Dennis Geare",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570080"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5230",
+      "district": "5230",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5240",
+      "district": "5240",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "Rostock_Patanatic",
+          "title": "San Luis School Patanatic / Rostock Germany"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5340",
+      "district": "5340",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Maureen Duncan",
+          "role": "Primary International Contact",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "Maureen Duncan E-Club of San",
+          "role": "DRFC Chair",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "Michael Whitehurst Point Loma (San",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "Luis Carranza",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "Amanda Wirtz Rosolowski E-Club of San",
+          "role": "Club President / Signatory",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "E-Club of San",
+          "role": "Primary International Contact",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5440",
+      "district": "5440",
+      "gap_status": "Missing Email",
+      "projects_count": 4,
+      "projects": [
+        {
+          "id": "GG1525485",
+          "title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships"
+        },
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        },
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Thomas Dunn",
+          "role": "International primary contact, Greeley Centennial RC",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Nancy Pettus Jackson Hole",
+          "role": "DRFC Chair",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Mike Oakes Greeley",
+          "role": "Club President / Signatory",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Greeley",
+          "role": "Primary International Contact",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "Nancy Pettus",
+          "role": "DRFC, District 5440 (authorized application)",
+          "project_id": "GG1525485"
+        },
+        {
+          "name": "John Trone",
+          "role": "Fort Collins Rotary Club; International Primary Contact; financial manager",
+          "project_id": "GG2125241"
+        },
+        {
+          "name": "Charles Rutenberg Fort Collins-",
+          "role": "DRFC Chair",
+          "project_id": "GG2125241"
+        },
+        {
+          "name": "Charles Rutenberg",
+          "role": "Fort Collins Breakfast RC; DRFC Chair, District 5440",
+          "project_id": "GG2125241"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5450",
+      "district": "5450",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1865581",
+          "title": "Young Mayan Women as Engines of Economic Growth \u2014 Colegio Impacto"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Alan Steger",
+          "role": "Rotary Club of Evergreen, International Primary Contact",
+          "project_id": "GG1865581"
+        },
+        {
+          "name": "Gail Lehrmann",
+          "role": "DRFC Chair",
+          "project_id": "GG1865581"
+        },
+        {
+          "name": "Laurence Caine",
+          "role": "Club President / Signatory",
+          "project_id": "GG1865581"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5710",
+      "district": "5710",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2352598",
+          "title": "Healthcare in Patantic & Sanika-ya"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Faron Barr",
+          "role": "International Primary Contact, Topeka South RC, District 5710",
+          "project_id": "GG2352598"
+        },
+        {
+          "name": "Stephanie Meyer",
+          "role": "DDF Authorizer",
+          "project_id": "GG2352598"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 5950",
+      "district": "5950",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 6330",
+      "district": "6330",
+      "gap_status": "Missing Email",
+      "projects_count": 5,
+      "projects": [
+        {
+          "id": "GG2346063",
+          "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills"
+        },
+        {
+          "id": "GG2459764",
+          "title": "Amigos de Santa Cruz 2 / School tutoring Program"
+        },
+        {
+          "id": "GG2567164",
+          "title": "Amigos de Santa Cruz 3 / Economic Dev"
+        },
+        {
+          "id": "GG2684482",
+          "title": "Agroecological Vegetable Production in Santa Cruz La Laguna"
+        },
+        {
+          "id": "GG2684872",
+          "title": "Protecting the Watershed of Lake Atitlan, Santa Lucia"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Donald Moore",
+          "role": "Walkerton RC, international primary contact; prepared grant application and final reports",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "David Elliott",
+          "role": "DRFC Chair",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "Michael Chaffee",
+          "role": "DDF Authorizer",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "Tim Mancell",
+          "role": "Club President / Signatory",
+          "project_id": "GG2346063"
+        },
+        {
+          "name": "Patricia Cavan",
+          "role": "International Primary Contact; retired school principal, Rotary Club of Wiarton",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "David Elliott",
+          "role": "DRFC Chair",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Sonja Glass",
+          "role": "DDF Authorizer",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Nora Walden",
+          "role": "Club President / Signatory",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Glenda Jamieson",
+          "role": "International Secondary Contact, Wiarton",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Robert Carson",
+          "role": "International Secondary Contact, Wiarton",
+          "project_id": "GG2459764"
+        },
+        {
+          "name": "Trudy Morris",
+          "role": "International Primary Contact, Rotary Club of Watford",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "David Elliott",
+          "role": "DRFC Chair",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "Katherine Hahn",
+          "role": "DDF Authorizer",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "Wayne Morris",
+          "role": "Club President / Signatory",
+          "project_id": "GG2567164"
+        },
+        {
+          "name": "Erin Wettlaufer",
+          "role": "International Primary Contact, Rotary Club of Mildmay",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Sonja Glass",
+          "role": "DRFC Chair",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Julia Gutscher",
+          "role": "Club President / Signatory",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Dawn Kennedy",
+          "role": "Rotarian DGN, District 6330; co-initiated project during February 2025 site visit",
+          "project_id": "GG2684482"
+        },
+        {
+          "name": "Patricia Cavan",
+          "role": "Rotary Club of Wiarton; international primary contact; project champion who visited Guatemala in 2020, 2023, 2024, and 2025 to build the partnership",
+          "project_id": "GG2684872"
+        },
+        {
+          "name": "Sonja Glass",
+          "role": "DRFC Chair",
+          "project_id": "GG2684872"
+        },
+        {
+          "name": "George Gordon",
+          "role": "Club President / Signatory",
+          "project_id": "GG2684872"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 6440",
+      "district": "6440",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2125241",
+          "title": "El Potrero, WASH"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 6690",
+      "district": "6690",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1410846",
+          "title": "Mayan Families Guatemala Trade School"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Steve Sandbo",
+          "role": "International primary contact, Upper Arlington RC",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "Bart Mahoney",
+          "role": "DDF Authorizer",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "David Kott",
+          "role": "DDF Authorizer",
+          "project_id": "GG1410846"
+        },
+        {
+          "name": "Price Finley",
+          "role": "Club President / Signatory",
+          "project_id": "GG1410846"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 7080",
+      "district": "7080",
+      "gap_status": "No Contact",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2570080",
+          "title": "Hospitalito Atitlan - Mothers and Infants"
+        }
+      ],
+      "existing_contacts": []
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 7620",
+      "district": "7620",
+      "gap_status": "Missing Email",
+      "projects_count": 3,
+      "projects": [
+        {
+          "id": "GG2091778",
+          "title": "Water & Sanitation in Santa Lucia Utatlan and San Andreas"
+        },
+        {
+          "id": "GG2570516",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase I"
+        },
+        {
+          "id": "GG2578692",
+          "title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Lydia Hohman",
+          "role": "International primary contact, RC Annapolis, District 7620",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "Geetha Jayaram",
+          "role": "DRFC Chair",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "Naumaan Hamid",
+          "role": "DDF Authorizer",
+          "project_id": "GG2570516"
+        },
+        {
+          "name": "John Wojcik",
+          "role": "International primary contact, RC Annapolis",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Barbara Chamberlain- Skinner",
+          "role": "DRFC Chair",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Mandy Granger Dupont Circle",
+          "role": "DDF Authorizer",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Sue Weber",
+          "role": "DDF Authorizer",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Barbara Chamberlain-Skinner",
+          "role": "DRFC Chair, District 7620; DDF and grant authorization",
+          "project_id": "GG2578692"
+        },
+        {
+          "name": "Mandy Granger",
+          "role": "DDF authorization, RC Dupont Circle / District 7620",
+          "project_id": "GG2578692"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 7670",
+      "district": "7670",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1985748",
+          "title": "David Lamont School in Tzanchaj"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "William Rawlings",
+          "role": "Rotary Club of Asheville, international primary contact; led application writing, liaison with Rotary International",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Carol King",
+          "role": "DRFC Chair",
+          "project_id": "GG1985748"
+        },
+        {
+          "name": "Sophia Ungert",
+          "role": "Club President / Signatory",
+          "project_id": "GG1985748"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 7780",
+      "district": "7780",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG2574529",
+          "title": "Reforesting Santiago"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "Aileen Dugan",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        },
+        {
+          "name": "Robert MacKenzie",
+          "role": "DDF Authorizer",
+          "project_id": "GG2574529"
+        }
+      ]
+    },
+    {
+      "entity_type": "District",
+      "entity_name": "District 7950",
+      "district": "7950",
+      "gap_status": "Missing Email",
+      "projects_count": 1,
+      "projects": [
+        {
+          "id": "GG1415576",
+          "title": "Potable Water for Multiple Communities (Sawyer Filters)"
+        }
+      ],
+      "existing_contacts": [
+        {
+          "name": "August Muller",
+          "role": "International primary contact, Rotary Club of Hingham, District 7950",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "Gregory Roche",
+          "role": "DRFC Chair",
+          "project_id": "GG1415576"
+        },
+        {
+          "name": "Robert MacCallum",
+          "role": "Club President / Signatory",
+          "project_id": "GG1415576"
+        }
+      ]
+    }
+  ],
+  "covered_clubs": [
+    {
+      "entity_name": "Livermore",
+      "district": "5170",
+      "contacts_with_email": [
+        "Patrick Coyle <pat@coyles.com>",
+        "Glenn Kubiak <gdkubiak@gmail.com>",
+        "Jeffrey Youngsma <j.youngsma@me.com>",
+        "Glenn D. Kubiak <gdkubiak@gmail.com>"
+      ]
+    },
+    {
+      "entity_name": "Northfield",
+      "district": "5960",
+      "contacts_with_email": [
+        "Todd Thompson <todd@tiddley.com>",
+        "Todd Thompson <todd@tiddley.com>"
+      ]
+    },
+    {
+      "entity_name": "Rochester Risers",
+      "district": "5960",
+      "contacts_with_email": [
+        "Joanne Rosener <jenb@mycookkitchen.com>"
+      ]
+    },
+    {
+      "entity_name": "dyee@ahschc.org",
+      "district": "",
+      "contacts_with_email": [
+        "Darren Yee <dyee@ahschc.org>"
+      ]
+    },
+    {
+      "entity_name": "joselek@sutterhealth.org",
+      "district": "",
+      "contacts_with_email": [
+        "Kathleen Jose Le <joselek@sutterhealth.org>"
+      ]
+    },
+    {
+      "entity_name": "vjonas@axishealth.org",
+      "district": "",
+      "contacts_with_email": [
+        "Valerie Jonas <vjonas@axishealth.org>"
+      ]
+    }
+  ],
+  "covered_districts": [
+    {
+      "district": "4250",
+      "contacts_with_email": [
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Candis Krummel <candis@lakeatitlanrotary.org>",
+        "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
+        "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
+        "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
+        "Terrence (Joe) Wakely <joe.wakely@gmail.com>",
+        "Clinton White <clint@lakeatitlanrotary.org>",
+        "Emilio Crespo Morales <emilio@lakeatitlanrotary.org>",
+        "William Boegel <drboegel@gmail.com>",
+        "Emilio Crespo Morales <emilio@lakeatitlanrotary.org>",
+        "Dwight Mara-Poage <dwight@lakeatitlanrotary.org>",
+        "William Boegel <drboegel@gmail.com>",
+        "Dwight Mara-Poage <dwight@lakeatitlanrotary.org>",
+        "Dr. Bruce Clemens (PhD) <bruce.wayne.clemens@gmail.com>",
+        "Joe Wakely <joe.wakely@gmail.com>",
+        "William Boegel <drboegel@gmail.com>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "William Boegel <drboegel@gmail.com>",
+        "Terrence Wakely <joe.wakely@gmail.com>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "William Boegel <drboegel@gmail.com>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Terrence Wakely <joe.wakely@gmail.com>",
+        "Terrence Wakely <joe.wakely@gmail.com>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Joe Wakely <joe.wakely@gmail.com>",
+        "Shad Qudsi <shad@atitlanorganics.com>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Terrence Wakely <joe.wakely@gmail.com>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Clinton White <clint@lakeatitlanrotary.org>",
+        "Bruce Clemens <bruce.wayne.clemens@gmail.com>",
+        "Duncan Aitken <duncan@lakeatitlanrotary.org>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Clinton White <clint@lakeatitlanrotary.org>",
+        "Bruce Clemens <bruce.wayne.clemens@gmail.com>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Shad Qudsi <shad@atitlanorganics.com>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Michelle Fajkus <michelle@lakeatitlanrotary.org>",
+        "Bruce Clemens <bruce.wayne.clemens@gmail.com>",
+        "Michael Rosen <mrosen@lakeatitlanrotary.org>",
+        "Shad Qudsi <shad@atitlanorganics.com>",
+        "Clinton White <clint@lakeatitlanrotary.org>",
+        "Armand Boissy <armand@lakeatitlanrotary.org>"
+      ]
+    },
+    {
+      "district": "5170",
+      "contacts_with_email": [
+        "Patrick Coyle <pat@coyles.com>",
+        "Glenn Kubiak <gdkubiak@gmail.com>",
+        "Jeffrey Youngsma <j.youngsma@me.com>"
+      ]
+    },
+    {
+      "district": "5960",
+      "contacts_with_email": [
+        "Todd Thompson <todd@tiddley.com>",
+        "Joanne Rosener <jenb@mycookkitchen.com>",
+        "Todd Thompson <todd@tiddley.com>"
+      ]
+    }
+  ]
+}

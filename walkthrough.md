@@ -1,81 +1,77 @@
-# Walkthrough: Dynamic Extraction & Migration of Non-Financial Partner Organizations to Rotary SPC
+# Walkthrough: Rotary Contacts Directory & Gap Enrichment
 
-We have completed the dynamic extraction and migration engine for non-financial implementing partner organizations (NGOs, Municipalities, Schools, Community Committees / COCODEs) to Rotary Service Project Center (SPC), completely eliminating fragile hardcoded profiles and guaranteeing zero `$0 USD` funding lines.
-
----
-
-## 1. Key Accomplishments
-
-### A. Elimination of Fragile Hardcoded Profiles
-- Removed `DETAILED_PROJECT_PROFILES` entirely from [`scripts/migrate_to_spc.py`](./scripts/migrate_to_spc.py) and [`migrate_to_spc.py`](./migrate_to_spc.py).
-- Canonical financial breakdowns (`club_contributions_list`, `district_contributions`, `world_fund`) are now sourced directly and dynamically from Supabase database fields, ensuring all downstream tools and web views share identical data.
-
-### B. Dynamic Partner Extraction (`extract_partner_organizations`)
-- Dynamically extracts cooperating and implementing partner organizations from:
-  - `details.cooperating_organizations` (string arrays, comma-delimited strings)
-  - `details.implementing_partners`
-  - `project.partner`
-  - `project.narrative` (under `### Partner Organizations` / `NGOs & Local Organizations`)
-- Robust cleaning pipeline:
-  - Normalizes smart quotes and typographic punctuation.
-  - Strips parenthetical roles, URLs, and noisy suffixes while preserving acronyms like `(AdP)`.
-  - Normalizes duplicate names and sub-strings (e.g. deduplicates "COCODE" vs "Vista Hermosa Water Committee / COCODE").
-  - Automatically classifies partner types into `GovernmentEntity`, `LocalCommunityGroup`, `Foundation`, or `NonGovernmentalOrganization`.
-
-### C. Partner Credit & Clean Financial Table in Rotary SPC
-- **0 Zero-Dollar Funding Rows**:
-  - Only genuine financial contributions with `fundingAmount > 0` are placed in `projectFundings`.
-  - Verified across all 37 projects: **0 zero-dollar funding rows** exist in the generated payloads.
-- **Prominent Narrative Callout**:
-  - Dynamically appends `Cooperating Partner(s): ...` to `description` within Rotary SPC's 1,000-character limit, ensuring all non-financial partners are prominently credited.
-- **Search Tag Indexing**:
-  - Dynamically populates partner names into Rotary SPC's `tags` field within the 100-character limit, ensuring projects are discoverable when searching for partner organizations.
-- **RI Service Partners Mapping**:
-  - Formal Rotary International Global Partners in Service (Ashoka, Habitat for Humanity, IEP, Peace Corps, ShelterBox, USAID) are mapped to their official RI database GUIDs in `projectNonRotaryPartners`.
-
-### D. In-Browser Evaluation & Duplicate Prevention
-- Reconciles existing project details fetched via `ProjectDetail/en/{spcKey}`:
-  - Preserves backend category keys and handles existing club members.
-  - Guarantees valid `partnerCategoryId` and `fundTypeId` on all club member rows, preventing ASP.NET backend crashes.
-  - Automatically deduplicates individual contact joiners to prevent constraint violations.
+We have generated the standalone export package of Rotary contacts and leadership gaps for all 37 projects in the Rotary Club of Lake Atitlán map datastore.
 
 ---
 
-## 2. Verification & Live Results
+## 📦 Deliverables Summary
 
-### A. Automated 37-Project Survey
-Running [`scripts/test_all_projects_payload.py`](./scripts/test_all_projects_payload.py) across all 37 projects confirmed:
-- **29 projects** dynamically extracted and populated non-financial implementing partners.
-- **Total `$0 USD` funding rows across all 37 projects: 0**.
+| File | Type | Description |
+| :--- | :--- | :--- |
+| **[rotary_contacts.csv](./rotary_contacts.csv)** | Master CSV | Full roster of **518 contact entries** (direct project contacts and enriched current club/district leaders) with Name, Email, Club, Country, District, Role, Project Title, Archive URL, and Contact Type. |
+| **[rotary_clubs_districts_gaps.csv](./rotary_clubs_districts_gaps.csv)** | Gap CSV | Dedicated report of **118 participating clubs and districts** where no direct contact existed, enriched with Country, current 2025–2026 Club Presidents, District Governors, official emails, and websites. |
+| **[rotary_contacts_catalog.json](./rotary_contacts_catalog.json)** | Master JSON | Structured catalog containing project-level rosters, deduplicated individual Rotarians with Country, and gap records. |
+| **[contacts_directory.html](./contacts_directory.html)** | Interactive Viewer | Standalone, responsive HTML viewer with instant search, tabbed filtering, Country filter, "Has Email Only" filter, clickable column sorting, KPI statistics cards, one-click "Copy Filtered Emails", and CSV export. |
 
-### B. Live Migration of `GG2578692`
-Executed:
-```bash
-python3 -u scripts/migrate_to_spc.py GG2578692 --headless
+---
+
+## 📊 Harvest & Gap Statistics
+
 ```
-- Successfully authenticated via My Rotary Okta with headless OneTrust consent handler.
-- Matched existing project on SPC (`0c101fff-43ee-41ea-97bc-22fd018d4cff`) and performed in-place update.
-- Updated local migration state and synced status to Supabase `projects` and `project_links`.
+======================================================
+  Total Master Contact Roster Entries : 518
+  Direct Project Contacts Harvested   : 352
+  Enriched Gap Leadership Entries     : 166
+  Contacts with Verified Email        : 238
+  Countries Represented               : 7 (Guatemala, USA, Canada, Brazil, Honduras, Belize, Germany)
+  Unique Rotary Clubs Involved        : 96
+  Unique Rotary Districts Involved    : 22
+======================================================
+```
 
-### C. Live Rotary SPC API Confirmation
-Direct query of `https://spc.rotary.org/api/Project/ProjectDetail/en/0c101fff-43ee-41ea-97bc-22fd018d4cff`:
-- **Title**: `WASH for Vista Hermosa, Phase II`
-- **Tags**: Indexed with partner names:
-  `['Asociacion Pro Agua del Pueblo (AdP)', 'Municipality of Santa Lucia Utatlan', 'Guatemala Federal Departmen']`
-- **Description**: Sits cleanly at 1,000 chars and ends with:
-  > *Cooperating Partner(s): Asociacion Pro Agua del Pueblo (ADP), Municipality of Santa Lucia Utatlan, Guatemala Federal Department of Education, Vista Hermosa Water & Sanitation Committee / COCODE.*
-- **Funding Sources**: 12 rows, all positive, with **0 zero-dollar entries**:
-  - District 7620 DDF: \$15,000
-  - Global Grant: \$12,000
-  - Annapolis: \$8,450
-  - Washington, D.C.: \$5,000
-  - Baltimore: \$3,000
-  - Carroll Creek: \$2,500
-  - Petaluma Valley: \$1,600
-  - Rockville: \$1,500
-  - Lake Shore-Severna Park: \$1,000
-  - Dupont Circle: \$700
-  - Capitol Hill: \$500
-  - Lake Atitlán: \$300
-- **Partners**: All 8 partner clubs intact with financial contributions recorded.
-- **Contacts**: Single joiner contact (Michael Rosen), 0 duplicate active contacts.
+### Harvest Highlights
+- **Direct Project Contacts (352)**:
+  - Extracted from Global Grant Application PDFs, Final Reports, Progress Reports, Supabase metadata, and Markdown `narrative` Key Personnel sections.
+  - Automatically resolved all recurring RCLA project champions and shepherds (`Michael Rosen`, `Terrence (Joe) Wakely`, `Duncan Aitken`, `Armand Boissy`, `Bruce Clemens`, `Candis Krummel`, `Michelle Fajkus`, `Clinton White`, `Shad Qudsi`, `William Boegel`, `Emilio Crespo Morales`, `Dwight Mara-Poage`).
+  - Extracted direct personal emails from volunteer traveler tables, project report sign-offs, and narrative records (e.g. Todd Thompson, Patrick Coyle, Glenn Kubiak, Jeff Youngsma, Catherine Patel, Brad Fischer, Don Baldus, Dr. Paul Wise, Tom Tocco).
+- **Gap Entities (118)**:
+  - **22 Rotary Districts**: 100% enriched with the 2025–2026 District Governor name, term, district website, country, and verified email or district office contact (e.g. District 4250 Diana Brown, District 5960 Glenn Bowers, District 7620 Mandy Granger, District 6330 Jeffrey Ferweda, District 5440 Karen Morgan, District 6440 Marlene Frisbie, etc.).
+  - **96 Rotary Clubs**: Enriched with Country, Current Club Presidents (or DG contact c/o fallback), club website, and verified club contact emails (e.g. Northfield RC Diane Melbye `info@northfieldrotary.org`, Annapolis RC `info@annapolisrotary.org`, Ferndale RC `info@ferndalerotary.org`, Fort Collins RC `rotary@rotarycluboffortcollins.org`, etc.).
+
+---
+
+## 💻 How to Use the Interactive Directory Viewer
+
+You can use the viewer in either of two ways:
+
+1. **In Any Browser**:
+   Open **[contacts_directory.html](./contacts_directory.html)** directly in Chrome, Edge, or Firefox.
+2. **Via Local Server**:
+   Navigate to **[http://localhost:8000/contacts_directory.html](http://localhost:8000/contacts_directory.html)** while your local server is active.
+
+### Key Interactive Features:
+- **Instant Search**: Type any name, email, club name, country, district number, role keyword, or project title into the search box for real-time filtering.
+- **Country Filter**: Dropdown menu dynamically populated with all 7 represented countries (Guatemala, United States, Canada, Brazil, Honduras, Belize, Germany) and record counts.
+- **Has Email Only Toggle**: Instant checkbox filter to show only contacts with valid email addresses.
+- **Interactive Column Sorting**: Click any table header (**Name**, **Email**, **Club**, **Country**, **Dist.**, **Role**, **Project Title**, **Type**) to sort ascending (`▲`) or descending (`▼`).
+- **Filter Tabs**:
+  - `All Contacts` (All 518 records)
+  - `Direct Project Contacts` (The 352 project participants)
+  - `Enriched Officers (Gaps)` (The 166 gap leadership records)
+- **📋 Copy Filtered Emails**:
+  - One-click button copies all unique email addresses matching your current search/filter as a clean, comma-separated list ready to paste directly into your email client's `To:` or `Bcc:` field.
+- **⬇️ Export CSV**:
+  - Downloads the filtered table directly to a spreadsheet with all active columns including Country.
+- **Direct Archive Links**:
+  - Every project has a direct link pointing to its canonical online record (`https://mrosen.github.io/rcla_project_map/?source=supabase&project={id}`).
+
+---
+
+## 🔁 Automated Pipeline Scripts
+
+All four pipeline components are committed in the `scripts/` directory for ongoing maintainability:
+
+1. `python3 scripts/harvest_rotary_contacts.py` — Extracts contacts from Supabase and project PDFs.
+2. `python3 scripts/analyze_rotary_gaps.py` — Identifies clubs and districts lacking contacts or emails.
+3. `python3 scripts/enrich_officers.py` — Resolves and enriches gap entities with current officers.
+4. `python3 scripts/generate_contacts_deliverables.py` — Builds the final CSVs, JSON, and HTML viewer.
