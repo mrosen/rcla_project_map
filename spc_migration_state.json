@@ -89,5 +89,12 @@
     "action": "updated",
     "migrated_at": "2026-09-23T17:46:47.809155",
     "spc_url": "https://spc.rotary.org/project?guid=3734461f-2ef4-40d9-9d6b-5195761f27d1"
+  },
+  "GG1867690": {
+    "spc_id": "215b8869-f5aa-422f-b4f2-3de0022ff0c5",
+    "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
+    "action": "created",
+    "migrated_at": "2026-09-23T21:44:44.356511",
+    "spc_url": "https://spc.rotary.org/project?guid=215b8869-f5aa-422f-b4f2-3de0022ff0c5"
   }
 }

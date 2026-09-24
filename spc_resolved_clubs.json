@@ -670,5 +670,45 @@
     "district": "5950",
     "state": "MN",
     "country": "United States"
+  },
+  "anoka": {
+    "key": "dc6fdd61-98f4-4465-ae09-e9c46bdd0f37",
+    "name": "Anoka",
+    "id": "2141",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "real de minas-tegucigalpa": {
+    "key": "cdc208e0-775b-4beb-a74c-a22351778545",
+    "name": "Real de Minas-Tegucigalpa",
+    "id": "71257",
+    "district": "4250",
+    "state": null,
+    "country": "Honduras"
+  },
+  "prior lake": {
+    "key": "10bd655c-87fa-4849-ac47-06da8bfced38",
+    "name": "Prior Lake",
+    "id": "2163",
+    "district": "5960",
+    "state": "MN",
+    "country": "United States"
+  },
+  "lajes": {
+    "key": "f5e691a2-59d6-45fe-9283-2e23d255ea1b",
+    "name": "Lajes",
+    "id": "9009",
+    "district": "4740",
+    "state": null,
+    "country": "Brazil"
+  },
+  "chapec\u00f3-centro": {
+    "key": "291d71c7-b3db-4e42-b2b3-07f117f1711f",
+    "name": "Chapec\u00f3-Centro",
+    "id": "90385",
+    "district": "4740",
+    "state": null,
+    "country": "Brazil"
   }
 }
