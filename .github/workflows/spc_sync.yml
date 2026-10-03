@@ -1,0 +1,90 @@
+name: "Sync to Rotary Service Project Center (SPC)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "Target Project ID (e.g. GG2684482) — Leave blank to process next unmigrated project"
+        required: false
+        default: ""
+        type: string
+      action:
+        description: "Action mode"
+        required: true
+        type: choice
+        options:
+          - "migrate_single_or_next"
+          - "force_update_project"
+          - "dry_run"
+          - "force_update_all"
+        default: "migrate_single_or_next"
+
+jobs:
+  sync-spc:
+    name: "Sync Projects to Rotary SPC"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run Rotary SPC Migrator
+        env:
+          ROTARY_EMAIL: ${{ secrets.ROTARY_EMAIL }}
+          ROTARY_PASSWORD: ${{ secrets.ROTARY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rqhmsincnmxrgtipvkif.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o' }}
+        run: |
+          CMD="python scripts/migrate_to_spc.py"
+          TARGET="${{ inputs.project_id }}"
+          MODE="${{ inputs.action }}"
+
+          if [ "$MODE" = "dry_run" ]; then
+            if [ -n "$TARGET" ]; then
+              CMD="$CMD $TARGET --dry-run"
+            else
+              CMD="$CMD --dry-run"
+            fi
+          elif [ "$MODE" = "force_update_all" ]; then
+            CMD="$CMD --update --all"
+          elif [ "$MODE" = "force_update_project" ]; then
+            if [ -n "$TARGET" ]; then
+              CMD="$CMD $TARGET --update"
+            else
+              echo "Error: Target Project ID is required for force_update_project"
+              exit 1
+            fi
+          else
+            if [ -n "$TARGET" ]; then
+              CMD="$CMD $TARGET"
+            fi
+          fi
+
+          echo "Running: $CMD"
+          eval "$CMD"
+
+      - name: Commit and push state changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add spc_migration_state.json spc_resolved_clubs.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(spc): update migration state and resolved clubs [skip ci]"
+            git push
+          else
+            echo "No state changes to commit."
+          fi

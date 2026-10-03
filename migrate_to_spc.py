@@ -24,14 +24,15 @@ from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
 # --- Configuration & Constants ---
-ENV_PATHS = [Path("/home/msr/grantcenter/.env"), Path(__file__).resolve().parent.parent / ".env", Path(".env")]
+REPO_ROOT = Path(__file__).resolve().parent if (Path(__file__).resolve().parent / "spc_migration_state.json").exists() else Path(__file__).resolve().parent.parent
+ENV_PATHS = [REPO_ROOT / ".env", Path(".env"), Path("/home/msr/grantcenter/.env")]
 for p in ENV_PATHS:
     if p.exists():
         load_dotenv(p)
-STATE_PATH = Path("/home/msr/rcla_project_map/spc_migration_state.json")
+STATE_PATH = REPO_ROOT / "spc_migration_state.json"
 
-SUPABASE_URL = "https://rqhmsincnmxrgtipvkif.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://rqhmsincnmxrgtipvkif.supabase.co")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o")
 
 ROTARY_LAKE_ATITLAN_CLUB_KEY = "c575902e-aae0-4b82-9aba-54947c09f4fe"
 ROTARY_LAKE_ATITLAN_CLUB_ID  = "84633"
@@ -792,8 +793,7 @@ def construct_spc_payload(p: dict) -> dict:
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(int(num_wf)),
-                "fundingClubKey": gid,
-                "fundingOtherName": gid
+                "fundingClubKey": gid
             })
 
         # 2. Districts (DDF)
@@ -806,8 +806,7 @@ def construct_spc_payload(p: dict) -> dict:
                     fundings.append({
                         "fundingSource": dc.get("source", "District(DDF)"),
                         "fundingAmount": str(int(amt_val)),
-                        "fundingClubKey": dnum,
-                        "fundingOtherName": dnum
+                        "fundingClubKey": dnum
                     })
         else:
             raw_pdist = details.get("partner_districts") or []
@@ -834,8 +833,7 @@ def construct_spc_payload(p: dict) -> dict:
                 fundings.append({
                     "fundingSource": "District(DDF)",
                     "fundingAmount": str(int(num_ddf)),
-                    "fundingClubKey": clean_target,
-                    "fundingOtherName": clean_target
+                    "fundingClubKey": clean_target
                 })
 
         # 3. Contributing / Partner Clubs
@@ -871,9 +869,7 @@ def construct_spc_payload(p: dict) -> dict:
                         "fundingAmount": amt_str,
                         "fundingClubKey": use_key if ckey or is_host else ""
                     }
-                    if ckey or is_host:
-                        f_item["fundingSourceKey"] = use_key
-                    else:
+                    if not ckey and not is_host:
                         f_item["fundingOtherName"] = c_name
                     fundings.append(f_item)
 
@@ -939,9 +935,7 @@ def construct_spc_payload(p: dict) -> dict:
                         "fundingAmount": amt_str,
                         "fundingClubKey": use_key if ckey or is_host else ""
                     }
-                    if ckey or is_host:
-                        f_item["fundingSourceKey"] = use_key
-                    else:
+                    if not ckey and not is_host:
                         f_item["fundingOtherName"] = c_str
                     fundings.append(f_item)
 
@@ -973,35 +967,30 @@ def construct_spc_payload(p: dict) -> dict:
             fundings.append({
                 "fundingSource": "Global grant",
                 "fundingAmount": str(int(num_budget * 0.45)) if num_budget else "20000",
-                "fundingClubKey": gid,
-                "fundingOtherName": gid
+                "fundingClubKey": gid
             })
             if intl_dist:
                 fundings.append({
                     "fundingSource": "District(Cash)",
                     "fundingAmount": str(int(num_budget * 0.35)) if num_budget else "15000",
-                    "fundingClubKey": intl_dist,
-                    "fundingOtherName": intl_dist
+                    "fundingClubKey": intl_dist
                 })
             if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": str(int(num_budget * 0.15)) if num_budget else "5000",
-                    "fundingClubKey": partner_club_key,
-                    "fundingSourceKey": partner_club_key
+                    "fundingClubKey": partner_club_key
                 })
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": str(int(num_budget * 0.05)) if num_budget else "2000",
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "fundingSourceKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
+                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
                 })
             else:
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": str(int(num_budget * 0.20)) if num_budget else "5000",
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
-                    "fundingSourceKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
+                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
                 })
         else:
             if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
@@ -1498,37 +1487,40 @@ async def main():
 
                         for (const f of (payload.projectFundings || [])) {
                             delete f.fundingOrgName;
+                            if (!f.fundingOtherName) delete f.fundingOtherName;
+                            delete f.fundingSourceKey;
                             delete f.isImplementingPartnerFlag;
 
                             const match = existingFundings.find(ef => (!usedFundingKeys.has(ef.projectFundingSourceKey)) && (
-                                (ef.fundingSource === f.fundingSource && (
-                                    (ef.fundingSourceKey && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingSourceKey === f.fundingSourceKey)) ||
-                                    (ef.fundingOtherName && (ef.fundingOtherName === f.fundingClubKey || ef.fundingOtherName === f.fundingOtherName))
-                                )) ||
+                                (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)) ||
                                 (f.fundingClubKey && ef.fundingOtherName === f.fundingClubKey)
                             ));
-
-                            const isClub = (f.fundingSource === 'Rotary Club');
-                            const fundingItem = {
-                                ...f,
-                                fundingSourceKey: match?.fundingSourceKey || f.fundingSourceKey || (isClub ? f.fundingClubKey : null),
-                                fundingOtherName: match?.fundingOtherName || f.fundingOtherName || (!isClub ? f.fundingClubKey : null),
-                                fundingClubKey: f.fundingClubKey || match?.fundingSourceKey || match?.fundingOtherName || "",
-                                isChangedProjectFundingSource: true,
-                                isDeleted: false
-                            };
-
                             if (match) {
                                 usedFundingKeys.add(match.projectFundingSourceKey);
-                                fundingItem.projectFundingSourceKey = match.projectFundingSourceKey;
+                                newFundings.push({
+                                    ...f,
+                                    projectFundingSourceKey: match.projectFundingSourceKey,
+                                    isChangedProjectFundingSource: true,
+                                    isDeleted: false
+                                });
                             } else {
                                 const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey) && ef.fundingSource === f.fundingSource);
                                 if (unused) {
                                     usedFundingKeys.add(unused.projectFundingSourceKey);
-                                    fundingItem.projectFundingSourceKey = unused.projectFundingSourceKey;
+                                    newFundings.push({
+                                        ...f,
+                                        projectFundingSourceKey: unused.projectFundingSourceKey,
+                                        isChangedProjectFundingSource: true,
+                                        isDeleted: false
+                                    });
+                                } else {
+                                    newFundings.push({
+                                        ...f,
+                                        isChangedProjectFundingSource: true,
+                                        isDeleted: false
+                                    });
                                 }
                             }
-                            newFundings.push(fundingItem);
                         }
 
                         // Mark any unreferenced existing funding as deleted
@@ -1538,9 +1530,7 @@ async def main():
                                     projectFundingSourceKey: ef.projectFundingSourceKey,
                                     fundingSource: ef.fundingSource || "",
                                     fundingAmount: ef.fundingAmount || "",
-                                    fundingClubKey: ef.fundingSourceKey || "",
-                                    fundingSourceKey: ef.fundingSourceKey || null,
-                                    fundingOtherName: ef.fundingOtherName || null,
+                                    fundingClubKey: "",
                                     isDeleted: true,
                                     isChangedProjectFundingSource: true
                                 });

@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 from datetime import datetime
 
-WORKSPACE_ROOT = Path("/home/msr/rcla_project_map")
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent if (Path(__file__).resolve().parent.parent / "harvested_contacts.json").exists() else Path(__file__).resolve().parent
 HARVESTED_PATH = WORKSPACE_ROOT / "harvested_contacts.json"
 ENRICHED_PATH = WORKSPACE_ROOT / "rotary_officers_enriched.json"
 

@@ -15,7 +15,7 @@ import json
 import re
 from pathlib import Path
 
-WORKSPACE_ROOT = Path("/home/msr/rcla_project_map")
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent if (Path(__file__).resolve().parent.parent / "harvested_contacts.json").exists() else Path(__file__).resolve().parent
 HARVESTED_PATH = WORKSPACE_ROOT / "harvested_contacts.json"
 RESOLVED_CLUBS_PATH = WORKSPACE_ROOT / "spc_resolved_clubs.json"
 OUTPUT_GAPS_PATH = WORKSPACE_ROOT / "rotary_gaps_identified.json"

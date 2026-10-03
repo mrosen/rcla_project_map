@@ -1,0 +1,64 @@
+name: "Harvest Contacts & Publish Directory"
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: "Force full refresh of all contacts and leadership gaps"
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    # Run automatically every Sunday at 06:00 UTC
+    - cron: "0 6 * * 0"
+
+jobs:
+  harvest-and-publish:
+    name: "Harvest Contacts & Generate Deliverables"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Contacts Harvesting Pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rqhmsincnmxrgtipvkif.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o' }}
+        run: |
+          echo "=== 1/4 Harvesting Contacts from Supabase & PDFs ==="
+          python scripts/harvest_rotary_contacts.py
+
+          echo "=== 2/4 Analyzing Coverage Gaps ==="
+          python scripts/analyze_rotary_gaps.py
+
+          echo "=== 3/4 Enriching Gap Officers ==="
+          python scripts/enrich_officers.py
+
+          echo "=== 4/4 Generating Final Deliverables & HTML Directory ==="
+          python scripts/generate_contacts_deliverables.py
+
+      - name: Commit and push updated deliverables
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add rotary_contacts.csv rotary_clubs_districts_gaps.csv rotary_contacts_catalog.json contacts_directory.html harvested_contacts.json rotary_gaps_identified.json rotary_officers_enriched.json
+          if ! git diff --staged --quiet; then
+            git commit -m "feat(contacts): update contacts directory and roster deliverables [skip ci]"
+            git push
+          else
+            echo "No deliverable changes to commit."
+          fi

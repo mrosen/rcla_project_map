@@ -19,20 +19,17 @@ from pathlib import Path
 from dotenv import load_dotenv
 import fitz  # PyMuPDF
 
-WORKSPACE_ROOT = Path("/home/msr/rcla_project_map")
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent if (Path(__file__).resolve().parent.parent / "projects").exists() else Path(__file__).resolve().parent
 ENV_PATH = WORKSPACE_ROOT / ".env"
 RESOLVED_CLUBS_PATH = WORKSPACE_ROOT / "spc_resolved_clubs.json"
 
 if not ENV_PATH.exists():
     ENV_PATH = Path(".env")
-load_dotenv(ENV_PATH)
+if ENV_PATH.exists():
+    load_dotenv(ENV_PATH)
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Error: Missing SUPABASE_URL or SUPABASE_KEY in environment.")
-    sys.exit(1)
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://rqhmsincnmxrgtipvkif.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o"
 
 # Base URL for archive links
 ARCHIVE_BASE_URL = "https://mrosen.github.io/rcla_project_map/?source=supabase&project="
