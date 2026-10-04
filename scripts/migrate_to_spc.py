@@ -44,14 +44,30 @@ MEMBER_NAME = "Michael Rosen"
 MEMBER_EMAIL = "michael.rosen@gmail.com"
 
 AREA_OF_FOCUS_MAP = {
-    "water": ("db66058c-bb64-452e-92bf-405fdb8aa2cf", "Water, sanitation, and hygiene"),
-    "education": ("a5d5e449-36a9-446b-bf8f-2a691953873e", "Basic education and literacy"),
-    "economic": ("ecb970bf-b8e0-497a-828a-e0af3fefa28e", "Community economic development"),
-    "environment": ("3d1955c4-87fc-4f33-b75e-a8f7c3230cbc", "Environment"),
-    "health": ("6d9a56cd-9ca4-4e85-bb0b-9ff68cc1fb3c", "Maternal and child health"),
-    "disease": ("855c0e81-10bb-4560-9b92-2819867335d0", "Disease prevention and treatment"),
-    "peace": ("5a49b16b-8dc8-4e19-b0f8-fa092c9976d4", "Peacebuilding and conflict prevention"),
+    "water": ("277fa508-2453-44ff-b9c5-fa7400eaad48", "Water, sanitation, and hygiene"),
+    "education": ("a0c03499-3032-4be7-88d8-92f9b3669088", "Basic education and literacy"),
+    "economic": ("0a96d033-7795-4d8a-a6df-7d498ff5a30b", "Community economic development"),
+    "environment": ("e336025a-df29-427b-8f80-4f34d8c0ab77", "Environment"),
+    "health": ("232900f1-c143-4c9b-bf48-a15bcc2a1fee", "Maternal and child health"),
+    "disease": ("dcf8d4be-82a6-4575-bd95-a2b391d35cab", "Disease prevention and treatment"),
+    "peace": ("5ecd39bb-8059-4d6e-9c31-d15a61731536", "Peacebuilding and conflict prevention"),
 }
+
+FUNDING_TYPE_APINEW_MAP = {
+    "Global grant": "123456be-cece-4096-ab1b-4a554f213f04",
+    "District grant": "123456be-cece-4096-ab1b-4a554f213f01",
+    "Disaster response grant": "123456be-cece-4096-ab1b-4a554f213f21",
+    "Rotary Club": "123456be-cece-4096-ab1b-4a554f213f05",
+    "Rotaract club": "123456be-cece-4096-ab1b-4a554f213f06",
+    "District(Cash)": "123456be-cece-4096-ab1b-4a554f213f02",
+    "District(DDF)": "123456be-cece-4096-ab1b-4a554f213f03",
+    "Other": "123456be-cece-4096-ab1b-4a554f213f07",
+}
+
+PARTNER_CATEGORY_IMPLEMENTING = "8881284b-572b-4247-8546-6f5a9ead9ae8"
+PARTNER_CATEGORY_CONTRIBUTING = "09b7b3de-56b4-4d12-95b1-eaa58b53f573"
+FUNDING_TYPE_ROTARY_CLUB = "123456be-cece-4096-ab1b-4a554f213f05"
+PROJECT_STATUS_SUSTAINABLE = "6d9a56cd-9ca4-4e85-bb0b-9ff68cc1fb3c"
 
 US_STATE_ABBR = {
     'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
@@ -695,18 +711,18 @@ def construct_spc_payload(p: dict) -> dict:
     if len(full_desc) > 1000:
         full_desc = full_desc[:1000]
 
-    # Dates
+    # Dates (ISO 8601 required by Rotary apiNew backend)
     def to_spc_date(dt_str, fallback_m, fallback_d, fallback_y):
         if not dt_str:
-            return f"{fallback_m}/{fallback_d}/{fallback_y}"
+            return f"{fallback_y}-{fallback_m}-{fallback_d}T00:00:00"
         parts = str(dt_str).strip().split("-")
         if len(parts) == 3:
-            return f"{parts[1].zfill(2)}/{parts[2].zfill(2)}/{parts[0]}"
+            return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}T00:00:00"
         elif len(parts) == 2:
-            return f"{parts[1].zfill(2)}/15/{parts[0]}"
+            return f"{parts[0]}-{parts[1].zfill(2)}-15T00:00:00"
         elif len(parts) == 1 and parts[0].isdigit():
-            return f"01/15/{parts[0]}"
-        return f"{fallback_m}/{fallback_d}/{fallback_y}"
+            return f"{parts[0]}-01-15T00:00:00"
+        return f"{fallback_y}-{fallback_m}-{fallback_d}T00:00:00"
 
     start_y = str(p.get("start_year") or "2020").strip()
     end_y = str(p.get("end_year") or start_y).strip()
@@ -1042,18 +1058,41 @@ def construct_spc_payload(p: dict) -> dict:
                 "year": ""
             })
 
-    # Strict Funding Cleanup: ONLY entries with fundingAmount > 0 are allowed in Rotary SPC
+    # Strict Funding Cleanup: Format for apiNew typed model
     clean_fundings = []
     for f in fundings:
         f_amt = float(re.sub(r'[^0-9.]', '', str(f.get("fundingAmount", 0))) or 0)
         if f_amt > 0:
-            clean_fundings.append(f)
+            f_src = f.get("fundingSource", "Other")
+            f_type_id = FUNDING_TYPE_APINEW_MAP.get(f_src, FUNDING_TYPE_APINEW_MAP["Other"])
+            ckey = f.get("fundingClubKey") or ""
+            is_impl = (str(ckey).lower() == ROTARY_LAKE_ATITLAN_CLUB_KEY.lower() or "lake atitlan" in str(f.get("fundingOtherName", "")).lower())
+            clean_fundings.append({
+                "fundingTypeId": f_type_id,
+                "fundingAmount": str(int(f_amt)),
+                "fundingClubKey": ckey,
+                "isImplementingPartnerFlag": is_impl
+            })
     fundings = clean_fundings
 
-    # Strict Partner Cleanup: ONLY entries with a valid GUID partnerOrganizationKey are allowed in Rotary SPC
-    partners = [pt for pt in partners if is_valid_guid(pt.get("partnerOrganizationKey"))]
+    # Strict Partner Cleanup: Format for apiNew typed model
+    clean_partners = []
+    for pt in partners:
+        pkey = pt.get("partnerOrganizationKey")
+        if is_valid_guid(pkey):
+            is_host = (str(pkey).lower() == ROTARY_LAKE_ATITLAN_CLUB_KEY.lower())
+            clean_partners.append({
+                "partnerOrganizationKey": pkey,
+                "partnerCategoryId": PARTNER_CATEGORY_IMPLEMENTING if is_host else PARTNER_CATEGORY_CONTRIBUTING,
+                "FundTypeId": FUNDING_TYPE_ROTARY_CLUB,
+                "Hour": pt.get("Hour") or "",
+                "MoneyDonated": pt.get("MoneyDonated") or "",
+                "NoOfVolunteer": pt.get("NoOfVolunteer") or "",
+                "year": pt.get("year") or ""
+            })
+    partners = clean_partners
 
-    # Project search tags (semicolon-delimited for Rotary SPC, max 100 chars)
+    # Project search tags (List of KeyValue objects for apiNew)
     tag_list = []
     for org in cooperating_orgs:
         if org and "rotary" not in org.lower():
@@ -1081,7 +1120,7 @@ def construct_spc_payload(p: dict) -> dict:
             cur_len += add_len
         else:
             break
-    tags_str = ";".join(shortened_tags)
+    tags_payload = [{"value": t} for t in shortened_tags]
 
     # Map any official Rotary International Service Partners (Peace Corps, USAID, etc.)
     matched_ri_partners = []
@@ -1102,14 +1141,17 @@ def construct_spc_payload(p: dict) -> dict:
         "description": full_desc,
         "startDate": start_date,
         "endDate": end_date if is_completed else "",
-        "countryId": ROTARY_GUATEMALA_COUNTRY_KEY,
-        "tags": tags_str,
+        "countryId": "Guatemala",
+        "tags": tags_payload,
         "communityImpact": "",
         "projectImpact": "",
         "sustainImpact": "",
         "difficultyLevel": "",
         "estimatedBudget": budget_str,
         "estimatedAmount": "",
+        "projectStatusId": PROJECT_STATUS_SUSTAINABLE,
+        "isEradicationEffortsInitiative": False,
+        "isFundraiserInitiative": False,
         "projectTypeCompleteStatus": status_type,
         "year": "",
         "month": "",
@@ -1123,37 +1165,25 @@ def construct_spc_payload(p: dict) -> dict:
         "locationPostalCode": "",
         "latitude": lat,
         "longitude": lng,
-        "optGlobalGrants": False,
+        "optGlobalGrants": is_international,
+        "isOptGlobalGrants": is_international,
         "isBasicLevel": False,
         "isIntermediateLevel": False,
         "isAdvancedLevel": True if is_completed else False,
-        "isOptGlobalGrants": False,
         "isEstimatedStartTime": False,
         "isEstimatedDuration": False,
         "estimatedDuration": "",
-        "durationType": "Days",
+        "durationType": "",
         "isCompleted": is_completed,
-        "projectCategoryFund": {
-            "communityFlag": "1" if not is_international else "0",
-            "internationalFlag": "1" if is_international else "0",
-            "vocationalFlag": "0",
-            "newGenerationFlag": "0",
-            "fundRaiserFlag": "0",
-            "polioFlag": "0",
-            "environmentalFlag": "1" if "environment" in category.lower() else "",
-            "disasterResponseFlag": "1" if "emergency" in category.lower() else "0",
-            "areaOfFocusFlag": "1",
-            "areaOfFocusValue": aof_key,
-            "clubFoundationFlag": "",
-            "publicRelationGrantFlag": "",
-            "rotaryFoundationGrantFlag": is_foundation,
-            "otherFlag": "",
-            "otherValue": ""
-        },
+        "rotaryFoundationGrantFlag": is_foundation,
+        "projectXAreaOfFocuses": [
+            {"areaOfFocusTypeId": aof_key}
+        ],
         "projectRelLinks": rel_links,
         "projectContacts": [{
             "individualContactKey": MEMBER_KEY,
-            "individualContactId": MEMBER_ID
+            "individualContactId": MEMBER_ID,
+            "creator": True
         }],
         "projectFundings": fundings,
         "projectPartnerClubMembers": partners,
@@ -2052,7 +2082,7 @@ async def main():
                 print(f"  ✓ Duplicate Check: Clean (no existing project found in SPC).")
                 print(f"     Action: CREATING new project in SPC...")
 
-                # Call POST /api/Project/CreateProject with multi-stage fallback
+                # Call POST /apiNew/Project/CreateProject
                 result = await page.evaluate("""async (payload) => {
                     let redux = null;
                     for (const k of ['__REDUX_STORE__', 'store']) {
@@ -2072,128 +2102,47 @@ async def main():
                         if (payload.projectContacts && payload.projectContacts.length > 0) {
                             payload.projectContacts[0].individualContactKey = user.individualkey || payload.projectContacts[0].individualContactKey;
                             payload.projectContacts[0].individualContactId = user.memberId || payload.projectContacts[0].individualContactId;
+                            payload.projectContacts[0].creator = true;
                         }
                     }
                     document.cookie = "ssoToken=true; path=/";
 
-                    const hostClubKey = "c575902e-aae0-4b82-9aba-54947c09f4fe";
-                    const makeCreateReq = async (p) => {
+                    try {
+                        const res = await fetch('https://spc.rotary.org/apiNew/Project/CreateProject', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'accept': '*/*',
+                                'subscriptionkey': 'ROTARY_API_KEY'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const text = await res.text();
+                        let spcId = text ? text.replace(/^"|"$/g, '').trim() : '';
                         try {
-                            const res = await fetch('https://spc.rotary.org/api/Project/CreateProject', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'accept': '*/*',
-                                    'subscriptionkey': 'ROTARY_API_KEY'
-                                },
-                                body: JSON.stringify(p)
-                            });
-                            const text = await res.text();
-                            let data = null;
-                            try { data = JSON.parse(text); } catch (e) { data = text; }
-                            const spcId = (typeof data === 'string' ? data.replace(/^"|"$/g, '') : (data && data.spcId ? data.spcId : ''));
-                            const isValid = Boolean(spcId && typeof spcId === 'string' && spcId.trim() !== '' && spcId.trim() !== '00000000-0000-0000-0000-000000000000');
-                            return {
-                                ok: res.ok && isValid,
-                                status: res.status,
-                                spc_id: isValid ? spcId.trim() : null,
-                                raw_text: text,
-                                headers: Object.fromEntries(res.headers.entries())
-                            };
-                        } catch (err) {
-                            return { ok: false, error: err.message };
-                        }
-                    };
-
-                    // Stage 1: Attempt creation with full sanitized payload
-                    let r1 = await makeCreateReq(payload);
-                    if (r1.ok) {
-                        return { ok: true, spc_id: r1.spc_id, stage: 1 };
-                    }
-
-                    // Stage 2: Fallback attempt with empty tags
-                    if (payload.tags) {
-                        const p2 = { ...payload, tags: "" };
-                        let r2 = await makeCreateReq(p2);
-                        if (r2.ok) {
-                            return { ok: true, spc_id: r2.spc_id, stage: 2 };
-                        }
-                    }
-
-                    // Stage 3: Fallback attempt with host club only for initial creation record
-                    const p3 = {
-                        ...payload,
-                        tags: "",
-                        projectPartnerClubMembers: [{
-                            partnerOrganizationKey: hostClubKey,
-                            Hour: "",
-                            MoneyDonated: "",
-                            NoOfVolunteer: "",
-                            year: ""
-                        }],
-                        projectFundings: (payload.projectFundings || []).map(f => {
-                            if (f.fundingSource === "Rotary Club") {
-                                return { ...f, fundingClubKey: hostClubKey };
+                            const parsed = JSON.parse(text);
+                            if (parsed && typeof parsed === 'object') {
+                                spcId = parsed.key || parsed.spcId || parsed.guid || spcId;
                             }
-                            return f;
-                        })
-                    };
-                    let r3 = await makeCreateReq(p3);
-                    if (r3.ok) {
-                        return { ok: true, spc_id: r3.spc_id, stage: 3, needsUpdate: true };
-                    }
+                        } catch (e) {}
 
-                    return {
-                        ok: false,
-                        status: r1.status,
-                        error: `Empty GUID returned across all 3 stages. Stage 1: '${r1.raw_text || "empty"}', Stage 3: '${r3.raw_text || "empty"}'`,
-                        stage1_headers: r1.headers,
-                        stage3_headers: r3.headers
-                    };
+                        const isValid = Boolean(spcId && spcId.length > 10 && spcId !== '00000000-0000-0000-0000-000000000000');
+                        if (res.ok && isValid) {
+                            return { ok: true, spc_id: spcId, status: res.status };
+                        }
+                        return {
+                            ok: false,
+                            status: res.status,
+                            error: `Create failed (status ${res.status}): ${text}`
+                        };
+                    } catch (err) {
+                        return { ok: false, error: err.message };
+                    }
                 }""", payload)
 
                 if result.get("ok") and result.get("spc_id"):
                     spc_id = result.get("spc_id")
-                    stage = result.get("stage", 1)
-                    print(f"  ✓ SUCCESS! Created in SPC (Stage {stage}): {spc_id}")
-
-                    # Rotary's CreateProject endpoint returns legacy nfKey.
-                    # Query apiNew/Search to resolve canonical profile.key used by modern SPC web app.
-                    try:
-                        canon_id = await page.evaluate("""async ({ title, fallbackId }) => {
-                            try {
-                                const res = await fetch('https://spc.rotary.org/apiNew/Search', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'accept': '*/*',
-                                        'subscriptionkey': 'ROTARY_API_KEY'
-                                    },
-                                    body: JSON.stringify({
-                                        keyword: title,
-                                        limit: '20',
-                                        variation: 'en'
-                                    })
-                                });
-                                if (!res.ok) return fallbackId;
-                                const items = await res.json();
-                                const clean = title.toLowerCase().trim();
-                                for (const it of items) {
-                                    const itTitle = (it.title || '').toLowerCase().trim();
-                                    if (itTitle === clean || itTitle.includes(clean) || clean.includes(itTitle)) {
-                                        if (it.nfKey) return it.nfKey;
-                                    }
-                                }
-                                return fallbackId;
-                            } catch (e) {
-                                return fallbackId;
-                            }
-                        }""", {"title": title, "fallbackId": spc_id})
-                        if canon_id and canon_id.lower() != spc_id.lower():
-                            print(f"  ⚡ Canonical Profile Key resolved from apiNew: {canon_id}")
-                            spc_id = canon_id
-                    except Exception as ex:
-                        print(f"  [Notice] Could not resolve apiNew profile key: {ex}")
+                    print(f"  ✓ SUCCESS! Created in SPC: {spc_id}")
 
                     state[pid] = {
                         "spc_id": spc_id,
@@ -2204,34 +2153,7 @@ async def main():
                     }
                     save_state(state, pid)
 
-                    # If Stage 3 was used, immediately attach all partner clubs & detailed funding via UpdateProject
-                    if result.get("needsUpdate"):
-                        print(f"  ⚡ Stage 3 used: Now attaching partner clubs & funding allocations via UpdateProject...")
-                        payload["currentProjectKey"] = spc_id
-                        update_res = await page.evaluate("""async (payload) => {
-                            try {
-                                payload.isChangedProjectPartnerDetail = true;
-                                payload.isChangedProjectFundingDetail = true;
-                                payload.isChangedProjectDetail = true;
 
-                                const res = await fetch('https://spc.rotary.org/api/Project/UpdateProject', {
-                                    method: 'PUT',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'accept': '*/*',
-                                        'subscriptionkey': 'ROTARY_API_KEY'
-                                    },
-                                    body: JSON.stringify(payload)
-                                });
-                                return { ok: res.ok, status: res.status };
-                            } catch (e) {
-                                return { ok: false, error: e.message };
-                            }
-                        }""", payload)
-                        if update_res.get("ok"):
-                            print(f"  ✓ Successfully attached partner clubs and funding allocations to {spc_id}")
-                        else:
-                            print(f"  [Notice] Partner club attachment update status: {update_res.get('status')}")
                 else:
                     err_msg = result.get('error') or f"Status {result.get('status')}"
                     print(f"  ✗ CREATE FAILED for {pid}: {err_msg}", flush=True)
