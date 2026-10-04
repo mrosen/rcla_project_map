@@ -1360,10 +1360,14 @@ async def main():
 
         # Wait until we leave the login page
         await page.wait_for_timeout(3000)
+        authenticated = False
         for _ in range(60):
             if "login" not in page.url.lower():
+                authenticated = True
                 break
             await page.wait_for_timeout(1000)
+        if not authenticated:
+            raise RuntimeError(f"Authentication failed: Page remained at login URL: {page.url}")
         print("  ✓ Successfully authenticated with My Rotary.")
 
         # Step 2: SSO Token Handshake from My Rotary to SPC
@@ -1704,32 +1708,16 @@ async def main():
                 print(f"     Action: UPDATING existing project in-place (No duplicate created)...")
 
                 payload["currentProjectKey"] = spc_key
+                payload["projectId"] = spc_key
+                payload["projectKey"] = spc_key
 
-                # Call PUT /api/Project/UpdateProject with existing detail context
+                # Call PUT /apiNew/Project/UpdateProject
                 result = await page.evaluate("""async (payload) => {
                     try {
-                        const spcKey = payload.currentProjectKey;
-                        // Fetch existing project detail to retain backend category keys
-                        let existingDetail = null;
-                        try {
-                            const detRes = await fetch(`https://spc.rotary.org/api/Project/ProjectDetail/en/${spcKey}`, {
-                                method: 'GET',
-                                headers: {
-                                    'accept': '*/*',
-                                    'subscriptionkey': 'ROTARY_API_KEY'
-                                }
-                            });
-                            if (detRes.ok) {
-                                existingDetail = await detRes.json();
-                            }
-                        } catch (e) {
-                            // Non-fatal
-                        }
-
                         let redux = null;
-                        for (const k in window) {
+                        for (const k of ['__REDUX_STORE__', 'store']) {
                             try {
-                                if (window[k] && typeof window[k].getState === 'function') {
+                                if (window[k] && window[k].getState) {
                                     redux = window[k].getState();
                                     break;
                                 }
@@ -1741,289 +1729,14 @@ async def main():
                             if (user.memberId) payload.currentSignedInMemberId = user.memberId;
                             if (user.userName) payload.currentSignedInMemberName = user.userName;
                             if (user.userLoginEmail) payload.individualEmail = user.userLoginEmail;
+                            if (payload.projectContacts && payload.projectContacts.length > 0) {
+                                payload.projectContacts[0].individualContactKey = user.individualkey || payload.projectContacts[0].individualContactKey;
+                                payload.projectContacts[0].individualContactId = user.memberId || payload.projectContacts[0].individualContactId;
+                            }
                         }
                         document.cookie = "ssoToken=true; path=/";
 
-                        payload.isChangedProjectDetail = true;
-                        if (payload.projectCategoryFund) {
-                            if (existingDetail && existingDetail.categories && existingDetail.categories.length > 0) {
-                                payload.projectCategoryFund.projectCategoryFundKey = existingDetail.categories[0].projectCategoryFundKey;
-                                payload.projectCategoryFund.isChangedProjectCategoryFund = false;
-                            } else {
-                                payload.projectCategoryFund.isChangedProjectCategoryFund = true;
-                            }
-                            payload.projectCategoryFund.rotaryFoundationGrantFlag = !!payload.projectCategoryFund.rotaryFoundationGrantFlag;
-                        }
-
-                        if (existingDetail && existingDetail.profile) {
-                            if (existingDetail.profile.locationName) payload.location = existingDetail.profile.locationName;
-                            if (existingDetail.profile.tags && existingDetail.profile.tags.length > 0) {
-                                payload.tags = existingDetail.profile.tags.join(';');
-                            }
-                            if (existingDetail.profile.currentProjectAddressKey) {
-                                payload.currentProjectAddressKey = existingDetail.profile.currentProjectAddressKey;
-                            }
-                            if (existingDetail.profile.currentEstablishedProjectKey) {
-                                payload.currentEstablishedProjectKey = existingDetail.profile.currentEstablishedProjectKey;
-                            }
-                            if (existingDetail.profile.currentProposedProjectKey) {
-                                payload.currentProposedProjectKey = existingDetail.profile.currentProposedProjectKey;
-                            }
-                        }
-                        if (payload.location && payload.location.length > 50) {
-                            payload.location = payload.location.slice(0, 50);
-                        }
-                        if (payload.tags && payload.tags.length > 100) {
-                            payload.tags = payload.tags.slice(0, 100);
-                        }
-
-                        // Reconcile Medias / RelLinks (prevents duplicate links)
-                        if (existingDetail && existingDetail.medias && existingDetail.medias.length > 0) {
-                            const existingMedias = existingDetail.medias;
-                            const newRelLinks = [];
-                            const usedExistingMediaKeys = new Set();
-
-                            for (const link of (payload.projectRelLinks || [])) {
-                                const rawUrl = atob(link.url);
-                                const match = existingMedias.find(m => (!usedExistingMediaKeys.has(m.mediaKey)) && (m.url === rawUrl || m.title === link.caption));
-                                if (match) {
-                                    usedExistingMediaKeys.add(match.mediaKey);
-                                    newRelLinks.push({
-                                        ...link,
-                                        mediaKey: match.mediaKey,
-                                        isChangedProjectRelLink: false,
-                                        isDeleted: false
-                                    });
-                                } else {
-                                    newRelLinks.push({
-                                        ...link,
-                                        isChangedProjectRelLink: true,
-                                        isDeleted: false
-                                    });
-                                }
-                            }
-
-                            // Mark any unreferenced existing media as deleted to clean up duplicates
-                            for (const m of existingMedias) {
-                                if (!usedExistingMediaKeys.has(m.mediaKey)) {
-                                    newRelLinks.push({
-                                        mediaKey: m.mediaKey,
-                                        relLinkType: m.type || "5",
-                                        caption: m.title || "",
-                                        url: btoa(m.url),
-                                        isCoverPhoto: "0",
-                                        isDeleted: true,
-                                        isChangedProjectRelLink: true
-                                    });
-                                }
-                            }
-                            payload.projectRelLinks = newRelLinks;
-                        }
-
-                        // Reconcile FundingSources (prevents duplicate fundings)
-                        const existingFundings = (existingDetail && existingDetail.fundingSources) ? existingDetail.fundingSources : [];
-                        const newFundings = [];
-                        const usedFundingKeys = new Set();
-
-                        for (const f of (payload.projectFundings || [])) {
-                            delete f.fundingOrgName;
-                            if (!f.fundingOtherName) delete f.fundingOtherName;
-                            delete f.fundingSourceKey;
-                            delete f.isImplementingPartnerFlag;
-
-                            const match = existingFundings.find(ef => (!usedFundingKeys.has(ef.projectFundingSourceKey)) && (
-                                (ef.fundingSource === f.fundingSource && (ef.fundingSourceKey === f.fundingClubKey || ef.fundingOtherName === f.fundingClubKey)) ||
-                                (f.fundingClubKey && ef.fundingOtherName === f.fundingClubKey)
-                            ));
-                            if (match) {
-                                usedFundingKeys.add(match.projectFundingSourceKey);
-                                newFundings.push({
-                                    ...f,
-                                    projectFundingSourceKey: match.projectFundingSourceKey,
-                                    isChangedProjectFundingSource: true,
-                                    isDeleted: false
-                                });
-                            } else {
-                                const unused = existingFundings.find(ef => !usedFundingKeys.has(ef.projectFundingSourceKey) && ef.fundingSource === f.fundingSource);
-                                if (unused) {
-                                    usedFundingKeys.add(unused.projectFundingSourceKey);
-                                    newFundings.push({
-                                        ...f,
-                                        projectFundingSourceKey: unused.projectFundingSourceKey,
-                                        isChangedProjectFundingSource: true,
-                                        isDeleted: false
-                                    });
-                                } else {
-                                    newFundings.push({
-                                        ...f,
-                                        isChangedProjectFundingSource: true,
-                                        isDeleted: false
-                                    });
-                                }
-                            }
-                        }
-
-                        // Mark any unreferenced existing funding as deleted
-                        for (const ef of existingFundings) {
-                            if (!usedFundingKeys.has(ef.projectFundingSourceKey)) {
-                                newFundings.push({
-                                    projectFundingSourceKey: ef.projectFundingSourceKey,
-                                    fundingSource: ef.fundingSource || "",
-                                    fundingAmount: ef.fundingAmount || "",
-                                    fundingClubKey: "",
-                                    isDeleted: true,
-                                    isChangedProjectFundingSource: true
-                                });
-                            }
-                        }
-                        payload.projectFundings = newFundings;
-
-                        // Reconcile Partners (prevents duplicate partners)
-                        const existingPartners = (existingDetail && existingDetail.partners) ? existingDetail.partners : [];
-                        const newPartners = [];
-                        const usedPartnerKeys = new Set();
-
-                        const hostClubKey = "c575902e-aae0-4b82-9aba-54947c09f4fe";
-                        const bothCat = "8881284b-572b-4247-8546-6f5a9ead9ae8";
-                        const fundingCat = "09b7b3de-56b4-4d12-95b1-eaa58b53f573";
-                        const clubFundType = "123456be-cece-4096-ab1b-4a554f213f05";
-
-                        for (const pcm of (payload.projectPartnerClubMembers || [])) {
-                            const pcmKey = (pcm.partnerOrganizationKey || '').toLowerCase().trim();
-                            const isHost = (pcmKey === hostClubKey.toLowerCase());
-                            const catId = pcm.partnerCategoryId || (isHost ? bothCat : fundingCat);
-                            const fTypeId = pcm.fundTypeId || clubFundType;
-
-                            const match = existingPartners.find(ep => (!usedPartnerKeys.has(ep.key)) && (
-                                (ep.partnerKey && ep.partnerKey.toLowerCase().trim() === pcmKey) ||
-                                (ep.organizationName && ep.organizationName.toLowerCase().trim() === pcmKey) ||
-                                (ep.clubName && ep.clubName.toLowerCase().trim() === pcmKey)
-                            ));
-                            if (match) {
-                                usedPartnerKeys.add(match.key);
-                                newPartners.push({
-                                    partnerOrganizationKey: pcm.partnerOrganizationKey,
-                                    partnerCategoryId: catId,
-                                    fundTypeId: fTypeId,
-                                    Hour: pcm.Hour || "",
-                                    MoneyDonated: pcm.MoneyDonated || "",
-                                    NoOfVolunteer: pcm.NoOfVolunteer || "",
-                                    year: pcm.year || "",
-                                    projectPartnerClubMemberKey: match.key,
-                                    isChangedProjectPartnerClubMember: true,
-                                    isDeleted: false
-                                });
-                            } else {
-                                newPartners.push({
-                                    partnerOrganizationKey: pcm.partnerOrganizationKey,
-                                    partnerCategoryId: catId,
-                                    fundTypeId: fTypeId,
-                                    Hour: pcm.Hour || "",
-                                    MoneyDonated: pcm.MoneyDonated || "",
-                                    NoOfVolunteer: pcm.NoOfVolunteer || "",
-                                    year: pcm.year || "",
-                                    isChangedProjectPartnerClubMember: true,
-                                    isDeleted: false
-                                });
-                            }
-                        }
-
-                        // Mark unreferenced duplicate partners as deleted
-                        for (const ep of existingPartners) {
-                            if (!usedPartnerKeys.has(ep.key)) {
-                                newPartners.push({
-                                    projectPartnerClubMemberKey: ep.key,
-                                    partnerOrganizationKey: ep.partnerKey || ep.organizationName || ep.clubName || "",
-                                    partnerCategoryId: ep.partnerCategoryId || fundingCat,
-                                    fundTypeId: ep.fundTypeId || clubFundType,
-                                    year: ep.year || "",
-                                    Hour: ep.numberOfHours ? String(ep.numberOfHours) : "",
-                                    NoOfVolunteer: ep.numberOfVolunteer ? String(ep.numberOfVolunteer) : "",
-                                    MoneyDonated: ep.moneyDonated ? String(ep.moneyDonated) : "",
-                                    isDeleted: true,
-                                    isChangedProjectPartnerClubMember: true
-                                });
-                            }
-                        }
-                        payload.projectPartnerClubMembers = newPartners;
-
-                        // Reconcile Non-Rotary Partners (Partners in Service)
-                        const existingNonRotary = (existingDetail && existingDetail.nonRotaryPartners) ? existingDetail.nonRotaryPartners : [];
-                        const newNonRotary = [];
-                        const usedNonRotaryKeys = new Set();
-
-                        for (const pnr of (payload.projectNonRotaryPartners || [])) {
-                            const pnrGuid = (pnr.nonRotaryPartnerKey || '').trim().toUpperCase();
-                            if (!pnrGuid) continue;
-                            const match = existingNonRotary.find(enr => (!usedNonRotaryKeys.has(enr.projectNonRotaryPartnerKey)) && (
-                                (enr.nonRotaryPartnerKey && enr.nonRotaryPartnerKey.toUpperCase() === pnrGuid)
-                            ));
-                            if (match) {
-                                usedNonRotaryKeys.add(match.projectNonRotaryPartnerKey);
-                                newNonRotary.push({
-                                    projectNonRotaryPartnerKey: match.projectNonRotaryPartnerKey,
-                                    nonRotaryPartnerKey: pnrGuid,
-                                    isChangedNonRotaryPartner: false,
-                                    isDeleted: false
-                                });
-                            } else {
-                                newNonRotary.push({
-                                    nonRotaryPartnerKey: pnrGuid,
-                                    isChangedNonRotaryPartner: true,
-                                    isDeleted: false
-                                });
-                            }
-                        }
-
-                        // Mark any unreferenced existing non-rotary partners as deleted
-                        for (const enr of existingNonRotary) {
-                            if (!usedNonRotaryKeys.has(enr.projectNonRotaryPartnerKey)) {
-                                newNonRotary.push({
-                                    projectNonRotaryPartnerKey: enr.projectNonRotaryPartnerKey,
-                                    nonRotaryPartnerKey: enr.nonRotaryPartnerKey,
-                                    isDeleted: true,
-                                    isChangedNonRotaryPartner: true
-                                });
-                            }
-                        }
-                        payload.projectNonRotaryPartners = newNonRotary;
-
-                        // Reconcile Contacts / Joiners (deduplicates so each individual appears only once active)
-                        if (existingDetail && existingDetail.joiners && existingDetail.joiners.length > 0) {
-                            const existingContacts = existingDetail.joiners.map(j => j.contacts).filter(Boolean);
-                            const seenIndividuals = new Set();
-                            const newContacts = [];
-                            for (const ec of existingContacts) {
-                                const indKey = ec.individualId || ec.memberId;
-                                if (!seenIndividuals.has(indKey)) {
-                                    seenIndividuals.add(indKey);
-                                    newContacts.push({
-                                        projectContactKey: ec.key,
-                                        individualContactKey: ec.individualId,
-                                        individualContactId: ec.memberId,
-                                        isChangedProjectContact: false,
-                                        isDeleted: false
-                                    });
-                                } else {
-                                    // Mark duplicate joiner for the same individual as deleted to resolve conflict
-                                    newContacts.push({
-                                        projectContactKey: ec.key,
-                                        individualContactKey: ec.individualId,
-                                        individualContactId: ec.memberId,
-                                        isChangedProjectContact: true,
-                                        isDeleted: true
-                                    });
-                                }
-                            }
-                            payload.projectContacts = newContacts;
-                        }
-
-                        payload.isChangedProjectPartnerDetail = true;
-                        payload.isChangedProjectNonRotaryPartnerDetail = newNonRotary.some(x => x.isChangedNonRotaryPartner !== false);
-                        payload.isChangedProjectFundingDetail = true;
-                        payload.isChangedProjectDetail = true;
-
-                        const res = await fetch('https://spc.rotary.org/api/Project/UpdateProject', {
+                        const res = await fetch('https://spc.rotary.org/apiNew/Project/UpdateProject', {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -2059,7 +1772,9 @@ async def main():
                     }
                     save_state(state, pid)
                 else:
-                    print(f"  ✗ UPDATE FAILED: Status {result.get('status')} — {result.get('error')}")
+                    err_msg = result.get('error') or f"Status {result.get('status')}"
+                    print(f"  ✗ UPDATE FAILED: {err_msg}")
+                    failed_projects.append((pid, err_msg))
                     if result.get("sentPayload"):
                         Path('/tmp/failed_payload.json').write_text(json.dumps(result.get("sentPayload"), indent=2))
                         print("  [DEBUG] Dumped sent payload to /tmp/failed_payload.json")
