@@ -3,10 +3,15 @@
 scripts/download_grant_center.py
 --------------------------------
 Downloads Grant Applications, Reports, and Attachments from the legacy Rotary
-Grant Center (grants.rotary.org / spc.rotary.org/mygrants) via Playwright.
+Grant Center (grants.rotary.org / spc.rotary.org/mygrants) via Playwright, and
+synchronizes them directly to Supabase Storage ('project-media') and the
+'project_assets' PostgreSQL table.
 
-Saves documents directly into projects/<grant_id>/, updates files.json manifests,
-and syncs assets into Supabase Storage ('project-media') and the 'project_assets' table.
+Supabase is the sole source of truth:
+- Existing file checks query Supabase project_assets directly.
+- Downloaded files upload to Supabase Storage bucket 'project-media'.
+- Metadata records are upserted into 'project_assets'.
+- No files are written or committed to git.
 
 Usage:
     python scripts/download_grant_center.py --grant GG2684482 --headless
@@ -17,20 +22,20 @@ Usage:
 import asyncio
 import argparse
 import html as html_module
-import json
 import mimetypes
 import os
 import re
 import sys
+import tempfile
+import shutil
 from datetime import datetime
 from pathlib import Path
 import requests
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import async_playwright
 
 # Locate repository root dynamically
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PROJECTS_DIR = REPO_ROOT / "projects"
 
 # Load environment configuration
 load_dotenv(REPO_ROOT / ".env")
@@ -70,35 +75,29 @@ async def dismiss_cookies(page):
         except Exception:
             pass
 
-def update_project_manifest(project_folder: Path):
-    """Scans project folder and updates files.json while preserving links."""
-    manifest_path = project_folder / "files.json"
-    existing_links = []
-    if manifest_path.exists():
-        try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                existing_links = data.get("links", [])
-        except Exception:
-            pass
+def get_existing_supabase_assets(project_id: str, supabase_url: str, supabase_key: str) -> set:
+    """Queries Supabase project_assets for filenames that already exist for this project."""
+    if not supabase_url or not supabase_key:
+        return set()
 
-    exclude = {"files.json"}
-    files = []
-    for entry in sorted(project_folder.iterdir()):
-        if entry.is_file() and entry.name not in exclude and not entry.name.startswith(".") and ":Zone.Identifier" not in entry.name:
-            files.append(entry.name)
-
-    manifest_data = {
-        "files": files,
-        "links": existing_links
+    clean_pid = project_id.upper().replace("-", "").replace(" ", "")
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}"
     }
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest_data, f, indent=2)
-    log(f"  ✓ Updated manifest: {manifest_path.name} ({len(files)} files)")
+    url = f"{supabase_url}/rest/v1/project_assets?project_id=eq.{clean_pid}&select=filename"
+    try:
+        r = requests.get(url, headers=headers, timeout=15)
+        if r.status_code == 200 and isinstance(r.json(), list):
+            return {row.get("filename", "").strip() for row in r.json() if row.get("filename")}
+    except Exception as e:
+        log(f"  Warning querying Supabase assets for {clean_pid}: {e}")
+    return set()
 
 def sync_file_to_supabase(project_id: str, file_path: Path, supabase_url: str, supabase_key: str):
     """Uploads file to Supabase Storage bucket 'project-media' and upserts into project_assets table."""
     if not supabase_url or not supabase_key:
+        log("  Warning: Supabase credentials missing. Skipping cloud upload.")
         return False
 
     clean_pid = project_id.upper().replace("-", "").replace(" ", "")
@@ -118,7 +117,7 @@ def sync_file_to_supabase(project_id: str, file_path: Path, supabase_url: str, s
     }
 
     try:
-        # 1. Upload to storage bucket
+        # 1. Upload file blob to Supabase Storage
         up_url = f"{supabase_url}/storage/v1/object/project-media/{storage_path}"
         up_headers = {
             **headers,
@@ -126,11 +125,12 @@ def sync_file_to_supabase(project_id: str, file_path: Path, supabase_url: str, s
             "x-upsert": "true",
         }
         with open(file_path, "rb") as bf:
-            up_res = requests.post(up_url, headers=up_headers, data=bf.read(), timeout=40)
+            up_res = requests.post(up_url, headers=up_headers, data=bf.read(), timeout=60)
         if up_res.status_code not in (200, 201):
-            log(f"  Notice: Supabase storage upload HTTP {up_res.status_code} for {file_path.name}")
+            log(f"  Storage upload returned HTTP {up_res.status_code} for {file_path.name}")
+            return False
 
-        # 2. Upsert row in project_assets table
+        # 2. Upsert metadata row in project_assets table
         pub_url = f"{supabase_url}/storage/v1/object/public/project-media/{storage_path}"
         asset_row = {
             "project_id": clean_pid,
@@ -152,10 +152,10 @@ def sync_file_to_supabase(project_id: str, file_path: Path, supabase_url: str, s
             post_url = f"{supabase_url}/rest/v1/project_assets"
             requests.post(post_url, headers=headers, json=asset_row, timeout=15)
 
-        log(f"  ✓ Synced to Supabase: {file_path.name}")
+        log(f"  ✓ Synced to Supabase: {file_path.name} ({file_path.stat().st_size:,} bytes)")
         return True
     except Exception as e:
-        log(f"  Supabase sync warning for {file_path.name}: {e}")
+        log(f"  Supabase sync error for {file_path.name}: {e}")
         return False
 
 def extract_print_url(page_source: str) -> str:
@@ -250,7 +250,6 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
         """
         await context.add_init_script(interceptor_js)
 
-        # Watch for direct PDF response
         direct_pdf_body = None
         async def on_response(response):
             nonlocal direct_pdf_body
@@ -269,7 +268,7 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
         if direct_pdf_body and direct_pdf_body[:4] == b'%PDF':
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(direct_pdf_body)
-            log(f"  ✓ {path.name} ({len(direct_pdf_body):,} bytes) [direct]")
+            log(f"  ✓ Downloaded {path.name} ({len(direct_pdf_body):,} bytes) [direct]")
             return True
 
         log("  Waiting for pdfWriter popup...")
@@ -301,7 +300,6 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
             log("  No POST body captured — skipping")
             return False
 
-        # Replay POST using requests with browser session cookies
         cookies = {c["name"]: c["value"] for c in await context.cookies(["https://grants.rotary.org"])}
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -323,7 +321,7 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
         if resp.content[:4] == b'%PDF':
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(resp.content)
-            log(f"  ✓ {path.name} ({len(resp.content):,} bytes)")
+            log(f"  ✓ Downloaded {path.name} ({len(resp.content):,} bytes)")
             return True
 
         log("  Response is not a valid PDF")
@@ -335,8 +333,8 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
         try: await tab.close()
         except Exception: pass
 
-async def save_reports_pdfs(context, grant_page, folder: Path, gn: str, force: bool = False) -> list:
-    """Navigate to Reports page (fieldid=1330864), discover all Print links, save each as PDF."""
+async def save_reports_pdfs(context, grant_page, work_dir: Path, gn: str, existing_assets: set, force: bool = False) -> list:
+    """Discover all Report Print links and save newly found ones."""
     m = re.search(r'codedid=([^&\s]+)', grant_page.url)
     if not m:
         log("  No codedid for reports — skipping")
@@ -357,13 +355,11 @@ async def save_reports_pdfs(context, grant_page, folder: Path, gn: str, force: b
                 try:
                     links = await frame.query_selector_all("a:has-text('Print')")
                     if links:
-                        log(f"  Found Print links in frame: {frame.url[:60]}")
                         print_links = links
                         break
                 except Exception:
                     pass
 
-        log(f"  Print link elements found: {len(print_links)}")
         print_urls = []
         for link in print_links:
             try:
@@ -380,11 +376,13 @@ async def save_reports_pdfs(context, grant_page, folder: Path, gn: str, force: b
         log(f"  Found {len(print_urls)} report print link(s)")
 
         for idx, print_url in enumerate(print_urls, 1):
-            out_path = folder / f"{gn}_Report_{idx:02d}.pdf"
-            if out_path.exists() and out_path.stat().st_size > 10000 and not force:
-                log(f"  Skipping report {idx} (already exists)")
+            report_name = f"{gn}_Report_{idx:02d}.pdf"
+            if report_name in existing_assets and not force:
+                log(f"  Skipping report {idx} (already in Supabase: {report_name})")
                 continue
-            log(f"  Report {idx}: {print_url[:80]}")
+
+            out_path = work_dir / report_name
+            log(f"  Downloading Report {idx}: {print_url[:80]}")
             try:
                 ok = await save_grant_pdf(context, reports_tab, out_path, print_url_override=print_url)
                 if ok:
@@ -396,8 +394,8 @@ async def save_reports_pdfs(context, grant_page, folder: Path, gn: str, force: b
         except Exception: pass
     return saved
 
-async def save_supporting_docs(context, grant_page, folder: Path, gn: str) -> list:
-    """Navigate to Supporting Documents page (fieldid=1331466), download all attachments."""
+async def save_supporting_docs(context, grant_page, work_dir: Path, gn: str, existing_assets: set, force: bool = False) -> list:
+    """Discover all attachment links in Supporting Documents and download them."""
     m = re.search(r'codedid=([^&\s]+)', grant_page.url)
     if not m:
         log("  No codedid for supporting docs — skipping")
@@ -439,7 +437,6 @@ async def save_supporting_docs(context, grant_page, folder: Path, gn: str) -> li
             except Exception:
                 pass
 
-        log(f"  Found {len(found_links)} supporting document link(s)")
         if found_links:
             cookies = {c["name"]: c["value"] for c in await context.cookies(["https://grants.rotary.org"])}
             for idx, (file_url, label) in enumerate(found_links, 1):
@@ -448,16 +445,18 @@ async def save_supporting_docs(context, grant_page, folder: Path, gn: str) -> li
                 if not any(clean_name.lower().endswith(ext) for ext in [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx", ".zip"]):
                     clean_name += ".pdf"
 
-                dest = folder / f"{gn}_Attachment_{idx:02d}_{clean_name}"
-                if dest.exists() and dest.stat().st_size > 500:
+                attachment_filename = f"{gn}_Attachment_{idx:02d}_{clean_name}"
+                if attachment_filename in existing_assets and not force:
+                    log(f"  Skipping attachment {idx} (already in Supabase: {attachment_filename})")
                     continue
 
+                dest = work_dir / attachment_filename
                 try:
                     r = requests.get(file_url, cookies=cookies, timeout=60)
                     if r.status_code == 200 and len(r.content) > 100:
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         dest.write_bytes(r.content)
-                        log(f"  ✓ Attachment {idx}: {dest.name} ({len(r.content):,} bytes)")
+                        log(f"  ✓ Downloaded Attachment {idx}: {dest.name} ({len(r.content):,} bytes)")
                         downloaded.append(dest)
                 except Exception as de:
                     log(f"  Attachment {idx} download error: {de}")
@@ -473,10 +472,6 @@ async def save_supporting_docs(context, grant_page, folder: Path, gn: str) -> li
 async def save_dg_excel(context, grant_page, out_path: Path) -> bool:
     """Fetch DG Excel export directly via fieldid=1324761."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    if out_path.exists() and out_path.stat().st_size > 1000:
-        log("  Skipping Excel (already exists)")
-        return True
-
     m = re.search(r'codedid=([^&]+)', grant_page.url)
     if not m:
         log("  Could not extract codedid from URL")
@@ -495,50 +490,69 @@ async def save_dg_excel(context, grant_page, out_path: Path) -> bool:
         resp = requests.get(url, cookies=cookies, headers=headers, timeout=60)
         if resp.status_code == 200 and len(resp.content) > 100:
             out_path.write_bytes(resp.content)
-            log(f"  ✓ {out_path.name} ({len(resp.content):,} bytes)")
+            log(f"  ✓ Downloaded {out_path.name} ({len(resp.content):,} bytes)")
             return True
         return False
     except Exception as e:
         log(f"  Excel fetch error: {e}")
         return False
 
-async def process_grant_page(grant_page, context, gn: str, dest_dir: Path, force: bool = False, sync_supabase: bool = True, sb_url: str = "", sb_key: str = ""):
-    """Processes open grant tab: downloads application, reports, attachments, and updates manifests."""
-    log(f"\nProcessing grant {gn} -> {dest_dir.name}...")
-    dest_dir.mkdir(parents=True, exist_ok=True)
+async def process_grant_page(grant_page, context, gn: str, force: bool = False, sb_url: str = "", sb_key: str = "", local_save_dir: Path = None):
+    """Processes open grant tab: checks Supabase, downloads missing files to temp, and uploads straight to Supabase."""
+    log(f"\nProcessing grant {gn}...")
+
+    # Query Supabase for existing assets for this grant
+    existing_assets = get_existing_supabase_assets(gn, sb_url, sb_key) if not force else set()
+    log(f"  Existing Supabase assets for {gn}: {len(existing_assets)} file(s)")
+
     is_dg = gn.startswith("DG")
+    work_dir = Path(tempfile.mkdtemp(prefix=f"grant_{gn}_"))
     downloaded_files = []
 
-    if is_dg:
-        excel_path = dest_dir / f"{gn}_Application.xls"
-        if not excel_path.exists() or force:
-            if await save_dg_excel(context, grant_page, excel_path):
-                downloaded_files.append(excel_path)
-    else:
-        # 1. Application PDF
-        app_path = dest_dir / f"{gn}_Application.pdf"
-        if not app_path.exists() or force or app_path.stat().st_size < 10000:
-            if await save_grant_pdf(context, grant_page, app_path):
-                downloaded_files.append(app_path)
+    try:
+        if is_dg:
+            excel_name = f"{gn}_Application.xls"
+            if excel_name not in existing_assets or force:
+                excel_path = work_dir / excel_name
+                if await save_dg_excel(context, grant_page, excel_path):
+                    downloaded_files.append(excel_path)
+            else:
+                log(f"  Skipping DG Excel (already in Supabase: {excel_name})")
         else:
-            log(f"  Skipping Application (already downloaded: {app_path.name})")
+            # 1. Application PDF
+            app_name = f"{gn}_Application.pdf"
+            if app_name not in existing_assets or force:
+                app_path = work_dir / app_name
+                if await save_grant_pdf(context, grant_page, app_path):
+                    downloaded_files.append(app_path)
+            else:
+                log(f"  Skipping Application (already in Supabase: {app_name})")
 
-        # 2. Report PDFs
-        reports = await save_reports_pdfs(context, grant_page, dest_dir, gn, force=force)
-        downloaded_files.extend(reports)
+            # 2. Report PDFs
+            reports = await save_reports_pdfs(context, grant_page, work_dir, gn, existing_assets=existing_assets, force=force)
+            downloaded_files.extend(reports)
 
-        # 3. Supporting Documents
-        attachments = await save_supporting_docs(context, grant_page, dest_dir, gn)
-        downloaded_files.extend(attachments)
+            # 3. Supporting Documents
+            attachments = await save_supporting_docs(context, grant_page, work_dir, gn, existing_assets=existing_assets, force=force)
+            downloaded_files.extend(attachments)
 
-    # Update manifest files.json
-    update_project_manifest(dest_dir)
+        # Upload downloaded files directly to Supabase Storage & project_assets
+        if downloaded_files and sb_url and sb_key:
+            log(f"  Uploading {len(downloaded_files)} newly retrieved file(s) to Supabase Storage & project_assets...")
+            for df in downloaded_files:
+                sync_file_to_supabase(gn, df, sb_url, sb_key)
 
-    # Sync to Supabase if configured
-    if sync_supabase and sb_url and sb_key and downloaded_files:
-        log(f"  Syncing {len(downloaded_files)} newly acquired files to Supabase...")
-        for df in downloaded_files:
-            sync_file_to_supabase(gn, df, sb_url, sb_key)
+                # Optional local copy if explicitly requested
+                if local_save_dir:
+                    dest = local_save_dir / gn / df.name
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(df, dest)
+        elif not downloaded_files:
+            log(f"  All files for {gn} are already up-to-date in Supabase.")
+
+    finally:
+        # Clean up temporary scratch directory
+        shutil.rmtree(work_dir, ignore_errors=True)
 
     return True
 
@@ -584,7 +598,6 @@ async def load_mygrants(page):
         await page.wait_for_timeout(4000)
     await dismiss_cookies(page)
 
-    # Scroll page to trigger lazy loading
     for _ in range(50):
         await page.evaluate("window.scrollBy(0, 300)")
         await page.wait_for_timeout(100)
@@ -594,7 +607,6 @@ async def load_mygrants(page):
 
 async def get_all_grants(page):
     all_grants = {}
-    sections = ['Authorization Required', 'Submitted', 'Approved', 'Past Applications']
 
     rows = await page.evaluate("""() => {
         const results = [];
@@ -630,7 +642,6 @@ async def get_all_grants(page):
     return [(gn, t, y) for gn, (t, y) in all_grants.items()]
 
 async def find_and_click_grant(page, context, gn: str):
-    """Finds grant button matching gn on mygrants and clicks it to open grant tab."""
     for attempt in range(120):
         spans = await page.query_selector_all("span[class*='rwc-button']")
         for span in spans:
@@ -648,7 +659,6 @@ async def find_and_click_grant(page, context, gn: str):
             except Exception:
                 pass
 
-        # Try next page
         selects = await page.query_selector_all("select.pagination-select")
         advanced = False
         for sel in selects:
@@ -669,18 +679,17 @@ async def find_and_click_grant(page, context, gn: str):
     return None
 
 async def main():
-    parser = argparse.ArgumentParser(description="Rotary Grant Application & Report Downloader")
+    parser = argparse.ArgumentParser(description="Rotary Grant Application & Report Downloader (Direct to Supabase)")
     parser.add_argument("--grant", type=str, default="", help="Specific Grant ID (e.g. GG2684482)")
-    parser.add_argument("--force", action="store_true", help="Force re-download even if files exist")
+    parser.add_argument("--force", action="store_true", help="Force re-download even if already in Supabase")
     parser.add_argument("--headless", action="store_true", default=False, help="Run browser headless")
     parser.add_argument("--headful", action="store_true", default=False, help="Run browser with visible UI")
     parser.add_argument("--discover-only", action="store_true", help="Discover and list grants without downloading")
-    parser.add_argument("--no-supabase", action="store_true", help="Skip syncing files to Supabase")
-    parser.add_argument("--output-dir", type=str, default=str(PROJECTS_DIR), help="Output projects directory")
+    parser.add_argument("--save-local", type=str, default="", help="Optional local directory to save backup copies")
     args = parser.parse_args()
 
     print("=" * 65)
-    print("  Rotary Grant Center Downloader (Applications & Reports)")
+    print("  Rotary Grant Center Downloader (Supabase Datastore Architecture)")
     print("=" * 65)
 
     email = os.environ.get("ROTARY_EMAIL", "")
@@ -692,9 +701,7 @@ async def main():
         print("ERROR: ROTARY_EMAIL and ROTARY_PASSWORD environment variables are required.")
         sys.exit(1)
 
-    out_base = Path(args.output_dir).resolve()
-    out_base.mkdir(parents=True, exist_ok=True)
-
+    local_save_dir = Path(args.save_local).resolve() if args.save_local else None
     target_grant = args.grant.strip().upper()
     is_headless = True if (args.headless or not args.headful) else False
 
@@ -735,18 +742,12 @@ async def main():
         else:
             discovered = await get_all_grants(page)
             log(f"Found {len(discovered)} grants on MyGrants.")
-            for gn, title, year in discovered:
-                dest_dir = out_base / gn
-                app_file = dest_dir / f"{gn}_Application.pdf"
-                if not args.force and app_file.exists() and app_file.stat().st_size > 10000:
-                    log(f"  Skipping {gn} (already downloaded)")
-                    continue
-                to_process.append((gn, title, year))
+            to_process = discovered
 
-        log(f"Grants to process: {len(to_process)}")
+        log(f"Grants to evaluate: {len(to_process)}")
 
         for idx, (gn, title, year) in enumerate(to_process, 1):
-            log(f"\n[{idx}/{len(to_process)}] Processing {gn} ({year})...")
+            log(f"\n[{idx}/{len(to_process)}] Evaluating {gn} ({year})...")
             try:
                 await load_mygrants(page)
                 grant_tab = await find_and_click_grant(page, context, gn)
@@ -755,17 +756,15 @@ async def main():
                     continue
 
                 try:
-                    dest_dir = out_base / gn
                     await grant_tab.wait_for_timeout(3000)
                     await process_grant_page(
                         grant_tab,
                         context,
                         gn,
-                        dest_dir,
                         force=args.force,
-                        sync_supabase=not args.no_supabase,
                         sb_url=supabase_url,
-                        sb_key=supabase_key
+                        sb_key=supabase_key,
+                        local_save_dir=local_save_dir
                     )
                 except Exception as pe:
                     log(f"  Error on {gn}: {pe}")
@@ -774,7 +773,7 @@ async def main():
             except Exception as e:
                 log(f"  Encountered error on {gn}: {e}")
 
-        log("\nDownload process completed.")
+        log("\nDownload & Supabase synchronization completed successfully.")
         await browser.close()
 
 if __name__ == "__main__":

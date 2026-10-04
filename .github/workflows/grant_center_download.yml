@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       grant_id:
-        description: "Target Grant ID (e.g. GG2684482) — Leave blank to process all un-downloaded grants"
+        description: "Target Grant ID (e.g. GG2684482) — Leave blank to process all grants"
         required: false
         default: ""
         type: string
       force:
-        description: "Force re-download even if files already exist locally"
+        description: "Force re-download and re-sync even if already in Supabase"
         required: false
         default: false
         type: boolean
 
 jobs:
   download-grants:
-    name: "Download Grant Applications & Reports"
+    name: "Download & Sync Grant Documents to Supabase"
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -59,15 +59,3 @@ jobs:
 
           echo "Running: $CMD"
           eval "$CMD"
-
-      - name: Commit and push downloaded grant files
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add projects/
-          if ! git diff --staged --quiet; then
-            git commit -m "feat(grants): download grant applications and reports from Grant Center [skip ci]"
-            git push
-          else
-            echo "No new grant documents to commit."
-          fi

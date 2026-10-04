@@ -15,3 +15,5 @@ index_bundle.js
 *.bak
 *.code-workspace
 *.log
+.cache/
+downloads/
