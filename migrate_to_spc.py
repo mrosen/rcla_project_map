@@ -1219,61 +1219,74 @@ async def main():
     async with async_playwright() as pw:
         print(f"\n[1/4] Launching Playwright browser (headless={headless_mode})...")
         browser = await pw.chromium.launch(headless=headless_mode, slow_mo=50 if not headless_mode else 0)
-        context = await browser.new_context()
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
         page = await context.new_page()
 
         # Step 1: Login
-        print("[2/4] Logging into My Rotary...")
+        print("[2/4] Logging into My Rotary...", flush=True)
+        email = (os.getenv("ROTARY_EMAIL") or os.getenv("ROTARY_USERNAME") or "").strip()
+        password = (os.getenv("ROTARY_PASSWORD") or "").strip()
+
+        if not email or not password:
+            print("  ❌ ERROR: Missing credentials in environment variables!", flush=True)
+            print(f"     ROTARY_EMAIL present: {bool(email)}", flush=True)
+            print(f"     ROTARY_PASSWORD present: {bool(password)}", flush=True)
+            print("     Configure ROTARY_EMAIL and ROTARY_PASSWORD in Google Cloud Run (Variables & Secrets).", flush=True)
+            raise ValueError("ROTARY_EMAIL and ROTARY_PASSWORD environment variables are required for My Rotary login.")
+
+        masked_email = email[:3] + "..." + email[email.find("@"):] if "@" in email else "..."
+        print(f"  Authenticating as: {masked_email}", flush=True)
         await page.goto("https://my.rotary.org/en/login", wait_until="domcontentloaded")
         await page.wait_for_timeout(3000)
 
-        email = os.getenv("ROTARY_EMAIL", "")
-        password = os.getenv("ROTARY_PASSWORD", "")
-
-        if email and password:
+        try:
+            # Accept OneTrust cookies if present to allow Okta sign-in widget to render
             try:
-                # Accept OneTrust cookies if present to allow Okta sign-in widget to render
+                accept_btn = await page.wait_for_selector("#onetrust-accept-btn-handler", timeout=6000)
+                if accept_btn:
+                    await accept_btn.click()
+                    print("  Accepted cookie consent banner.", flush=True)
+                    await page.wait_for_timeout(1000)
+            except Exception:
+                pass
+
+            user_input = None
+            for selector in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
                 try:
-                    accept_btn = await page.wait_for_selector("#onetrust-accept-btn-handler", timeout=6000)
-                    if accept_btn:
-                        await accept_btn.click()
-                        await page.wait_for_timeout(1000)
+                    user_input = await page.wait_for_selector(selector, timeout=6000)
+                    if user_input:
+                        break
                 except Exception:
                     pass
+            if not user_input:
+                user_input = await page.wait_for_selector("#okta-signin-username", timeout=15000)
 
-                user_input = None
-                for selector in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
-                    try:
-                        user_input = await page.wait_for_selector(selector, timeout=6000)
-                        if user_input:
-                            break
-                    except Exception:
-                        pass
-                if not user_input:
-                    user_input = await page.wait_for_selector("#okta-signin-username", timeout=15000)
-                await user_input.fill(email)
-                await page.fill("#okta-signin-password, input[name='password']", password)
+            print("  Filling credentials in login form...", flush=True)
+            await user_input.fill(email)
+            await page.fill("#okta-signin-password, input[name='password']", password)
 
-                submitted = False
+            submitted = False
+            try:
+                await page.click("#okta-signin-submit, input[type='submit']", force=True, timeout=5000)
+                submitted = True
+            except Exception:
+                pass
+
+            if not submitted:
                 try:
-                    await page.click("#okta-signin-submit, input[type='submit']", force=True, timeout=5000)
+                    await page.keyboard.press("Enter")
                     submitted = True
                 except Exception:
                     pass
 
-                if not submitted:
-                    try:
-                        await page.keyboard.press("Enter")
-                        submitted = True
-                    except Exception:
-                        pass
+            if not submitted:
+                await page.evaluate("() => { const b = document.querySelector('#okta-signin-submit, input[type=\\'submit\\']'); if (b) b.click(); }")
 
-                if not submitted:
-                    await page.evaluate("() => { const b = document.querySelector('#okta-signin-submit, input[type=\\'submit\\']'); if (b) b.click(); }")
-
-                print("  Submitted login form. Waiting for authentication...", flush=True)
-            except Exception as e:
-                print(f"  Note on auto-fill: {e}", flush=True)
+            print("  Submitted login form. Waiting for authentication to finalize...", flush=True)
+        except Exception as e:
+            print(f"  Note on auto-fill: {e}", flush=True)
 
         # Wait until we leave the login page
         await page.wait_for_timeout(3000)
