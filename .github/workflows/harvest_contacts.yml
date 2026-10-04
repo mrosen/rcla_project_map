@@ -8,9 +8,6 @@ on:
         required: false
         default: true
         type: boolean
-  schedule:
-    # Run automatically every Sunday at 06:00 UTC
-    - cron: "0 6 * * 0"
 
 jobs:
   harvest-and-publish:

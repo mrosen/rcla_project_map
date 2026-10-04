@@ -891,7 +891,10 @@ async def run_fetch_ri_files(project_id: str):
         await emit_log(f"Starting Grant Center sync for {project_id} (normalized: {clean_pid})...")
 
         # 1. Run live Grant Center downloader via Playwright for RI grants
-        downloader_script = GRANTCENTER_DIR / "rotary_grant_downloader.py"
+        repo_downloader = Path(__file__).resolve().parent / "scripts" / "download_grant_center.py"
+        downloader_script = repo_downloader if repo_downloader.exists() else (GRANTCENTER_DIR / "rotary_grant_downloader.py")
+        run_cwd = Path(__file__).resolve().parent if repo_downloader.exists() else GRANTCENTER_DIR
+
         if is_ri_grant and downloader_script.exists():
             await emit_log(f"Connecting to Rotary Grant Center via Playwright for {project_id}...")
             env = os.environ.copy()
@@ -908,7 +911,7 @@ async def run_fetch_ri_files(project_id: str):
                 "--grant", clean_pid,
                 "--headless",
                 "--force",
-                cwd=str(GRANTCENTER_DIR),
+                cwd=str(run_cwd),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 env=env

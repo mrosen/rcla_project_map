@@ -1,0 +1,73 @@
+name: "Download Grants & Reports from Grant Center"
+
+on:
+  workflow_dispatch:
+    inputs:
+      grant_id:
+        description: "Target Grant ID (e.g. GG2684482) — Leave blank to process all un-downloaded grants"
+        required: false
+        default: ""
+        type: string
+      force:
+        description: "Force re-download even if files already exist locally"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  download-grants:
+    name: "Download Grant Applications & Reports"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run Rotary Grant Center Downloader
+        env:
+          ROTARY_EMAIL: ${{ secrets.ROTARY_EMAIL }}
+          ROTARY_PASSWORD: ${{ secrets.ROTARY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rqhmsincnmxrgtipvkif.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o' }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY || '' }}
+        run: |
+          CMD="python scripts/download_grant_center.py --headless"
+          TARGET="${{ inputs.grant_id }}"
+          FORCE="${{ inputs.force }}"
+
+          if [ -n "$TARGET" ]; then
+            CMD="$CMD --grant $TARGET"
+          fi
+
+          if [ "$FORCE" = "true" ]; then
+            CMD="$CMD --force"
+          fi
+
+          echo "Running: $CMD"
+          eval "$CMD"
+
+      - name: Commit and push downloaded grant files
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add projects/
+          if ! git diff --staged --quiet; then
+            git commit -m "feat(grants): download grant applications and reports from Grant Center [skip ci]"
+            git push
+          else
+            echo "No new grant documents to commit."
+          fi
