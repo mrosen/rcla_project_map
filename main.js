@@ -3,10 +3,13 @@
 // Stable State: Deep-Linking (REST URLs) + Maintainer Mode
 // ============================================================
 
+// Google Cloud Run Orchestrator Backend URL
+const CLOUD_RUN_BACKEND_URL = 'https://rcla-orchestrator-648257320724.us-central1.run.app';
+
 function getEffectiveBackendUrl() {
   if (window.location.port === '8000') return '';
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000';
-  return window.RCLA_BACKEND_URL || localStorage.getItem('rcla_backend_url') || '';
+  return window.RCLA_BACKEND_URL || localStorage.getItem('rcla_backend_url') || CLOUD_RUN_BACKEND_URL;
 }
 
 const BACKEND_URL = getEffectiveBackendUrl();
