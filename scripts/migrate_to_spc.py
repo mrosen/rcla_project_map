@@ -74,6 +74,11 @@ if not RESOLVED_CLUBS_PATH.exists():
     RESOLVED_CLUBS_PATH = Path("spc_resolved_clubs.json")
 
 # Runtime cache for dynamically resolved Rotary Clubs
+def is_valid_guid(val) -> bool:
+    if not val or not isinstance(val, str):
+        return False
+    return bool(re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', val.strip()))
+
 RESOLVED_CLUBS_CACHE = {
     "lake atitlan": {"key": ROTARY_LAKE_ATITLAN_CLUB_KEY, "name": "Lake Atitlan", "id": "84633", "district": "4250"},
 }
@@ -849,48 +854,50 @@ def construct_spc_payload(p: dict) -> dict:
                 amt_str = str(int(amt_val)) if amt_val > 0 else ""
 
                 is_host = (ckey == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_name.lower())
-                use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else (ckey or c_name)
+                use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else ckey
 
-                existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
-                if not existing_p:
-                    partners.append({
-                        "partnerOrganizationKey": use_key,
-                        "Hour": "",
-                        "MoneyDonated": amt_str,
-                        "NoOfVolunteer": "",
-                        "year": ""
-                    })
-                elif amt_str and not existing_p.get("MoneyDonated"):
-                    existing_p["MoneyDonated"] = amt_str
+                if use_key and is_valid_guid(use_key):
+                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
+                    if not existing_p:
+                        partners.append({
+                            "partnerOrganizationKey": use_key,
+                            "Hour": "",
+                            "MoneyDonated": amt_str,
+                            "NoOfVolunteer": "",
+                            "year": ""
+                        })
+                    elif amt_str and not existing_p.get("MoneyDonated"):
+                        existing_p["MoneyDonated"] = amt_str
 
                 if amt_val > 0:
                     f_item = {
                         "fundingSource": "Rotary Club",
                         "fundingAmount": amt_str,
-                        "fundingClubKey": use_key if ckey or is_host else ""
+                        "fundingClubKey": use_key if (use_key and is_valid_guid(use_key)) else ""
                     }
-                    if not ckey and not is_host:
+                    if not (use_key and is_valid_guid(use_key)):
                         f_item["fundingOtherName"] = c_name
                     fundings.append(f_item)
 
-            # Ensure any non-contributing clubs named in partner_clubs are still represented in partners
+            # Ensure any non-contributing clubs named in partner_clubs are still represented in partners if resolved
             for c_raw in (details.get("partner_clubs") or []):
                 c_name = str(c_raw).strip()
                 if not c_name:
                     continue
                 matched = find_partner_club(c_name)
-                k = matched.get("key") if matched else c_name
+                k = matched.get("key") if matched else None
                 is_host = (k == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_name.lower())
                 use_k = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else k
-                existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_k).lower()), None)
-                if not existing_p:
-                    partners.append({
-                        "partnerOrganizationKey": use_k,
-                        "Hour": "",
-                        "MoneyDonated": "",
-                        "NoOfVolunteer": "",
-                        "year": ""
-                    })
+                if use_k and is_valid_guid(use_k):
+                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_k).lower()), None)
+                    if not existing_p:
+                        partners.append({
+                            "partnerOrganizationKey": use_k,
+                            "Hour": "",
+                            "MoneyDonated": "",
+                            "NoOfVolunteer": "",
+                            "year": ""
+                        })
         else:
             raw_pclubs = details.get("partner_clubs") or []
             if isinstance(raw_pclubs, str):
@@ -915,27 +922,28 @@ def construct_spc_payload(p: dict) -> dict:
                 amt_str = str(int(amt_val)) if amt_val > 0 else ""
 
                 is_host = (ckey == ROTARY_LAKE_ATITLAN_CLUB_KEY or "lake atitlan" in c_str.lower())
-                use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else (ckey or c_str)
+                use_key = ROTARY_LAKE_ATITLAN_CLUB_KEY if is_host else ckey
 
-                existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
-                if not existing_p:
-                    partners.append({
-                        "partnerOrganizationKey": use_key,
-                        "Hour": "",
-                        "MoneyDonated": amt_str,
-                        "NoOfVolunteer": "",
-                        "year": ""
-                    })
-                elif amt_str and not existing_p.get("MoneyDonated"):
-                    existing_p["MoneyDonated"] = amt_str
+                if use_key and is_valid_guid(use_key):
+                    existing_p = next((pt for pt in partners if str(pt.get("partnerOrganizationKey", "")).lower() == str(use_key).lower()), None)
+                    if not existing_p:
+                        partners.append({
+                            "partnerOrganizationKey": use_key,
+                            "Hour": "",
+                            "MoneyDonated": amt_str,
+                            "NoOfVolunteer": "",
+                            "year": ""
+                        })
+                    elif amt_str and not existing_p.get("MoneyDonated"):
+                        existing_p["MoneyDonated"] = amt_str
 
                 if amt_val > 0:
                     f_item = {
                         "fundingSource": "Rotary Club",
                         "fundingAmount": amt_str,
-                        "fundingClubKey": use_key if ckey or is_host else ""
+                        "fundingClubKey": use_key if (use_key and is_valid_guid(use_key)) else ""
                     }
-                    if not ckey and not is_host:
+                    if not (use_key and is_valid_guid(use_key)):
                         f_item["fundingOtherName"] = c_str
                     fundings.append(f_item)
 
@@ -1012,17 +1020,9 @@ def construct_spc_payload(p: dict) -> dict:
                     "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
                 })
 
-        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY:
+        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY and is_valid_guid(partner_club_key):
             partners.append({
                 "partnerOrganizationKey": partner_club_key,
-                "Hour": "",
-                "MoneyDonated": budget_str if num_budget else "",
-                "NoOfVolunteer": "",
-                "year": ""
-            })
-        elif intl_club and "lake atitlan" not in intl_club.lower():
-            partners.append({
-                "partnerOrganizationKey": intl_club,
                 "Hour": "",
                 "MoneyDonated": budget_str if num_budget else "",
                 "NoOfVolunteer": "",
@@ -1036,6 +1036,9 @@ def construct_spc_payload(p: dict) -> dict:
         if f_amt > 0:
             clean_fundings.append(f)
     fundings = clean_fundings
+
+    # Strict Partner Cleanup: ONLY entries with a valid GUID partnerOrganizationKey are allowed in Rotary SPC
+    partners = [pt for pt in partners if is_valid_guid(pt.get("partnerOrganizationKey"))]
 
     # Project search tags (semicolon-delimited for Rotary SPC, max 100 chars)
     tag_list = []
@@ -1334,8 +1337,70 @@ async def main():
         for ep in existing_spc_projects:
             print(f"   • {ep.get('title')} (Key: {ep.get('nfKey')})")
 
+        # Resolve any partner clubs using the authenticated browser session
+        print("[3.6/4] Resolving partner Rotary clubs via SPC search API...", flush=True)
+        for p_item in to_migrate:
+            p_details = p_item.get("details") or {}
+            if isinstance(p_details, str):
+                try: p_details = json.loads(p_details)
+                except Exception: p_details = {}
+            clubs_to_lookup = []
+            for c_raw in (p_details.get("partner_clubs") or []):
+                if c_raw and str(c_raw).strip():
+                    clubs_to_lookup.append(str(c_raw).strip())
+            for cc in (p_details.get("club_contributions_list") or []):
+                c_name = str(cc.get("name", "")).strip()
+                if c_name and c_name not in clubs_to_lookup:
+                    clubs_to_lookup.append(c_name)
+
+            for c_name in clubs_to_lookup:
+                clean_name = re.sub(r'^(?:RC\s+of\s+|RC\s+|Rotary\s+Club\s+(?:of\s+)?|Club\s+Rotario\s+(?:de\s+)?)', '', c_name, flags=re.I).strip()
+                clean_key = clean_name.lower()
+                if clean_key in RESOLVED_CLUBS_CACHE or find_partner_club(c_name):
+                    continue
+                try:
+                    res = await page.evaluate("""async (clubName) => {
+                        try {
+                            const res = await fetch('https://spc.rotary.org/api/Search/Organization', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'accept': '*/*',
+                                    'subscriptionkey': 'ROTARY_API_KEY'
+                                },
+                                body: JSON.stringify({
+                                    type: 'Rotary Club',
+                                    clubName: clubName,
+                                    districtNumber: '',
+                                    countrykey: ''
+                                })
+                            });
+                            if (!res.ok) return null;
+                            return await res.json();
+                        } catch (e) {
+                            return null;
+                        }
+                    }""", clean_name)
+                    if res and isinstance(res, list) and len(res) > 0:
+                        m = res[0]
+                        org_key = m.get("orgKey")
+                        if org_key and is_valid_guid(org_key):
+                            entry = {
+                                "key": org_key,
+                                "name": m.get("orgName"),
+                                "id": m.get("clubIdExt"),
+                                "district": m.get("districtAddress")
+                            }
+                            RESOLVED_CLUBS_CACHE[clean_key] = entry
+                            RESOLVED_CLUBS_CACHE[c_name.lower().strip()] = entry
+                            print(f"  ✓ Resolved partner club via SPC: {c_name} -> {m.get('orgName')} ({org_key})", flush=True)
+                            save_resolved_clubs()
+                except Exception as ex:
+                    print(f"  [Notice] Could not resolve club '{c_name}' in browser: {ex}", flush=True)
+
         # Step 4: Migration / Update Loop
         print(f"\n[4/4] Beginning processing of {len(to_migrate)} project(s)...")
+        failed_projects = []
 
         for idx, p in enumerate(to_migrate, start=1):
             pid = String(p.get("id") or p.get("grant_id") or "").strip()
@@ -1760,9 +1825,9 @@ async def main():
                         const text = await res.text();
                         let data = null;
                         try { data = JSON.parse(text); } catch (e) { data = text; }
-                        const spcId = (typeof data === 'string' ? data.replace(/^"|"$/g, '') : data);
-                        if (!spcId || typeof spcId !== 'string' || spcId.trim() === '') {
-                            return { ok: false, status: res.status, error: 'Empty GUID returned (validation failed)' };
+                        const spcId = (typeof data === 'string' ? data.replace(/^"|"$/g, '') : (data && data.spcId ? data.spcId : ''));
+                        if (!spcId || typeof spcId !== 'string' || spcId.trim() === '' || spcId.trim() === '00000000-0000-0000-0000-000000000000') {
+                            return { ok: false, status: res.status, error: 'Empty GUID returned (validation failed): ' + text };
                         }
                         return { ok: true, spc_id: spcId.trim() };
                     } catch (e) {
@@ -1821,7 +1886,9 @@ async def main():
                     }
                     save_state(state, pid)
                 else:
-                    print(f"  ✗ CREATE FAILED: Status {result.get('status')} — {result.get('error')}")
+                    err_msg = result.get('error') or f"Status {result.get('status')}"
+                    print(f"  ✗ CREATE FAILED for {pid}: {err_msg}", flush=True)
+                    failed_projects.append((pid, err_msg))
 
             await asyncio.sleep(2)
 
@@ -1830,6 +1897,14 @@ async def main():
         print("=" * 70)
         print(f"Total tracked projects in state: {len(state)} / {len(projects)}")
         await browser.close()
+
+        if failed_projects:
+            print("\n" + "=" * 70, flush=True)
+            print("  ❌ SPC MIGRATION ENCOUNTERED ERRORS:", flush=True)
+            for f_pid, f_err in failed_projects:
+                print(f"    • {f_pid}: {f_err}", flush=True)
+            print("=" * 70, flush=True)
+            raise RuntimeError(f"SPC migration failed for: {', '.join(f[0] for f in failed_projects)}")
 
 if __name__ == "__main__":
     asyncio.run(main())

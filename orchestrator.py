@@ -362,7 +362,7 @@ async def sync_spc_state_to_supabase(project_id: Optional[str] = None):
     key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
-    targets = {project_id: spc_data[project_id]} if (project_id and project_id in spc_data) else spc_data
+    targets = {project_id: spc_data[project_id]} if (project_id and project_id in spc_data) else ({} if project_id else spc_data)
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         for pid, info in targets.items():
