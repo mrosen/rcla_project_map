@@ -3,11 +3,13 @@
 // Stable State: Deep-Linking (REST URLs) + Maintainer Mode
 // ============================================================
 
-const BACKEND_URL = (window.location.port === '8000')
-  ? ''
-  : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:8000'
-    : window.location.origin;
+function getEffectiveBackendUrl() {
+  if (window.location.port === '8000') return '';
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000';
+  return window.RCLA_BACKEND_URL || localStorage.getItem('rcla_backend_url') || '';
+}
+
+const BACKEND_URL = getEffectiveBackendUrl();
 const CSV_PATH = 'RCLA_Projects_v2.csv';
 
 // Supabase Cloud Configuration
@@ -1638,23 +1640,26 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
     }
   }
 
-  // Check if we are on static GitHub Pages
+  var currentBackend = getEffectiveBackendUrl();
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal) {
-    var openLocal = confirm(
-      '⚠️ Local Orchestrator Required for SPC Export\n\n' +
-      'Automated SPC export uses Playwright browser automation to authenticate with My Rotary and create the project entry in Rotary International.\n\n' +
-      'Because GitHub Pages is a static host without a Python backend, the export must run through your local orchestrator.\n\n' +
-      'Steps:\n' +
-      '1. Start server: start_server.bat (Windows) or ./start_server.sh (WSL/Linux)\n' +
-      '2. In browser: Open http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true\n' +
-      '3. Click "🚀 Export to SPC"\n\n' +
-      'Would you like to open http://localhost:8000 now?'
+  if (!isLocal && !currentBackend) {
+    var userUrl = prompt(
+      '☁️ Google Cloud Run Backend Required\n\n' +
+      'To export directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
+      '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
+      'Or click Cancel to run via local orchestrator (http://localhost:8000).',
+      localStorage.getItem('rcla_backend_url') || ''
     );
-    if (openLocal) {
-      window.open('http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true', '_blank');
+    if (userUrl && userUrl.trim()) {
+      currentBackend = userUrl.trim().replace(/\/+$/, '');
+      localStorage.setItem('rcla_backend_url', currentBackend);
+    } else {
+      var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
+      if (openLocal) {
+        window.open('http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true', '_blank');
+      }
+      return;
     }
-    return;
   }
 
   // Immediately open the log console and print an instant status line
@@ -1674,7 +1679,7 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
   if (window.startLogPolling) window.startLogPolling(20000);
 
   try {
-    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/export-spc?dry_run=' + (dryRun ? 'true' : 'false'), { method: 'POST' });
+    var res = await fetch((currentBackend || BACKEND_URL) + '/api/projects/' + encodeURIComponent(projectId) + '/export-spc?dry_run=' + (dryRun ? 'true' : 'false'), { method: 'POST' });
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Export failed');
   } catch (e) {
@@ -1684,7 +1689,7 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
       errLine.style.color = '#f87171';
       var msg = e.message;
       if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
-        msg += ' — Cannot reach orchestrator on http://localhost:8000. Ensure server is started (start_server.bat on Windows or ./start_server.sh on WSL).';
+        msg += ' — Cannot reach orchestrator at ' + (currentBackend || 'http://localhost:8000') + '. Ensure the cloud service or local server is running.';
       }
       errLine.textContent = '❌ Error triggering SPC export: ' + msg;
       logDiv.appendChild(errLine);
@@ -3506,9 +3511,11 @@ function applyMaintenanceModeUI() {
     indicator.style.display = isMaintenanceMode ? 'inline-flex' : 'none';
   }
 
+  var currentBackend = getEffectiveBackendUrl();
+  var hasBackend = isLocal || Boolean(currentBackend);
   var localBtns = document.querySelectorAll('.local-only-btn');
   localBtns.forEach(function (el) {
-    el.style.display = (isLocal && isMaintenanceMode) ? '' : 'none';
+    el.style.display = (hasBackend && isMaintenanceMode) ? '' : 'none';
   });
 }
 
@@ -3543,16 +3550,17 @@ function initMaintainerClient() {
   applyMaintenanceModeUI();
 
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal) {
-    // On production/GitHub Pages, don't poll local backend URL
+  var currentBackend = getEffectiveBackendUrl();
+  if (!isLocal && !currentBackend) {
     return;
   }
+  var activeBackend = currentBackend || BACKEND_URL;
 
   // Load existing log history immediately on load
   window.fetchLogHistory();
 
   try {
-    var evtSource = new EventSource(BACKEND_URL + '/api/logs');
+    var evtSource = new EventSource(activeBackend + '/api/logs');
     evtSource.onmessage = function (event) {
       var line = event.data || '';
       var logDiv = document.getElementById('log-output');
@@ -3588,8 +3596,10 @@ function initMaintainerClient() {
 }
 
 window.fetchLogHistory = async function () {
+  var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+  if (!bUrl) return;
   try {
-    var res = await fetch(BACKEND_URL + '/api/logs/history');
+    var res = await fetch(bUrl + '/api/logs/history');
     if (res.ok) {
       var data = await res.json();
       var logDiv = document.getElementById('log-output');
@@ -3645,9 +3655,10 @@ window.startLogPolling = function (durationMs) {
 
 function pollMaintStatus() {
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal) return;
+  var bUrl = getEffectiveBackendUrl();
+  if (!isLocal && !bUrl) return;
 
-  fetch(BACKEND_URL + '/api/status')
+  fetch((bUrl || BACKEND_URL) + '/api/status')
     .then(function (res) {
       if (!res.ok) throw new Error();
       return res.json();
@@ -3672,33 +3683,58 @@ function pollMaintStatus() {
 
 window.triggerSync = function (dryRun) {
   if (dryRun === undefined) dryRun = true;
+  var currentBackend = getEffectiveBackendUrl();
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isLocal && !currentBackend) {
+    var userUrl = prompt(
+      '☁️ Google Cloud Run / Backend Required\n\n' +
+      'To run Grant Center sync directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
+      '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
+      'Or click Cancel to run via local orchestrator (http://localhost:8000).',
+      localStorage.getItem('rcla_backend_url') || ''
+    );
+    if (userUrl && userUrl.trim()) {
+      currentBackend = userUrl.trim().replace(/\/+$/, '');
+      localStorage.setItem('rcla_backend_url', currentBackend);
+    } else {
+      var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
+      if (openLocal) {
+        window.open('http://localhost:8000/', '_blank');
+      }
+      return;
+    }
+  }
   window.toggleLogConsole(true);
   window.startLogPolling(20000);
-  fetch(BACKEND_URL + '/api/grantcenter/sync?dry_run=' + dryRun, { method: 'POST' });
+  fetch((currentBackend || BACKEND_URL) + '/api/grantcenter/sync?dry_run=' + dryRun, { method: 'POST' });
 };
 
 window.triggerSpcExport = function (dryRun) {
   if (dryRun === undefined) dryRun = true;
+  var currentBackend = getEffectiveBackendUrl();
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal) {
-    var openLocal = confirm(
-      '⚠️ Local Orchestrator Required for SPC Export\n\n' +
-      'Batch SPC export uses Playwright browser automation to authenticate with My Rotary and create project entries in Rotary International.\n\n' +
-      'Because GitHub Pages is a static host without a Python backend, the export must run through your local orchestrator.\n\n' +
-      'Steps:\n' +
-      '1. Start server: start_server.bat (Windows) or ./start_server.sh (WSL/Linux)\n' +
-      '2. In browser: Open http://localhost:8000\n' +
-      '3. Click "SPC Export (Live)" in the maintainer bar\n\n' +
-      'Would you like to open http://localhost:8000 now?'
+  if (!isLocal && !currentBackend) {
+    var userUrl = prompt(
+      '☁️ Google Cloud Run / Backend Required\n\n' +
+      'To export directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
+      '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
+      'Or click Cancel to run via local orchestrator (http://localhost:8000).',
+      localStorage.getItem('rcla_backend_url') || ''
     );
-    if (openLocal) {
-      window.open('http://localhost:8000/', '_blank');
+    if (userUrl && userUrl.trim()) {
+      currentBackend = userUrl.trim().replace(/\/+$/, '');
+      localStorage.setItem('rcla_backend_url', currentBackend);
+    } else {
+      var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
+      if (openLocal) {
+        window.open('http://localhost:8000/', '_blank');
+      }
+      return;
     }
-    return;
   }
   window.toggleLogConsole(true);
   window.startLogPolling(20000);
-  fetch(BACKEND_URL + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' })
+  fetch((currentBackend || BACKEND_URL) + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' })
     .catch(function (e) {
       var logDiv = document.getElementById('log-output');
       if (logDiv) {
@@ -3707,7 +3743,7 @@ window.triggerSpcExport = function (dryRun) {
         errLine.style.color = '#f87171';
         var msg = e.message;
         if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
-          msg += ' — Cannot reach orchestrator on http://localhost:8000. Ensure server is started (start_server.bat on Windows or ./start_server.sh on WSL).';
+          msg += ' — Cannot reach orchestrator at ' + (currentBackend || 'http://localhost:8000') + '. Ensure the cloud service or local server is running.';
         }
         errLine.textContent = '❌ Error triggering SPC export: ' + msg;
         logDiv.appendChild(errLine);
