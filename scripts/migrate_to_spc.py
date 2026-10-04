@@ -35,7 +35,7 @@ STATE_PATH = REPO_ROOT / "spc_migration_state.json"
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://rqhmsincnmxrgtipvkif.supabase.co")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o")
 
-ROTARY_LAKE_ATITLAN_CLUB_KEY = "c575902e-aae0-4b82-9aba-54947c09f4fe"
+ROTARY_LAKE_ATITLAN_CLUB_KEY = "7de94f72-4330-4015-9ba9-5fac50225049"
 ROTARY_LAKE_ATITLAN_CLUB_ID  = "84633"
 ROTARY_GUATEMALA_COUNTRY_KEY = "884813f1-8178-450a-9402-b0b658d3a8ec"
 MEMBER_KEY = "277b2562-0575-4eb6-b044-6e3655a44264"
@@ -141,7 +141,7 @@ def _search_rotary_org_api(q_name: str, q_district: str = "") -> list:
     """Executes a search against the Rotary International Organization Search API with retries and throttling."""
     if not q_name or len(q_name.strip()) < 3:
         return []
-    url = "https://spc.rotary.org/api/Search/Organization"
+    url = "https://spc.rotary.org/apiNew/Search/Organization"
     req_body = json.dumps({
         "type": "Rotary Club",
         "clubName": q_name.strip(),
@@ -1619,14 +1619,23 @@ async def main():
                 clean_name = re.sub(r'\s*\(D\d+\)', '', clean_name, flags=re.I).strip()
                 clean_name = re.sub(r'\s*,\s*[A-Z]{2}\b', '', clean_name).strip()
                 clean_key = clean_name.lower()
+
+                # Extract district if specified in club string or project details
+                m_dist = re.search(r'\b[dD](\d{4})\b', c_name)
+                district_num = m_dist.group(1) if m_dist else ""
+                if not district_num:
+                    p_dists = p_details.get("partner_districts") or []
+                    if isinstance(p_dists, list) and len(p_dists) == 1:
+                        district_num = re.sub(r'[^0-9]', '', str(p_dists[0]))
+
                 cached = RESOLVED_CLUBS_CACHE.get(clean_key) or find_partner_club(c_name)
                 if cached and cached.get("key") and is_valid_guid(cached.get("key")):
                     print(f"  ✓ Partner club resolved from cache: '{c_name}' -> {cached.get('name')} ({cached.get('key')})", flush=True)
                     continue
                 try:
-                    res = await page.evaluate("""async (clubName) => {
+                    res = await page.evaluate("""async ([clubName, districtNumber]) => {
                         try {
-                            const res = await fetch('https://spc.rotary.org/api/Search/Organization', {
+                            const res = await fetch('https://spc.rotary.org/apiNew/Search/Organization', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -1636,7 +1645,7 @@ async def main():
                                 body: JSON.stringify({
                                     type: 'Rotary Club',
                                     clubName: clubName,
-                                    districtNumber: '',
+                                    districtNumber: districtNumber || '',
                                     countrykey: ''
                                 })
                             });
@@ -1645,9 +1654,22 @@ async def main():
                         } catch (e) {
                             return null;
                         }
-                    }""", clean_name)
+                    }""", [clean_name, district_num])
                     if res and isinstance(res, list) and len(res) > 0:
-                        m = res[0]
+                        m = None
+                        for cand in res:
+                            c_cand = cand.get("orgName", "").lower()
+                            if f"rotary club of {clean_name.lower()}," in c_cand:
+                                m = cand
+                                break
+                        if not m:
+                            for cand in res:
+                                c_cand = cand.get("orgName", "").lower()
+                                if clean_name.lower() in c_cand:
+                                    m = cand
+                                    break
+                        if not m:
+                            m = res[0]
                         org_key = m.get("orgKey")
                         if org_key and is_valid_guid(org_key):
                             entry = {
@@ -1735,6 +1757,113 @@ async def main():
                             }
                         }
                         document.cookie = "ssoToken=true; path=/";
+
+                        // Reconcile existing partners and funding sources to update/delete cleanly
+                        try {
+                            const exRes = await fetch(`https://spc.rotary.org/apiNew/Project?projectId=${payload.currentProjectKey}`, {
+                                headers: { 'accept': '*/*', 'subscriptionkey': 'ROTARY_API_KEY' }
+                            });
+                            if (exRes.ok) {
+                                const exData = await exRes.json();
+                                if (exData) {
+                                    // 1. Reconcile Partners
+                                    const exPartners = exData.partners || [];
+                                    const newPartners = payload.projectPartnerClubMembers || [];
+                                    const reconciledPartners = [];
+                                    const usedExistingPartnerPKIds = new Set();
+
+                                    for (const np of newPartners) {
+                                        const npKey = (np.partnerOrganizationKey || '').toLowerCase();
+                                        const match = exPartners.find(ep =>
+                                            !usedExistingPartnerPKIds.has(ep.partnerPKId) &&
+                                            (ep.partnerKey || '').toLowerCase() === npKey
+                                        );
+                                        if (match) {
+                                            usedExistingPartnerPKIds.add(match.partnerPKId);
+                                            reconciledPartners.push({
+                                                ...np,
+                                                projectPartnerClubMemberKey: match.partnerPKId,
+                                                isChangedProjectPartnerClubMember: true,
+                                                isDeleted: false
+                                            });
+                                        } else {
+                                            reconciledPartners.push({
+                                                ...np,
+                                                isChangedProjectPartnerClubMember: true,
+                                                isDeleted: false
+                                            });
+                                        }
+                                    }
+
+                                    for (const ep of exPartners) {
+                                        if (!usedExistingPartnerPKIds.has(ep.partnerPKId)) {
+                                            reconciledPartners.push({
+                                                projectPartnerClubMemberKey: ep.partnerPKId,
+                                                partnerOrganizationKey: ep.partnerKey || '',
+                                                partnerCategoryId: ep.partnerCategoryId || '09b7b3de-56b4-4d12-95b1-eaa58b53f573',
+                                                FundTypeId: ep.fundTypeId || '123456be-cece-4096-ab1b-4a554f213f05',
+                                                Hour: ep.numberOfHours ? String(ep.numberOfHours) : '',
+                                                MoneyDonated: ep.moneyDonated ? String(ep.moneyDonated) : '',
+                                                NoOfVolunteer: ep.numberOfVolunteer ? String(ep.numberOfVolunteer) : '',
+                                                year: ep.year || '',
+                                                isDeleted: true,
+                                                isChangedProjectPartnerClubMember: true
+                                            });
+                                        }
+                                    }
+                                    payload.projectPartnerClubMembers = reconciledPartners;
+
+                                    // 2. Reconcile Funding Sources
+                                    const exFundings = exData.fundingSources || [];
+                                    const newFundings = payload.projectFundings || [];
+                                    const reconciledFundings = [];
+                                    const usedExistingFundingKeys = new Set();
+
+                                    for (const nf of newFundings) {
+                                        const nfType = nf.fundingTypeId;
+                                        const nfClub = (nf.fundingClubKey || '').toLowerCase();
+                                        const match = exFundings.find(ef =>
+                                            !usedExistingFundingKeys.has(ef.projectFundingSourceKey) &&
+                                            ef.fundingTypeId === nfType &&
+                                            ((ef.fundingClubKey || ef.organizationId || ef.fundingOtherName || '').toLowerCase() === nfClub)
+                                        );
+                                        if (match) {
+                                            usedExistingFundingKeys.add(match.projectFundingSourceKey);
+                                            reconciledFundings.push({
+                                                ...nf,
+                                                projectFundingSourceKey: match.projectFundingSourceKey,
+                                                isChangedProjectFundingSource: true,
+                                                isDeleted: false
+                                            });
+                                        } else {
+                                            reconciledFundings.push({
+                                                ...nf,
+                                                isChangedProjectFundingSource: true,
+                                                isDeleted: false
+                                            });
+                                        }
+                                    }
+
+                                    for (const ef of exFundings) {
+                                        if (!usedExistingFundingKeys.has(ef.projectFundingSourceKey)) {
+                                            reconciledFundings.push({
+                                                projectFundingSourceKey: ef.projectFundingSourceKey,
+                                                fundingTypeId: ef.fundingTypeId,
+                                                fundingAmount: ef.fundingAmount || '',
+                                                fundingClubKey: ef.fundingClubKey || ef.organizationId || ef.fundingOtherName || '',
+                                                isDeleted: true,
+                                                isChangedProjectFundingSource: true
+                                            });
+                                        }
+                                    }
+                                    payload.projectFundings = reconciledFundings;
+                                }
+                            }
+                        } catch(e){}
+
+                        payload.isChangedProjectPartnerDetail = true;
+                        payload.isChangedProjectFundingDetail = true;
+                        payload.isChangedProjectDetail = true;
 
                         const res = await fetch('https://spc.rotary.org/apiNew/Project/UpdateProject', {
                             method: 'PUT',

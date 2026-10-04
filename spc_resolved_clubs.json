@@ -1,24 +1,24 @@
 {
   "lake atitlan": {
-    "key": "c575902e-aae0-4b82-9aba-54947c09f4fe",
+    "key": "7de94f72-4330-4015-9ba9-5fac50225049",
     "name": "Lake Atitlan",
     "id": "84633",
     "district": "4250"
   },
   "lake atitl\u00e1n": {
-    "key": "c575902e-aae0-4b82-9aba-54947c09f4fe",
+    "key": "7de94f72-4330-4015-9ba9-5fac50225049",
     "name": "Lake Atitlan",
     "id": "84633",
     "district": "4250"
   },
   "lake atitl\u00e1n (d4250)": {
-    "key": "c575902e-aae0-4b82-9aba-54947c09f4fe",
+    "key": "7de94f72-4330-4015-9ba9-5fac50225049",
     "name": "Lake Atitlan",
     "id": "84633",
     "district": "4250"
   },
   "annapolis": {
-    "key": "2d768063-d1d0-4573-a094-a7ace36588d0",
+    "key": "6ef2a008-17d8-424b-b280-c59dfdaedce3",
     "name": "Annapolis",
     "id": "5853",
     "district": "7620",
@@ -42,7 +42,7 @@
     "country": "United States"
   },
   "baltimore": {
-    "key": "a909d44a-de9c-4cb8-9749-a6c321df348f",
+    "key": "fd7e2d7c-03d3-48e8-82f0-0ed5f729cfee",
     "name": "Baltimore",
     "id": "5855",
     "district": "7620",
@@ -74,7 +74,7 @@
     "country": "United States"
   },
   "carroll creek (frederick)": {
-    "key": "53a43929-2e4f-402a-9977-44999b441c7d",
+    "key": "548493a3-3260-4d4b-9b42-76b26b211c5e",
     "name": "Carroll Creek (Frederick)",
     "id": "29713",
     "district": "7620",
@@ -106,11 +106,11 @@
     "country": "United States"
   },
   "evergreen": {
-    "key": "8ca08b8f-934f-4e71-9a9d-0cc6a2e9c392",
+    "key": "aa1cc256-13c5-4c98-be41-47f04e9286c8",
     "name": "Evergreen",
-    "id": "4076",
-    "district": "6880",
-    "state": "AL",
+    "id": "22493",
+    "district": "5450",
+    "state": "CO",
     "country": "United States"
   },
   "ferndale, wa": {
@@ -122,7 +122,7 @@
     "country": "United States"
   },
   "fort collins": {
-    "key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3",
+    "key": "cb49c6f4-80fe-4221-bd35-c265bba54167",
     "name": "Fort Collins",
     "id": "1100",
     "district": "5440",
@@ -130,7 +130,7 @@
     "country": "United States"
   },
   "fort collins-breakfast": {
-    "key": "30495041-3626-490f-8911-294094f361b4",
+    "key": "a4a176f0-5f10-4e6e-84ab-def7fc5c54d1",
     "name": "Fort Collins-Breakfast",
     "id": "26298",
     "district": "5440",
@@ -146,7 +146,7 @@
     "country": "United States"
   },
   "greeley (centennial)": {
-    "key": "daa34a78-1b74-4af6-82ef-d0efc7c26a6a",
+    "key": "fb6036ec-0bcd-4e8b-b6ba-665a5ea3d82c",
     "name": "Greeley (Centennial)",
     "id": "1106",
     "district": "5440",
@@ -170,7 +170,7 @@
     "country": "United States"
   },
   "lake shore-severna park": {
-    "key": "e819dd35-8c87-4002-a80d-a985d75a94c9",
+    "key": "16e367d8-59e4-4eae-96bf-68112d22c074",
     "name": "Lake Shore-Severna Park",
     "id": "5878",
     "district": "7620",
@@ -274,7 +274,7 @@
     "country": "United States"
   },
   "petaluma": {
-    "key": "55fba6a2-d4ee-4c6e-beb1-7faa18c7d02c",
+    "key": "1c5fc0dd-c678-4053-91f8-645a3394a3b7",
     "name": "Petaluma",
     "id": "399",
     "district": "5130",
@@ -282,7 +282,7 @@
     "country": "United States"
   },
   "petaluma valley": {
-    "key": "7b11cb6f-a6be-46c3-9049-d5e885c02186",
+    "key": "12d33133-49ce-414d-bcda-5630d057d415",
     "name": "Petaluma Valley",
     "id": "400",
     "district": "5130",
@@ -290,7 +290,7 @@
     "country": "United States"
   },
   "rc fort collins, co": {
-    "key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3",
+    "key": "cb49c6f4-80fe-4221-bd35-c265bba54167",
     "name": "Fort Collins",
     "id": "1100",
     "district": "5440",
@@ -298,7 +298,7 @@
     "country": "United States"
   },
   "fort collins, co": {
-    "key": "b6a31f4f-f2bd-4e91-aa0d-713ab2c0d6d3",
+    "key": "cb49c6f4-80fe-4221-bd35-c265bba54167",
     "name": "Fort Collins",
     "id": "1100",
     "district": "5440",
@@ -378,7 +378,7 @@
     "country": "United States"
   },
   "rockville": {
-    "key": "151cd8fb-2591-4ccf-9424-0ee852bd647f",
+    "key": "c0845827-3590-41aa-8bbf-e47cf620add9",
     "name": "Rockville",
     "id": "5890",
     "district": "7620",
@@ -458,7 +458,7 @@
     "country": "United States"
   },
   "washington, d.c.": {
-    "key": "05c7ebef-2f21-4c6f-93df-39d9940dfcd0",
+    "key": "c1c82632-02cc-472f-94c3-a1ba7216c44b",
     "name": "Washington, D.C.",
     "id": "5851",
     "district": "7620",
@@ -482,7 +482,7 @@
     "country": "United States"
   },
   "wiarton": {
-    "key": "36e86754-6c0b-44c9-9cff-46974241043a",
+    "key": "b5e64e0e-9b0f-4ae4-8b5d-fa53c55f31d6",
     "name": "Wiarton",
     "id": "2896",
     "district": "6330",
@@ -632,7 +632,7 @@
     "country": "United States"
   },
   "watsonville": {
-    "key": "eeae7853-f24a-4bf9-8098-cedd9700d500",
+    "key": "9e8ae607-990f-4d46-a037-af294ff53e36",
     "name": "Watsonville",
     "id": "515",
     "district": "5170",
@@ -720,7 +720,7 @@
     "country": "Canada"
   },
   "mildmay": {
-    "key": "316909fd-7a66-4f64-83de-69b7e935ac67",
+    "key": "4ba5c59b-5d00-4112-bbc9-62d4a283325f",
     "name": "Mildmay",
     "id": "2881",
     "district": "6330",
@@ -736,7 +736,7 @@
     "country": "Canada"
   },
   "walkerton": {
-    "key": "1eed4538-6888-408b-874e-61bc18330473",
+    "key": "a9c02aea-ca77-48d1-b9eb-03904755bf3c",
     "name": "Walkerton",
     "id": "2894",
     "district": "6330",
@@ -744,7 +744,7 @@
     "country": "Canada"
   },
   "london": {
-    "key": "f77ccf49-c498-4911-89fe-67ff469d448c",
+    "key": "b4e3812e-8e56-4171-a3bc-1ae611a5433a",
     "name": "London",
     "id": "2875",
     "district": "6330",
@@ -752,7 +752,7 @@
     "country": "Canada"
   },
   "flint": {
-    "key": "5b70bcfa-5ade-457a-b717-9aa56fa99f2e",
+    "key": "129e460f-1f3c-4537-b55c-a043ffeb7604",
     "name": "Flint",
     "id": "2904",
     "district": "6330",
@@ -776,11 +776,123 @@
     "country": "Canada"
   },
   "watford": {
-    "key": "1cff426d-53ad-4849-93c6-bbe401d6d493",
+    "key": "e3d97007-f094-4379-ae11-f78a150d3ba2",
     "name": "Watford",
     "id": "2895",
     "district": "6330",
     "state": "ON",
     "country": "Canada"
+  },
+  "rotary club of evergreen (d5450)": {
+    "key": "aa1cc256-13c5-4c98-be41-47f04e9286c8",
+    "name": "Evergreen",
+    "id": "22493",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "greeley": {
+    "key": "102a9cab-d6ba-4332-8542-775d2922a49c",
+    "name": "Greeley",
+    "id": "1105",
+    "district": "5440",
+    "state": "CO",
+    "country": "United States"
+  },
+  "denver": {
+    "key": "317bccdf-817f-4aa8-8bf2-f985f79487ac",
+    "name": "Denver",
+    "id": "1097",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "westminster": {
+    "key": "5a6bc8aa-df5d-45a2-9d5e-bda012c71820",
+    "name": "Westminster",
+    "id": "1120",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "mountain foothills of evergreen": {
+    "key": "3ba4b0ce-0ca4-44e8-b1b3-1e937973531c",
+    "name": "Mountain Foothills of Evergreen",
+    "id": "56721",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "golden": {
+    "key": "085273b5-7020-4f79-a61e-1287a5375c77",
+    "name": "Golden",
+    "id": "23535",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "conifer": {
+    "key": "e3062010-51e7-4a0b-a24b-53317c6cf959",
+    "name": "Conifer",
+    "id": "31748",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "parker": {
+    "key": "abe28976-dc67-433d-9938-642849462c58",
+    "name": "Parker",
+    "id": "29730",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "highlands ranch": {
+    "key": "ce4c2ceb-08cc-42ca-8e2d-c2be6a99c58b",
+    "name": "Highlands Ranch",
+    "id": "23064",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "boulder": {
+    "key": "d11695b6-1958-4293-9df3-1713f09d20ee",
+    "name": "Boulder",
+    "id": "1091",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "littleton": {
+    "key": "e1db33a5-ce72-49a3-978c-dac8ad95f2a6",
+    "name": "Littleton",
+    "id": "1111",
+    "district": "5450",
+    "state": "CO",
+    "country": "United States"
+  },
+  "billings": {
+    "key": "5b41a8f3-8f90-45ca-b807-710a46ea8120",
+    "name": "Billings",
+    "id": "999",
+    "district": "5390",
+    "state": "MT",
+    "country": "United States"
+  },
+  "lacey": {
+    "key": "dfdabd69-7bfd-41cf-bfff-cd636c441f49",
+    "name": "Lacey",
+    "id": "68",
+    "district": "5020",
+    "state": "WA",
+    "country": "United States"
+  },
+  "novato": {
+    "key": "f34a43ba-7952-4358-b035-2b7907ed154e",
+    "name": "Novato",
+    "id": "397",
+    "district": "5150",
+    "state": "CA",
+    "country": "United States"
   }
 }
