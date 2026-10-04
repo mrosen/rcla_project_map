@@ -1279,11 +1279,7 @@ async def main():
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--no-first-run",
-                "--no-zygote",
-                "--disable-extensions",
-                "--disable-blink-features=AutomationControlled"
+                "--disable-gpu"
             ],
             slow_mo=50 if not headless_mode else 0
         )
@@ -1291,8 +1287,8 @@ async def main():
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 900}
         )
-        context.set_default_navigation_timeout(90000)
-        context.set_default_timeout(90000)
+        context.set_default_navigation_timeout(60000)
+        context.set_default_timeout(60000)
         page = await context.new_page()
 
         # Step 1: Login
@@ -1310,25 +1306,15 @@ async def main():
         masked_email = email[:3] + "..." + email[email.find("@"):] if "@" in email else "..."
         print(f"  Authenticating as: {masked_email}", flush=True)
 
-        login_url = "https://my.rotary.org/login?destination=/en/secure/showcase"
-        for attempt in range(1, 3):
-            try:
-                print(f"  Navigating to My Rotary login page (attempt {attempt}/2)...", flush=True)
-                await page.goto(login_url, wait_until="domcontentloaded", timeout=60000)
-                break
-            except Exception as e:
-                print(f"  [Warning] Attempt {attempt} notice: {e}", flush=True)
-                if attempt == 2:
-                    print("  Falling back to https://my.rotary.org/en/login...", flush=True)
-                    await page.goto("https://my.rotary.org/en/login", wait_until="domcontentloaded", timeout=90000)
-                else:
-                    await page.wait_for_timeout(2000)
+        login_url = "https://my.rotary.org/en/login"
+        print("  Navigating to My Rotary login page...", flush=True)
+        await page.goto(login_url, wait_until="domcontentloaded", timeout=45000)
         await page.wait_for_timeout(3000)
 
         try:
             # Accept OneTrust cookies if present to allow Okta sign-in widget to render
             try:
-                accept_btn = await page.wait_for_selector("#onetrust-accept-btn-handler", timeout=6000)
+                accept_btn = await page.wait_for_selector("#onetrust-accept-btn-handler", timeout=4000)
                 if accept_btn:
                     await accept_btn.click()
                     print("  Accepted cookie consent banner.", flush=True)
@@ -1339,13 +1325,13 @@ async def main():
             user_input = None
             for selector in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
                 try:
-                    user_input = await page.wait_for_selector(selector, timeout=6000)
+                    user_input = await page.wait_for_selector(selector, timeout=8000)
                     if user_input:
                         break
                 except Exception:
                     pass
             if not user_input:
-                user_input = await page.wait_for_selector("#okta-signin-username", timeout=15000)
+                user_input = await page.wait_for_selector("#okta-signin-username", timeout=20000)
 
             print("  Filling credentials in login form...", flush=True)
             await user_input.fill(email)
