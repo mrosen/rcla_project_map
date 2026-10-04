@@ -1760,6 +1760,45 @@ async def main():
                 if result.get("ok") and result.get("spc_id"):
                     spc_id = result.get("spc_id")
                     print(f"  ✓ SUCCESS! Created in SPC: {spc_id}")
+
+                    # Rotary's CreateProject endpoint returns legacy nfKey.
+                    # Query apiNew/Search to resolve canonical profile.key used by modern SPC web app.
+                    try:
+                        canon_id = await page.evaluate("""async ({ title, fallbackId }) => {
+                            try {
+                                const res = await fetch('https://spc.rotary.org/apiNew/Search', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'accept': '*/*',
+                                        'subscriptionkey': 'ROTARY_API_KEY'
+                                    },
+                                    body: JSON.stringify({
+                                        keyword: title,
+                                        limit: '20',
+                                        variation: 'en'
+                                    })
+                                });
+                                if (!res.ok) return fallbackId;
+                                const items = await res.json();
+                                const clean = title.toLowerCase().trim();
+                                for (const it of items) {
+                                    const itTitle = (it.title || '').toLowerCase().trim();
+                                    if (itTitle === clean || itTitle.includes(clean) || clean.includes(itTitle)) {
+                                        if (it.nfKey) return it.nfKey;
+                                    }
+                                }
+                                return fallbackId;
+                            } catch (e) {
+                                return fallbackId;
+                            }
+                        }""", {"title": title, "fallbackId": spc_id})
+                        if canon_id and canon_id.lower() != spc_id.lower():
+                            print(f"  ⚡ Canonical Profile Key resolved from apiNew: {canon_id}")
+                            spc_id = canon_id
+                    except Exception as ex:
+                        print(f"  [Notice] Could not resolve apiNew profile key: {ex}")
+
                     state[pid] = {
                         "spc_id": spc_id,
                         "title": title,
