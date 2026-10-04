@@ -469,8 +469,8 @@ def clean_partner_name(name: str) -> str:
     if not name:
         return ""
     clean = str(name).strip()
-    # 1. Normalize curly quotes and apostrophes to standard ASCII
-    clean = clean.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    # 1. Normalize curly quotes, dashes, and apostrophes to standard ASCII
+    clean = clean.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
     clean = clean.replace("**", "").replace("*", "").strip()
     clean = re.sub(r'^[•\-\*\s]+', '', clean)
 
@@ -480,7 +480,7 @@ def clean_partner_name(name: str) -> str:
 
     # 3. Strip noisy descriptive parentheticals (roles, websites, geographic notes)
     clean = re.sub(r'\s*\([^)]*(?:https?://|www\.)[^)]*\)', '', clean, flags=re.I)
-    clean = re.sub(r'\s*\([^)]*\b(?:partner|cooperating|implementing|councils|consejo|non-rotarian|donor|usa|guatemala|eagan|hopedale|spain|minnesota)\b[^)]*\)', '', clean, flags=re.I)
+    clean = re.sub(r'\s*\([^)]*\b(?:partner|cooperating|implementing|councils|consejo|non-rotarian|donor|usa|guatemala|eagan|hopedale|spain|minnesota|nc|ca|va|md|co|il|wa|ma|al|fl|tx|ny|black mountain|mountain)\b[^)]*\)', '', clean, flags=re.I)
 
     # 4. Strip standalone URLs and website links
     clean = re.sub(r'https?://\S+', '', clean)
@@ -668,6 +668,11 @@ def construct_spc_payload(p: dict) -> dict:
     brief = (p.get("brief_overview") or "").strip()
     overview = clean_text(brief) if brief else build_overview(description, narrative)
 
+    # Normalize curly quotes and dashes to standard ASCII
+    title = title.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
+    overview = overview.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
+    full_desc = full_desc.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
+
     # --- Rotary SPC Character Length Validation Constraints ---
     # 1. prjTitle: max 50 characters
     if len(title) > 50:
@@ -715,6 +720,13 @@ def construct_spc_payload(p: dict) -> dict:
     lng = str(p.get("position_lng") or "-91.191623")
     partner_name = (p.get("partner") or "").strip()
     location_name = partner_name if partner_name else "Lake Atitlán Region"
+    location_name = location_name.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
+    location_name = re.sub(r'[,.\'"()\/\\;:!?]', ' ', location_name)
+    location_name = re.sub(r'\s+', ' ', location_name).strip()
+    if len(location_name) > 50:
+        location_name = location_name[:50].rsplit(' ', 1)[0].strip()
+    if not location_name:
+        location_name = "Lake Atitlán Region"
 
     # Status
     raw_status = (p.get("status") or "completed").lower()
@@ -1043,10 +1055,19 @@ def construct_spc_payload(p: dict) -> dict:
     # Project search tags (semicolon-delimited for Rotary SPC, max 100 chars)
     tag_list = []
     for org in cooperating_orgs:
-        if org and org not in tag_list and "rotary" not in org.lower():
-            tag_list.append(org)
-    if aof_name and aof_name not in tag_list:
-        tag_list.append(aof_name)
+        if org and "rotary" not in org.lower():
+            clean_t = re.sub(r'\s*\([^)]*\)', '', org)
+            clean_t = clean_t.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
+            clean_t = re.sub(r'[,.\'\"()\/\\;:!?]', ' ', clean_t)
+            clean_t = re.sub(r'\s+', ' ', clean_t).strip()
+            if clean_t and len(clean_t) >= 2 and clean_t not in tag_list:
+                tag_list.append(clean_t[:35].strip())
+    if aof_name:
+        clean_aof = aof_name.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("—", "-").replace("–", "-")
+        clean_aof = re.sub(r'[,.\'\"()\/\\;:!?]', ' ', clean_aof)
+        clean_aof = re.sub(r'\s+', ' ', clean_aof).strip()
+        if clean_aof and clean_aof not in tag_list:
+            tag_list.append(clean_aof[:35].strip())
     tag_list.append("Guatemala")
     tag_list.append("Lake Atitlan")
 
@@ -1352,11 +1373,18 @@ async def main():
                 c_name = str(cc.get("name", "")).strip()
                 if c_name and c_name not in clubs_to_lookup:
                     clubs_to_lookup.append(c_name)
+            intl_c = str(p_details.get("international_club") or p_item.get("international_club_name") or "").strip()
+            if intl_c and intl_c not in clubs_to_lookup:
+                clubs_to_lookup.append(intl_c)
 
             for c_name in clubs_to_lookup:
                 clean_name = re.sub(r'^(?:RC\s+of\s+|RC\s+|Rotary\s+Club\s+(?:of\s+)?|Club\s+Rotario\s+(?:de\s+)?)', '', c_name, flags=re.I).strip()
+                clean_name = re.sub(r'\s*\(D\d+\)', '', clean_name, flags=re.I).strip()
+                clean_name = re.sub(r'\s*,\s*[A-Z]{2}\b', '', clean_name).strip()
                 clean_key = clean_name.lower()
-                if clean_key in RESOLVED_CLUBS_CACHE or find_partner_club(c_name):
+                cached = RESOLVED_CLUBS_CACHE.get(clean_key) or find_partner_club(c_name)
+                if cached and cached.get("key") and is_valid_guid(cached.get("key")):
+                    print(f"  ✓ Partner club resolved from cache: '{c_name}' -> {cached.get('name')} ({cached.get('key')})", flush=True)
                     continue
                 try:
                     res = await page.evaluate("""async (clubName) => {
@@ -1393,7 +1421,7 @@ async def main():
                             }
                             RESOLVED_CLUBS_CACHE[clean_key] = entry
                             RESOLVED_CLUBS_CACHE[c_name.lower().strip()] = entry
-                            print(f"  ✓ Resolved partner club via SPC: {c_name} -> {m.get('orgName')} ({org_key})", flush=True)
+                            print(f"  ✓ Resolved partner club via live SPC API: {c_name} -> {m.get('orgName')} ({org_key})", flush=True)
                             save_resolved_clubs()
                 except Exception as ex:
                     print(f"  [Notice] Could not resolve club '{c_name}' in browser: {ex}", flush=True)
@@ -1806,38 +1834,88 @@ async def main():
                 print(f"  ✓ Duplicate Check: Clean (no existing project found in SPC).")
                 print(f"     Action: CREATING new project in SPC...")
 
-                # Call POST /api/Project/CreateProject
+                # Call POST /api/Project/CreateProject with multi-stage fallback
                 result = await page.evaluate("""async (payload) => {
-                    try {
-                        const res = await fetch('https://spc.rotary.org/api/Project/CreateProject', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'accept': '*/*',
-                                'subscriptionkey': 'ROTARY_API_KEY'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-                        if (!res.ok) {
-                            const errTxt = await res.text();
-                            return { ok: false, status: res.status, error: errTxt };
+                    const hostClubKey = "c575902e-aae0-4b82-9aba-54947c09f4fe";
+                    const makeCreateReq = async (p) => {
+                        try {
+                            const res = await fetch('https://spc.rotary.org/api/Project/CreateProject', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'accept': '*/*',
+                                    'subscriptionkey': 'ROTARY_API_KEY'
+                                },
+                                body: JSON.stringify(p)
+                            });
+                            const text = await res.text();
+                            let data = null;
+                            try { data = JSON.parse(text); } catch (e) { data = text; }
+                            const spcId = (typeof data === 'string' ? data.replace(/^"|"$/g, '') : (data && data.spcId ? data.spcId : ''));
+                            const isValid = Boolean(spcId && typeof spcId === 'string' && spcId.trim() !== '' && spcId.trim() !== '00000000-0000-0000-0000-000000000000');
+                            return {
+                                ok: res.ok && isValid,
+                                status: res.status,
+                                spc_id: isValid ? spcId.trim() : null,
+                                raw_text: text,
+                                headers: Object.fromEntries(res.headers.entries())
+                            };
+                        } catch (err) {
+                            return { ok: false, error: err.message };
                         }
-                        const text = await res.text();
-                        let data = null;
-                        try { data = JSON.parse(text); } catch (e) { data = text; }
-                        const spcId = (typeof data === 'string' ? data.replace(/^"|"$/g, '') : (data && data.spcId ? data.spcId : ''));
-                        if (!spcId || typeof spcId !== 'string' || spcId.trim() === '' || spcId.trim() === '00000000-0000-0000-0000-000000000000') {
-                            return { ok: false, status: res.status, error: 'Empty GUID returned (validation failed): ' + text };
-                        }
-                        return { ok: true, spc_id: spcId.trim() };
-                    } catch (e) {
-                        return { ok: false, error: e.message };
+                    };
+
+                    // Stage 1: Attempt creation with full sanitized payload
+                    let r1 = await makeCreateReq(payload);
+                    if (r1.ok) {
+                        return { ok: true, spc_id: r1.spc_id, stage: 1 };
                     }
+
+                    // Stage 2: Fallback attempt with empty tags
+                    if (payload.tags) {
+                        const p2 = { ...payload, tags: "" };
+                        let r2 = await makeCreateReq(p2);
+                        if (r2.ok) {
+                            return { ok: true, spc_id: r2.spc_id, stage: 2 };
+                        }
+                    }
+
+                    // Stage 3: Fallback attempt with host club only for initial creation record
+                    const p3 = {
+                        ...payload,
+                        tags: "",
+                        projectPartnerClubMembers: [{
+                            partnerOrganizationKey: hostClubKey,
+                            Hour: "",
+                            MoneyDonated: "",
+                            NoOfVolunteer: "",
+                            year: ""
+                        }],
+                        projectFundings: (payload.projectFundings || []).map(f => {
+                            if (f.fundingSource === "Rotary Club") {
+                                return { ...f, fundingClubKey: hostClubKey };
+                            }
+                            return f;
+                        })
+                    };
+                    let r3 = await makeCreateReq(p3);
+                    if (r3.ok) {
+                        return { ok: true, spc_id: r3.spc_id, stage: 3, needsUpdate: true };
+                    }
+
+                    return {
+                        ok: false,
+                        status: r1.status,
+                        error: `Empty GUID returned across all 3 stages. Stage 1: '${r1.raw_text || "empty"}', Stage 3: '${r3.raw_text || "empty"}'`,
+                        stage1_headers: r1.headers,
+                        stage3_headers: r3.headers
+                    };
                 }""", payload)
 
                 if result.get("ok") and result.get("spc_id"):
                     spc_id = result.get("spc_id")
-                    print(f"  ✓ SUCCESS! Created in SPC: {spc_id}")
+                    stage = result.get("stage", 1)
+                    print(f"  ✓ SUCCESS! Created in SPC (Stage {stage}): {spc_id}")
 
                     # Rotary's CreateProject endpoint returns legacy nfKey.
                     # Query apiNew/Search to resolve canonical profile.key used by modern SPC web app.
@@ -1885,6 +1963,35 @@ async def main():
                         "spc_url": f"https://spc.rotary.org/project?guid={spc_id}"
                     }
                     save_state(state, pid)
+
+                    # If Stage 3 was used, immediately attach all partner clubs & detailed funding via UpdateProject
+                    if result.get("needsUpdate"):
+                        print(f"  ⚡ Stage 3 used: Now attaching partner clubs & funding allocations via UpdateProject...")
+                        payload["currentProjectKey"] = spc_id
+                        update_res = await page.evaluate("""async (payload) => {
+                            try {
+                                payload.isChangedProjectPartnerDetail = true;
+                                payload.isChangedProjectFundingDetail = true;
+                                payload.isChangedProjectDetail = true;
+
+                                const res = await fetch('https://spc.rotary.org/api/Project/UpdateProject', {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'accept': '*/*',
+                                        'subscriptionkey': 'ROTARY_API_KEY'
+                                    },
+                                    body: JSON.stringify(payload)
+                                });
+                                return { ok: res.ok, status: res.status };
+                            } catch (e) {
+                                return { ok: false, error: e.message };
+                            }
+                        }""", payload)
+                        if update_res.get("ok"):
+                            print(f"  ✓ Successfully attached partner clubs and funding allocations to {spc_id}")
+                        else:
+                            print(f"  [Notice] Partner club attachment update status: {update_res.get('status')}")
                 else:
                     err_msg = result.get('error') or f"Status {result.get('status')}"
                     print(f"  ✗ CREATE FAILED for {pid}: {err_msg}", flush=True)
