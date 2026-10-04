@@ -1242,11 +1242,27 @@ async def main():
     headless_mode = not force_headful
 
     async with async_playwright() as pw:
-        print(f"\n[1/4] Launching Playwright browser (headless={headless_mode})...")
-        browser = await pw.chromium.launch(headless=headless_mode, slow_mo=50 if not headless_mode else 0)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        print(f"\n[1/4] Launching Playwright browser (headless={headless_mode})...", flush=True)
+        browser = await pw.chromium.launch(
+            headless=headless_mode,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--no-first-run",
+                "--no-zygote",
+                "--disable-extensions",
+                "--disable-blink-features=AutomationControlled"
+            ],
+            slow_mo=50 if not headless_mode else 0
         )
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 900}
+        )
+        context.set_default_navigation_timeout(90000)
+        context.set_default_timeout(90000)
         page = await context.new_page()
 
         # Step 1: Login
@@ -1263,7 +1279,20 @@ async def main():
 
         masked_email = email[:3] + "..." + email[email.find("@"):] if "@" in email else "..."
         print(f"  Authenticating as: {masked_email}", flush=True)
-        await page.goto("https://my.rotary.org/en/login", wait_until="domcontentloaded")
+
+        login_url = "https://my.rotary.org/login?destination=/en/secure/showcase"
+        for attempt in range(1, 3):
+            try:
+                print(f"  Navigating to My Rotary login page (attempt {attempt}/2)...", flush=True)
+                await page.goto(login_url, wait_until="domcontentloaded", timeout=60000)
+                break
+            except Exception as e:
+                print(f"  [Warning] Attempt {attempt} notice: {e}", flush=True)
+                if attempt == 2:
+                    print("  Falling back to https://my.rotary.org/en/login...", flush=True)
+                    await page.goto("https://my.rotary.org/en/login", wait_until="domcontentloaded", timeout=90000)
+                else:
+                    await page.wait_for_timeout(2000)
         await page.wait_for_timeout(3000)
 
         try:
@@ -1315,24 +1344,28 @@ async def main():
 
         # Wait until we leave the login page
         await page.wait_for_timeout(3000)
-        if "login" in page.url.lower():
-            try:
-                await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=30000)
-            except Exception:
-                print("  Waiting for authentication to finalize...", flush=True)
-                await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=60000)
+        for _ in range(60):
+            if "login" not in page.url.lower():
+                break
+            await page.wait_for_timeout(1000)
         print("  ✓ Successfully authenticated with My Rotary.")
 
         # Step 2: SSO Token Handshake from My Rotary to SPC
         print("[3/4] Exchanging SSO credentials and establishing authenticated session on spc.rotary.org...", flush=True)
 
-        # Ensure we are on my.rotary.org origin to make authorized API calls
-        if "my.rotary.org" not in page.url.lower():
-            await page.goto("https://my.rotary.org/en", wait_until="domcontentloaded")
-            await page.wait_for_timeout(2000)
+        dest_url = None
+        sso_info = {}
+        if "spc.rotary.org" in page.url.lower():
+            print("  ✓ Login redirect already landed on spc.rotary.org.", flush=True)
+            dest_url = page.url
+        else:
+            # Ensure we are on my.rotary.org origin to make authorized API calls
+            if "my.rotary.org" not in page.url.lower():
+                await page.goto("https://my.rotary.org/en", wait_until="domcontentloaded", timeout=60000)
+                await page.wait_for_timeout(2000)
 
-        # 1. Fetch individualId and request SSO token for SPC from My Rotary API
-        sso_info = await page.evaluate("""async () => {
+            # 1. Fetch individualId and request SSO token for SPC from My Rotary API
+            sso_info = await page.evaluate("""async () => {
             let indId = null;
             let memberId = null;
             let userName = null;
@@ -1415,12 +1448,24 @@ async def main():
             }
         }""")
 
-        dest_url = sso_info.get("destinationUrl") if sso_info.get("ok") else None
+            dest_url = sso_info.get("destinationUrl") if sso_info.get("ok") else None
+
         ticket_val = None
         iv_val = None
 
-        if dest_url:
+        if "spc.rotary.org" in page.url.lower():
+            dest_url = page.url
+        elif dest_url:
             print(f"  ✓ SSO ticket obtained for individualId: {sso_info.get('individualId')}", flush=True)
+            print(f"  Navigating to SPC via SSO destination URL...", flush=True)
+            await page.goto(dest_url, wait_until="domcontentloaded", timeout=60000)
+            await page.wait_for_timeout(4000)
+        else:
+            print(f"  [Notice] SSO ticket endpoint returned: {sso_info.get('error') or sso_info.get('status')}. Falling back to direct navigation...", flush=True)
+            await page.goto("https://spc.rotary.org/", wait_until="domcontentloaded", timeout=60000)
+            await page.wait_for_timeout(3000)
+
+        if dest_url:
             try:
                 parsed_dest = urllib.parse.urlparse(dest_url)
                 qs = urllib.parse.parse_qs(parsed_dest.query)
@@ -1428,13 +1473,6 @@ async def main():
                 iv_val = qs.get("iv", [None])[0]
             except Exception:
                 pass
-            print(f"  Navigating to SPC via SSO destination URL...", flush=True)
-            await page.goto(dest_url, wait_until="domcontentloaded")
-            await page.wait_for_timeout(4000)
-        else:
-            print(f"  [Notice] SSO ticket endpoint returned: {sso_info.get('error') or sso_info.get('status')}. Falling back to direct navigation...", flush=True)
-            await page.goto("https://spc.rotary.org/", wait_until="domcontentloaded")
-            await page.wait_for_timeout(3000)
 
         # 2. Finalize and verify authenticated session on spc.rotary.org
         auth_status = await page.evaluate("""async ({ ticket, iv }) => {
