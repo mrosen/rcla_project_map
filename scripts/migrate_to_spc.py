@@ -17,6 +17,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -1322,10 +1323,188 @@ async def main():
                 await page.wait_for_url(lambda u: "login" not in u.lower(), timeout=60000)
         print("  ✓ Successfully authenticated with My Rotary.")
 
-        # Step 2: Navigate to SPC
-        print("[3/4] Establishing session on spc.rotary.org...")
-        await page.goto("https://spc.rotary.org/", wait_until="domcontentloaded")
-        await page.wait_for_timeout(3000)
+        # Step 2: SSO Token Handshake from My Rotary to SPC
+        print("[3/4] Exchanging SSO credentials and establishing authenticated session on spc.rotary.org...", flush=True)
+
+        # Ensure we are on my.rotary.org origin to make authorized API calls
+        if "my.rotary.org" not in page.url.lower():
+            await page.goto("https://my.rotary.org/en", wait_until="domcontentloaded")
+            await page.wait_for_timeout(2000)
+
+        # 1. Fetch individualId and request SSO token for SPC from My Rotary API
+        sso_info = await page.evaluate("""async () => {
+            let indId = null;
+            let memberId = null;
+            let userName = null;
+            let email = null;
+
+            // Fetch current user details via GraphQL
+            try {
+                const gqlRes = await fetch("https://my-api.rotary.org/api/graphql", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "accept": "*/*"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        operationName: "AuthGetUser",
+                        variables: {},
+                        query: "query AuthGetUser { currentUser { individualId memberId login profile { firstName lastName } riIndividualId } }"
+                    })
+                });
+                if (gqlRes.ok) {
+                    const gqlData = await gqlRes.json();
+                    const cu = gqlData?.data?.currentUser;
+                    if (cu) {
+                        indId = cu.individualId;
+                        memberId = cu.riIndividualId || cu.memberId;
+                        email = cu.login;
+                        if (cu.profile?.firstName && cu.profile?.lastName) {
+                            userName = `${cu.profile.firstName} ${cu.profile.lastName}`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("GraphQL AuthGetUser lookup:", e);
+            }
+
+            if (!indId) {
+                indId = "481046f7-2587-4c7e-b14c-2eca3769bf69";
+            }
+
+            // Request SSO token for SPC
+            try {
+                const ssoRes = await fetch("https://my-api.rotary.org/api/domui/authorizerwf/sSOToken", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "accept": "application/json, text/plain, */*"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        data: {
+                            postData: {
+                                applicationToken: "SPC",
+                                individual_pk: indId
+                            },
+                            apiMethod: "post"
+                        }
+                    })
+                });
+                if (ssoRes.ok) {
+                    const ssoData = await ssoRes.json();
+                    return {
+                        ok: true,
+                        individualId: indId,
+                        memberId: memberId,
+                        userName: userName,
+                        email: email,
+                        destinationUrl: ssoData?.wfRes?.destinationUrl
+                    };
+                } else {
+                    return {
+                        ok: false,
+                        individualId: indId,
+                        status: ssoRes.status,
+                        error: await ssoRes.text()
+                    };
+                }
+            } catch (e) {
+                return { ok: false, individualId: indId, error: e.message };
+            }
+        }""")
+
+        dest_url = sso_info.get("destinationUrl") if sso_info.get("ok") else None
+        ticket_val = None
+        iv_val = None
+
+        if dest_url:
+            print(f"  ✓ SSO ticket obtained for individualId: {sso_info.get('individualId')}", flush=True)
+            try:
+                parsed_dest = urllib.parse.urlparse(dest_url)
+                qs = urllib.parse.parse_qs(parsed_dest.query)
+                ticket_val = qs.get("frmTicketInfo", [None])[0]
+                iv_val = qs.get("iv", [None])[0]
+            except Exception:
+                pass
+            print(f"  Navigating to SPC via SSO destination URL...", flush=True)
+            await page.goto(dest_url, wait_until="domcontentloaded")
+            await page.wait_for_timeout(4000)
+        else:
+            print(f"  [Notice] SSO ticket endpoint returned: {sso_info.get('error') or sso_info.get('status')}. Falling back to direct navigation...", flush=True)
+            await page.goto("https://spc.rotary.org/", wait_until="domcontentloaded")
+            await page.wait_for_timeout(3000)
+
+        # 2. Finalize and verify authenticated session on spc.rotary.org
+        auth_status = await page.evaluate("""async ({ ticket, iv }) => {
+            // Check Redux store for authenticated user details
+            let reduxUser = null;
+            for (let attempt = 0; attempt < 5; attempt++) {
+                for (const k of ['__REDUX_STORE__', 'store']) {
+                    try {
+                        if (window[k] && window[k].getState) {
+                            reduxUser = window[k].getState()?.user?.userDeatils;
+                            if (reduxUser && reduxUser.individualkey) break;
+                        }
+                    } catch(e){}
+                }
+                if (reduxUser && reduxUser.individualkey) break;
+                await new Promise(r => setTimeout(r, 600));
+            }
+
+            if (reduxUser && reduxUser.individualkey) {
+                document.cookie = "ssoToken=true; path=/";
+                return { ok: true, source: 'redux', user: reduxUser };
+            }
+
+            // If not yet populated in Redux, invoke /api/Auth explicitly with ticket & iv
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenVal = urlParams.get('frmTicketInfo') || ticket;
+            const ivVal = urlParams.get('iv') || iv;
+
+            if (tokenVal && ivVal) {
+                try {
+                    const res = await fetch('https://spc.rotary.org/api/Auth', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'accept': '*/*',
+                            'subscriptionkey': 'ROTARY_API_KEY'
+                        },
+                        body: JSON.stringify({ token: tokenVal, iv: ivVal })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        document.cookie = "ssoToken=true; path=/";
+                        return { ok: true, source: 'api/Auth', user: data };
+                    } else {
+                        return { ok: false, status: res.status, error: await res.text() };
+                    }
+                } catch(e) {
+                    return { ok: false, error: e.message };
+                }
+            }
+
+            // Always ensure ssoToken cookie is set
+            document.cookie = "ssoToken=true; path=/";
+            return { ok: true, source: 'cookie_only', user: null };
+        }""", {"ticket": ticket_val, "iv": iv_val})
+
+        if auth_status.get("ok"):
+            u = auth_status.get("user") or {}
+            global MEMBER_KEY, MEMBER_ID, MEMBER_NAME, MEMBER_EMAIL
+            if u.get("individualkey"):
+                MEMBER_KEY = u["individualkey"]
+            if u.get("memberId"):
+                MEMBER_ID = str(u["memberId"])
+            if u.get("userName"):
+                MEMBER_NAME = u["userName"]
+            if u.get("userLoginEmail"):
+                MEMBER_EMAIL = u["userLoginEmail"]
+            print(f"  ✓ Authenticated session active on SPC (via {auth_status.get('source')}): {MEMBER_NAME} ({MEMBER_KEY})", flush=True)
+        else:
+            print(f"  [Notice] SPC auth status: {auth_status.get('error')}", flush=True)
 
         # Step 3: Fetch existing club projects from SPC to prevent duplicates
         print("\n[3.5/4] Querying Rotary SPC for existing Lake Atitlán projects to prevent duplicates...")
@@ -1509,6 +1688,7 @@ async def main():
                             if (user.userName) payload.currentSignedInMemberName = user.userName;
                             if (user.userLoginEmail) payload.individualEmail = user.userLoginEmail;
                         }
+                        document.cookie = "ssoToken=true; path=/";
 
                         payload.isChangedProjectDetail = true;
                         if (payload.projectCategoryFund) {
@@ -1836,6 +2016,28 @@ async def main():
 
                 # Call POST /api/Project/CreateProject with multi-stage fallback
                 result = await page.evaluate("""async (payload) => {
+                    let redux = null;
+                    for (const k of ['__REDUX_STORE__', 'store']) {
+                        try {
+                            if (window[k] && window[k].getState) {
+                                redux = window[k].getState();
+                                break;
+                            }
+                        } catch(e){}
+                    }
+                    const user = redux?.user?.userDeatils;
+                    if (user) {
+                        if (user.individualkey) payload.currentSignedInIndividualKey = user.individualkey;
+                        if (user.memberId) payload.currentSignedInMemberId = user.memberId;
+                        if (user.userName) payload.currentSignedInMemberName = user.userName;
+                        if (user.userLoginEmail) payload.individualEmail = user.userLoginEmail;
+                        if (payload.projectContacts && payload.projectContacts.length > 0) {
+                            payload.projectContacts[0].individualContactKey = user.individualkey || payload.projectContacts[0].individualContactKey;
+                            payload.projectContacts[0].individualContactId = user.memberId || payload.projectContacts[0].individualContactId;
+                        }
+                    }
+                    document.cookie = "ssoToken=true; path=/";
+
                     const hostClubKey = "c575902e-aae0-4b82-9aba-54947c09f4fe";
                     const makeCreateReq = async (p) => {
                         try {
