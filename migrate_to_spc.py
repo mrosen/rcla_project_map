@@ -1279,7 +1279,10 @@ async def main():
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
-                "--disable-gpu"
+                "--disable-gpu",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-extensions",
+                "--no-first-run",
             ],
             slow_mo=50 if not headless_mode else 0
         )
@@ -1287,6 +1290,7 @@ async def main():
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 900}
         )
+        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         context.set_default_navigation_timeout(60000)
         context.set_default_timeout(60000)
         page = await context.new_page()
@@ -1306,67 +1310,142 @@ async def main():
         masked_email = email[:3] + "..." + email[email.find("@"):] if "@" in email else "..."
         print(f"  Authenticating as: {masked_email}", flush=True)
 
-        login_url = "https://my.rotary.org/en/login"
-        print("  Navigating to My Rotary login page...", flush=True)
-        await page.goto(login_url, wait_until="domcontentloaded", timeout=45000)
-        await page.wait_for_timeout(3000)
-
-        try:
-            # Accept OneTrust cookies if present to allow Okta sign-in widget to render
-            try:
-                accept_btn = await page.wait_for_selector("#onetrust-accept-btn-handler", timeout=4000)
-                if accept_btn:
-                    await accept_btn.click()
-                    print("  Accepted cookie consent banner.", flush=True)
-                    await page.wait_for_timeout(1000)
-            except Exception:
-                pass
-
-            user_input = None
-            for selector in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
+        async def dismiss_cookie_banner():
+            cookie_selectors = [
+                "#onetrust-accept-btn-handler",
+                "button:has-text('Accept All Cookies')",
+                "button:has-text('Accept All')",
+                "button[id*='onetrust']",
+                ".optanon-allow-all"
+            ]
+            for sel in cookie_selectors:
                 try:
-                    user_input = await page.wait_for_selector(selector, timeout=8000)
-                    if user_input:
+                    btn = await page.query_selector(sel)
+                    if btn and await btn.is_visible():
+                        await btn.click()
+                        print("  Accepted cookie consent banner.", flush=True)
+                        await page.wait_for_timeout(800)
                         break
                 except Exception:
                     pass
-            if not user_input:
-                user_input = await page.wait_for_selector("#okta-signin-username", timeout=20000)
+            try:
+                await page.evaluate("""() => {
+                    const el = document.getElementById('onetrust-banner-sdk');
+                    if (el) el.remove();
+                    const dark = document.querySelector('.onetrust-pc-dark-filter');
+                    if (dark) dark.remove();
+                    const group = document.getElementById('onetrust-consent-sdk');
+                    if (group) group.remove();
+                }""")
+            except Exception:
+                pass
 
-            print("  Filling credentials in login form...", flush=True)
-            await user_input.fill(email)
+        login_urls = [
+            "https://my.rotary.org/login?destination=/en/secure/showcase",
+            "https://my.rotary.org/en/login"
+        ]
+        navigated = False
+        for l_url in login_urls:
+            try:
+                print(f"  Navigating to My Rotary login page ({l_url})...", flush=True)
+                await page.goto(l_url, wait_until="domcontentloaded", timeout=45000)
+                await page.wait_for_timeout(2000)
+                navigated = True
+                break
+            except Exception as e:
+                print(f"  [Warning] Navigation to {l_url} failed: {e}", flush=True)
+
+        if not navigated:
+            raise RuntimeError("Could not load any My Rotary login page.")
+
+        # Find Okta username input, polling and dismissing cookies for up to 30 seconds
+        user_input = None
+        for attempt in range(15):
+            await dismiss_cookie_banner()
+            for selector in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
+                try:
+                    el = await page.query_selector(selector)
+                    if el:
+                        user_input = el
+                        break
+                except Exception:
+                    pass
+            if user_input:
+                break
+            await page.wait_for_timeout(2000)
+
+        if not user_input:
+            page_title = await page.title()
+            page_text = await page.evaluate("() => (document.body ? document.body.innerText.slice(0, 500) : '')")
+            all_inputs = await page.evaluate("() => Array.from(document.querySelectorAll('input')).map(i => ({id: i.id, name: i.name, type: i.type}))")
+            print(f"  ❌ Username input not found! URL: {page.url} | Title: {page_title}", flush=True)
+            print(f"  Page inputs: {all_inputs}", flush=True)
+            print(f"  Page text: {page_text[:300]}...", flush=True)
+            raise RuntimeError(f"Okta login input not found on page: {page.url} ({page_title})")
+
+        print("  Filling credentials in login form...", flush=True)
+        await user_input.fill(email)
+        await page.wait_for_timeout(500)
+
+        pwd_input = None
+        for sel in ["#okta-signin-password", "input[name='password']", "input[type='password']"]:
+            try:
+                el = await page.query_selector(sel)
+                if el:
+                    pwd_input = el
+                    break
+            except Exception:
+                pass
+        if pwd_input:
+            await pwd_input.fill(password)
+        else:
             await page.fill("#okta-signin-password, input[name='password']", password)
 
-            submitted = False
+        await page.wait_for_timeout(500)
+
+        submitted = False
+        for btn_sel in ["#okta-signin-submit", "input[type='submit']", "button[type='submit']"]:
             try:
-                await page.click("#okta-signin-submit, input[type='submit']", force=True, timeout=5000)
+                btn = await page.query_selector(btn_sel)
+                if btn:
+                    await btn.click(force=True)
+                    submitted = True
+                    break
+            except Exception:
+                pass
+
+        if not submitted:
+            try:
+                await page.keyboard.press("Enter")
                 submitted = True
             except Exception:
                 pass
 
-            if not submitted:
-                try:
-                    await page.keyboard.press("Enter")
-                    submitted = True
-                except Exception:
-                    pass
+        if not submitted:
+            await page.evaluate("() => { const b = document.querySelector('#okta-signin-submit, input[type=\\'submit\\'], button[type=\\'submit\\']'); if (b) b.click(); }")
 
-            if not submitted:
-                await page.evaluate("() => { const b = document.querySelector('#okta-signin-submit, input[type=\\'submit\\']'); if (b) b.click(); }")
-
-            print("  Submitted login form. Waiting for authentication to finalize...", flush=True)
-        except Exception as e:
-            print(f"  Note on auto-fill: {e}", flush=True)
+        print("  Submitted login form. Waiting for authentication to finalize...", flush=True)
 
         # Wait until we leave the login page
         await page.wait_for_timeout(3000)
         authenticated = False
         for _ in range(60):
-            if "login" not in page.url.lower():
+            cur_url = page.url.lower()
+            if "login" not in cur_url and ("rotary.org" in cur_url):
                 authenticated = True
                 break
+            err_box = await page.query_selector(".okta-form-infobox-error, .infobox-error")
+            if err_box and await err_box.is_visible():
+                err_text = await err_box.inner_text()
+                if "error" in err_text.lower() or "unable" in err_text.lower():
+                    print(f"  ❌ Okta error banner: {err_text}", flush=True)
             await page.wait_for_timeout(1000)
+
         if not authenticated:
+            page_title = await page.title()
+            page_text = await page.evaluate("() => (document.body ? document.body.innerText.slice(0, 500) : '')")
+            print(f"  ❌ Authentication timeout! URL: {page.url} | Title: {page_title}", flush=True)
+            print(f"  Page text: {page_text[:300]}...", flush=True)
             raise RuntimeError(f"Authentication failed: Page remained at login URL: {page.url}")
         print("  ✓ Successfully authenticated with My Rotary.")
 
