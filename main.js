@@ -1449,8 +1449,12 @@ window.applyExportedSpcGuid = function (projectId, guid) {
 
   // 1. If currently on Detail View or badge is in DOM, update immediately!
   var detailBadge = document.getElementById('detail-spc-badge');
-  if (detailBadge && (p || allProjects[currentIndex])) {
-    detailBadge.innerHTML = renderDetailSpcBadgeHtml(p || allProjects[currentIndex]);
+  if (detailBadge) {
+    var curDetailProject = allProjects[currentIndex];
+    var curGid = curDetailProject ? String(curDetailProject.id || curDetailProject.grant_id || '').trim().toLowerCase() : '';
+    if (p && (curGid === projectId.toLowerCase() || !curGid)) {
+      detailBadge.innerHTML = renderDetailSpcBadgeHtml(p);
+    }
   }
   var detailBtn = document.getElementById('detail-spc-view-btn');
   if (detailBtn) {
@@ -1459,10 +1463,10 @@ window.applyExportedSpcGuid = function (projectId, guid) {
   }
   if (currentView === 'detail' && allProjects[currentIndex]) {
     var cur = allProjects[currentIndex];
-    var curGid = String(cur.id || cur.grant_id || '').trim().toLowerCase();
-    if (curGid === projectId.toLowerCase()) {
+    var curGid2 = String(cur.id || cur.grant_id || '').trim().toLowerCase();
+    if (curGid2 === projectId.toLowerCase()) {
       if (typeof loadProjectFiles === 'function') {
-        loadProjectFiles(curGid, 'photo-area', 'files-area');
+        loadProjectFiles(curGid2, 'photo-area', 'files-area');
       }
     }
   }
@@ -1515,6 +1519,36 @@ window.applyExportedSpcGuid = function (projectId, guid) {
   if (document.getElementById('modal-existing-files') && typeof loadEditFiles === 'function') {
     loadEditFiles(projectId);
   }
+
+  // 5. Background re-fetch from Supabase to sync in-memory allProjects with remote database
+  if (supabaseClient) {
+    supabaseClient
+      .from('projects')
+      .select('*, project_links(*), project_assets(*)')
+      .eq('id', projectId)
+      .single()
+      .then(function (res) {
+        if (res.data) {
+          var fIdx = allProjects.findIndex(function (item) {
+            return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
+          });
+          if (fIdx !== -1) {
+            allProjects[fIdx] = Object.assign(allProjects[fIdx], res.data);
+            if (currentView === 'detail' && currentIndex === fIdx) {
+              var dBadge = document.getElementById('detail-spc-badge');
+              if (dBadge) dBadge.innerHTML = renderDetailSpcBadgeHtml(allProjects[fIdx]);
+            }
+            if (activeEditIdx === fIdx) {
+              var sgc = (allProjects[fIdx].sync_status && allProjects[fIdx].sync_status.grant_center) || {};
+              var sspc = (allProjects[fIdx].sync_status && allProjects[fIdx].sync_status.spc) || {};
+              renderSyncChips(projectId, sgc, sspc);
+              renderSyncActions(projectId, sspc);
+            }
+          }
+        }
+      })
+      .catch(function () {});
+  }
 };
 
 window.loadProjectSyncStatus = async function (projectId) {
@@ -1550,7 +1584,8 @@ window.loadProjectSyncStatus = async function (projectId) {
 
   // 2. Query live backend daemon if available
   try {
-    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/sync-status');
+    var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+    var res = await fetch(bUrl + '/api/projects/' + encodeURIComponent(projectId) + '/sync-status');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var data = await res.json();
     var gc = data.grant_center || {};
@@ -1624,9 +1659,10 @@ window.triggerProjectRiFetch = async function (projectId) {
   window.currentActiveProjectId = projectId;
   if (!confirm('Fetch files and reconcile attachments from Rotary Grant Center for ' + projectId + '?')) return;
   if (window.toggleLogConsole) window.toggleLogConsole(true);
-  if (window.startLogPolling) window.startLogPolling(20000);
+  if (window.startLogPolling) window.startLogPolling();
   try {
-    var res = await fetch(BACKEND_URL + '/api/projects/' + encodeURIComponent(projectId) + '/fetch-ri-files', { method: 'POST' });
+    var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+    var res = await fetch(bUrl + '/api/projects/' + encodeURIComponent(projectId) + '/fetch-ri-files', { method: 'POST' });
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Fetch failed');
   } catch (e) {
@@ -1679,7 +1715,7 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
   }
 
   // Start polling log history so the output appears in real-time
-  if (window.startLogPolling) window.startLogPolling(20000);
+  if (window.startLogPolling) window.startLogPolling();
 
   try {
     var res = await fetch((currentBackend || BACKEND_URL) + '/api/projects/' + encodeURIComponent(projectId) + '/export-spc?dry_run=' + (dryRun ? 'true' : 'false'), { method: 'POST' });
@@ -3575,11 +3611,17 @@ function initMaintainerClient() {
         logDiv.appendChild(newLine);
         if (drawer) drawer.scrollTop = drawer.scrollHeight;
       }
-      var m = line.match(/(?:Created|Updated) in SPC:\s*([0-9a-fA-F-]{32,36})/i);
-      if (m && m[1] && window.currentActiveProjectId) {
-        window.applyExportedSpcGuid(window.currentActiveProjectId, m[1].trim());
+
+      var mPid = line.match(/(?:Processing:\s*|Targeting single specific project:\s*|Supabase projects [(]|SPC export for\s+)([A-Za-z0-9_-]+)/i);
+      if (mPid && mPid[1]) {
+        window.currentActiveProjectId = mPid[1].trim();
       }
-      if ((line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1) && window.currentActiveProjectId) {
+
+      var mGuid = line.match(/(?:(?:Created|Updated)\s+in\s+SPC:\s*|SPC Project Key:\s*|guid=)([0-9a-fA-F-]{32,36})/i);
+      if (mGuid && mGuid[1] && window.currentActiveProjectId) {
+        window.applyExportedSpcGuid(window.currentActiveProjectId, mGuid[1].trim());
+      }
+      if ((line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1 || line.indexOf('Synced to Supabase') !== -1) && window.currentActiveProjectId) {
         window.loadProjectSyncStatus(window.currentActiveProjectId);
       }
       pollMaintStatus();
@@ -3594,7 +3636,7 @@ function initMaintainerClient() {
     };
   } catch (e) {}
 
-  setInterval(pollMaintStatus, 5000);
+  setInterval(pollMaintStatus, 3000);
   pollMaintStatus();
 }
 
@@ -3619,9 +3661,18 @@ window.fetchLogHistory = async function () {
           div.textContent = line;
           logDiv.appendChild(div);
 
-          var m = line.match(/(?:Created|Updated) in SPC:\s*([0-9a-fA-F-]{32,36})/i);
+          var mPid = line.match(/(?:Processing:\s*|Targeting single specific project:\s*|Supabase projects [(]|SPC export for\s+)([A-Za-z0-9_-]+)/i);
+          if (mPid && mPid[1]) {
+            detectedPid = mPid[1].trim();
+            window.currentActiveProjectId = detectedPid;
+          }
+
+          var m = line.match(/(?:(?:Created|Updated)\s+in\s+SPC:\s*|SPC Project Key:\s*|guid=)([0-9a-fA-F-]{32,36})/i);
           if (m && m[1]) {
             detectedGuid = m[1].trim();
+            if (detectedPid) {
+              window.applyExportedSpcGuid(detectedPid, detectedGuid);
+            }
           }
 
           if (line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1 || line.indexOf('Synced to Supabase') !== -1) {
@@ -3646,15 +3697,34 @@ var logPollInterval = null;
 window.startLogPolling = function (durationMs) {
   if (logPollInterval) clearInterval(logPollInterval);
   window.fetchLogHistory();
-  var endTime = Date.now() + (durationMs || 15000);
-  logPollInterval = setInterval(function () {
-    window.fetchLogHistory();
+  var endTime = Date.now() + (durationMs || 300000); // 5 min safety cap
+  logPollInterval = setInterval(async function () {
+    try {
+      await window.fetchLogHistory();
+      var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+      if (bUrl) {
+        var sRes = await fetch(bUrl + '/api/status');
+        if (sRes.ok) {
+          var sData = await sRes.json();
+          if (sData.status !== 'running') {
+            await window.fetchLogHistory();
+            clearInterval(logPollInterval);
+            logPollInterval = null;
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+
     if (Date.now() > endTime) {
       clearInterval(logPollInterval);
       logPollInterval = null;
     }
-  }, 1000);
+  }, 1500);
 };
+
+var lastMaintStatus = 'idle';
+var lastMaintTask = null;
 
 function pollMaintStatus() {
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -3674,6 +3744,47 @@ function pollMaintStatus() {
         badge.textContent = 'Status: ' + label;
         badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
       }
+
+      // Detect transition from 'running' to completed ('idle' or 'error')
+      if (lastMaintStatus === 'running' && data.status !== 'running') {
+        window.fetchLogHistory();
+
+        var targetPid = window.currentActiveProjectId;
+        if (!targetPid && activeEditIdx !== null && activeEditIdx >= 0 && allProjects[activeEditIdx]) {
+          targetPid = String(allProjects[activeEditIdx].id || allProjects[activeEditIdx].grant_id || '').trim();
+        }
+        if (!targetPid && currentView === 'detail' && allProjects[currentIndex]) {
+          targetPid = String(allProjects[currentIndex].id || allProjects[currentIndex].grant_id || '').trim();
+        }
+
+        if (targetPid) {
+          window.loadProjectSyncStatus(targetPid);
+        }
+
+        // Silent background sync from Supabase to refresh in-memory state
+        if (supabaseClient) {
+          loadData().then(function (projects) {
+            if (projects && projects.length > 0) {
+              allProjects = projects;
+              if (currentView === 'detail' && allProjects[currentIndex]) {
+                var dBadge = document.getElementById('detail-spc-badge');
+                if (dBadge) dBadge.innerHTML = renderDetailSpcBadgeHtml(allProjects[currentIndex]);
+              }
+              if (activeEditIdx !== null && activeEditIdx >= 0 && allProjects[activeEditIdx]) {
+                var curP = allProjects[activeEditIdx];
+                var curGid = String(curP.id || curP.grant_id || '').trim();
+                var gc = (curP.sync_status && curP.sync_status.grant_center) || {};
+                var spc = (curP.sync_status && curP.sync_status.spc) || {};
+                renderSyncChips(curGid, gc, spc);
+                renderSyncActions(curGid, spc);
+              }
+            }
+          }).catch(function () {});
+        }
+      }
+
+      lastMaintStatus = data.status;
+      lastMaintTask = data.task;
     })
     .catch(function () {
       var badge = document.getElementById('sync-status-badge');
@@ -3708,7 +3819,7 @@ window.triggerSync = function (dryRun) {
     }
   }
   window.toggleLogConsole(true);
-  window.startLogPolling(20000);
+  window.startLogPolling();
   fetch((currentBackend || BACKEND_URL) + '/api/grantcenter/sync?dry_run=' + dryRun, { method: 'POST' });
 };
 
@@ -3736,7 +3847,7 @@ window.triggerSpcExport = function (dryRun) {
     }
   }
   window.toggleLogConsole(true);
-  window.startLogPolling(20000);
+  window.startLogPolling();
   fetch((currentBackend || BACKEND_URL) + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' })
     .catch(function (e) {
       var logDiv = document.getElementById('log-output');
