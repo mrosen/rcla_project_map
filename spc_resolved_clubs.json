@@ -894,5 +894,21 @@
     "district": "5150",
     "state": "CA",
     "country": "United States"
+  },
+  "rotary club of greater bend (d5110)": {
+    "key": "c5df47d5-24d3-43c7-8c6d-d8410b4c0c3e",
+    "name": "Rotary Club of Greater Bend, Oregon, United States",
+    "id": null,
+    "district": "5110",
+    "state": null,
+    "country": null
+  },
+  "greater bend": {
+    "key": "c5df47d5-24d3-43c7-8c6d-d8410b4c0c3e",
+    "name": "Rotary Club of Greater Bend, Oregon, United States",
+    "id": null,
+    "district": "5110",
+    "state": null,
+    "country": null
   }
 }

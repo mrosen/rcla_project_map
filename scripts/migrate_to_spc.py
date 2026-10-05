@@ -1837,6 +1837,22 @@ async def main():
                         }
                         document.cookie = "ssoToken=true; path=/";
 
+                        // Ensure all partner members and funding sources have valid initial keys
+                        for (const p of (payload.projectPartnerClubMembers || [])) {
+                            if (!p.projectPartnerClubMemberKey) {
+                                p.projectPartnerClubMemberKey = "00000000-0000-0000-0000-000000000000";
+                            }
+                            p.isChangedProjectPartnerClubMember = true;
+                            p.isDeleted = false;
+                        }
+                        for (const f of (payload.projectFundings || [])) {
+                            if (!f.projectFundingSourceKey) {
+                                f.projectFundingSourceKey = "00000000-0000-0000-0000-000000000000";
+                            }
+                            f.isChangedProjectFundingSource = true;
+                            f.isDeleted = false;
+                        }
+
                         // Reconcile existing partners and funding sources to update/delete cleanly
                         try {
                             const exRes = await fetch(`https://spc.rotary.org/apiNew/Project?projectId=${payload.currentProjectKey}`, {
@@ -1868,6 +1884,7 @@ async def main():
                                         } else {
                                             reconciledPartners.push({
                                                 ...np,
+                                                projectPartnerClubMemberKey: '00000000-0000-0000-0000-000000000000',
                                                 isChangedProjectPartnerClubMember: true,
                                                 isDeleted: false
                                             });
@@ -1917,6 +1934,7 @@ async def main():
                                         } else {
                                             reconciledFundings.push({
                                                 ...nf,
+                                                projectFundingSourceKey: '00000000-0000-0000-0000-000000000000',
                                                 isChangedProjectFundingSource: true,
                                                 isDeleted: false
                                             });
@@ -1943,6 +1961,7 @@ async def main():
                         payload.isChangedProjectPartnerDetail = true;
                         payload.isChangedProjectFundingDetail = true;
                         payload.isChangedProjectDetail = true;
+
 
                         const res = await fetch('https://spc.rotary.org/apiNew/Project/UpdateProject', {
                             method: 'PUT',

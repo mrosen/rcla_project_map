@@ -131,5 +131,12 @@
     "action": "updated",
     "migrated_at": "2026-10-04T16:39:49.717574",
     "spc_url": "https://spc.rotary.org/project?guid=4d755ff5-bd3d-4aef-97fa-a3c2de8c4a80"
+  },
+  "GG1871794": {
+    "spc_id": "45125432-EC33-4435-B538-4C81B52638EB",
+    "title": "GG1871794 \u2014 C-arm X-ray Fluoroscopy Unit for SLT",
+    "action": "updated",
+    "migrated_at": "2026-10-05T19:23:22.000000",
+    "spc_url": "https://spc.rotary.org/project?guid=45125432-EC33-4435-B538-4C81B52638EB"
   }
 }
