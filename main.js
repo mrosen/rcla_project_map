@@ -119,6 +119,7 @@ let currentFilters = {
   status: '',
   category: '',
   year: '',
+  sync: '',
   search: ''
 };
 
@@ -200,6 +201,27 @@ function updateDetailHeaderSpcBadge(project) {
   var container = document.getElementById('detail-header-spc-badge');
   if (container) {
     container.innerHTML = renderHeaderSpcBadgeHtml(project);
+  }
+}
+
+function renderProjectSyncBadge(p) {
+  if (!p) return '—';
+  var spcUrl = getProjectSpcUrl(p);
+  var isSpc = Boolean((p.sync_status && p.sync_status.spc && p.sync_status.spc.exported) || spcUrl);
+  var gc = (p.sync_status && p.sync_status.grant_center) || {};
+  var hasApp = Boolean(gc.has_application_pdf);
+  var reportCount = gc.report_count || 0;
+
+  if (isSpc) {
+    if (spcUrl) {
+      return '<a href="' + escapeHtml(spcUrl) + '" target="_blank" onclick="event.stopPropagation()" class="sync-chip chip-green" style="text-decoration:none;font-size:11px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;" title="Official project entry on Rotary Service Project Center (SPC)">✓ Synced ↗</a>';
+    }
+    return '<span class="sync-chip chip-green" style="font-size:11px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;" title="Official project entry on Rotary Service Project Center (SPC)">✓ Synced</span>';
+  } else if (hasApp || reportCount > 0) {
+    var repNote = reportCount > 0 ? ' (+' + reportCount + ' report' + (reportCount > 1 ? 's' : '') + ')' : '';
+    return '<span class="sync-chip chip-orange" style="font-size:11px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;" title="Grant Center docs on file' + repNote + ', not yet exported to SPC">📄 GC Only</span>';
+  } else {
+    return '<span class="sync-chip chip-gray" style="font-size:11px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;" title="Not yet synced to Rotary SPC">Not Synced</span>';
   }
 }
 
@@ -532,6 +554,7 @@ function setActiveNav(view) {
 function getFilteredProjects() {
   var t = (currentFilters.type || '').trim().toLowerCase();
   var s = (currentFilters.status || '').trim().toLowerCase();
+  var syncVal = (currentFilters.sync || '').trim().toLowerCase();
   var c = (currentFilters.category || '').trim().toLowerCase();
   var y = (currentFilters.year || '').trim();
   var q = (currentFilters.search || '').trim().toLowerCase();
@@ -539,6 +562,11 @@ function getFilteredProjects() {
   return allProjects.filter(function (p) {
     if (t && getProjectType(p).toLowerCase() !== t) return false;
     if (s && String(p.status || '').trim().toLowerCase() !== s) return false;
+    if (syncVal) {
+      var isSpc = Boolean((p.sync_status && p.sync_status.spc && p.sync_status.spc.exported) || getProjectSpcUrl(p));
+      if (syncVal === 'synced' && !isSpc) return false;
+      if (syncVal === 'unsynced' && isSpc) return false;
+    }
     if (c && String(p.category || '').trim().toLowerCase() !== c) return false;
     if (y && String(p.start_year || '').trim() !== y) return false;
     if (q) {
@@ -580,6 +608,7 @@ function renderFilterBar() {
     + '<div class="filters">'
     + '  <select id="filter-type"><option value="">All Grant / Project Types</option>' + typeOptions + '</select>'
     + '  <select id="filter-status"><option value="">All statuses</option>' + statusOptions + '</select>'
+    + '  <select id="filter-sync"><option value="">All Sync Statuses</option><option value="synced" ' + (currentFilters.sync === 'synced' ? 'selected' : '') + '>✓ Synced to SPC</option><option value="unsynced" ' + (currentFilters.sync === 'unsynced' ? 'selected' : '') + '>Not Synced</option></select>'
     + '  <select id="filter-category"><option value="">All categories</option>' + catOptions + '</select>'
     + '  <select id="filter-year"><option value="">All years</option>' + yearOptions + '</select>'
     + '  <input id="filter-search" type="text" placeholder="Search title, ID, partner…" value="' + escapeHtml(currentFilters.search) + '" style="flex:1;min-width:120px;">'
@@ -587,12 +616,13 @@ function renderFilterBar() {
 }
 
 function attachFilterListeners() {
-  ['filter-type', 'filter-status', 'filter-category', 'filter-year', 'filter-search'].forEach(function (id) {
+  ['filter-type', 'filter-status', 'filter-sync', 'filter-category', 'filter-year', 'filter-search'].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', function (e) {
       if (id === 'filter-type') currentFilters.type = e.target.value;
       if (id === 'filter-status') currentFilters.status = e.target.value;
+      if (id === 'filter-sync') currentFilters.sync = e.target.value;
       if (id === 'filter-category') currentFilters.category = e.target.value;
       if (id === 'filter-year') currentFilters.year = e.target.value;
       if (id === 'filter-search') currentFilters.search = e.target.value;
@@ -658,7 +688,7 @@ function updateOverviewContent() {
   var ggCount = filtered.filter(function (p) { return getProjectType(p) === 'Global Grant'; }).length;
   var directCount = filtered.filter(function (p) { return getProjectType(p) !== 'Global Grant'; }).length;
 
-  var isFiltered = currentFilters.type || currentFilters.status || currentFilters.category || currentFilters.year || currentFilters.search;
+  var isFiltered = currentFilters.type || currentFilters.status || currentFilters.sync || currentFilters.category || currentFilters.year || currentFilters.search;
   var noticeEl = document.getElementById('ov-filter-notice');
   if (noticeEl) {
     noticeEl.innerHTML = isFiltered ? '<span style="font-size:12px;color:#d97706;font-weight:normal;"> (Filtered: ' + filtered.length + ' of ' + allProjects.length + ')</span>' : '';
@@ -791,6 +821,19 @@ function sortProjects(list, column, direction) {
         valA = String(a.status || '').toLowerCase();
         valB = String(b.status || '').toLowerCase();
         return valA.localeCompare(valB) * factor;
+      case 'sync_status':
+        var getSyncRank = function (p) {
+          if ((p.sync_status && p.sync_status.spc && p.sync_status.spc.exported) || getProjectSpcUrl(p)) return 2;
+          var gc = (p.sync_status && p.sync_status.grant_center) || {};
+          if (gc.has_application_pdf || (gc.report_count || 0) > 0) return 1;
+          return 0;
+        };
+        var rankA = getSyncRank(a);
+        var rankB = getSyncRank(b);
+        if (rankA !== rankB) return (rankA - rankB) * factor;
+        var titleA = String(a.title || '').toLowerCase();
+        var titleB = String(b.title || '').toLowerCase();
+        return titleA.localeCompare(titleB);
       case 'amount':
         valA = Number(a.amount) || Number(a.budget) || 0;
         valB = Number(b.amount) || Number(b.budget) || 0;
@@ -812,7 +855,7 @@ function attachTableSortListeners() {
         tableSort.direction = (tableSort.direction === 'asc') ? 'desc' : 'asc';
       } else {
         tableSort.column = col;
-        tableSort.direction = (col === 'amount' || col === 'start_year') ? 'desc' : 'asc';
+        tableSort.direction = (col === 'amount' || col === 'start_year' || col === 'sync_status') ? 'desc' : 'asc';
       }
       updateSortIndicators();
       renderListRows();
@@ -865,6 +908,7 @@ function showList() {
       + '        <th data-col="category" title="Click to sort by Category">Category</th>'
       + '        <th data-col="start_year" title="Click to sort by Year">Year</th>'
       + '        <th data-col="status" title="Click to sort by Status">Status</th>'
+      + '        <th data-col="sync_status" title="Click to sort by Sync Status">Sync Status</th>'
       + '        <th data-col="amount" style="text-align:right" title="Click to sort by Budget">Budget</th>'
       + '      </tr>'
       + '    </thead>'
@@ -901,6 +945,7 @@ function renderListRows() {
       + '<td>' + (p.category || '—') + '</td>'
       + '<td>' + (p.start_year || '—') + '</td>'
       + '<td><span class="badge badge-' + pStatus + '">' + (p.status || '—') + '</span></td>'
+      + '<td>' + renderProjectSyncBadge(p) + '</td>'
       + '<td style="text-align:right">' + amt + '</td>'
       + '</tr>';
   });
