@@ -105,10 +105,16 @@ async def emit_log(message: str):
 
 @app.get("/api/health")
 async def health_check():
+    git_commit = "unknown"
+    try:
+        git_commit = os.popen("git rev-parse --short HEAD").read().strip()
+    except Exception:
+        pass
     return {
         "status": "ok",
         "service": "rcla-orchestrator",
-        "version": "2.0.0"
+        "version": "2.0.0",
+        "commit": git_commit or os.getenv("K_REVISION", "unknown")
     }
 
 @app.get("/api/status")
