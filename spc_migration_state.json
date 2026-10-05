@@ -24,27 +24,27 @@
     "spc_id": "b4c8c18d-197c-4724-b56c-fbf4cd1ff41e",
     "title": "Basketball Court, Panabaj",
     "action": "updated",
-    "migrated_at": "2026-09-17T14:55:11.786769",
+    "migrated_at": "2026-10-05T20:00:56.960648",
     "spc_url": "https://spc.rotary.org/project?guid=b4c8c18d-197c-4724-b56c-fbf4cd1ff41e"
   },
   "CLUB_2026_SchoolPlaygroundJust": {
     "spc_id": "01eaed56-020c-4ed8-834e-45de67bc9f30",
     "title": "School Playground:  Justo Ruffino, Sololoa",
     "action": "updated",
-    "migrated_at": "2026-10-04T17:04:11.136854",
+    "migrated_at": "2026-10-05T00:14:14.489582",
     "spc_url": "https://spc.rotary.org/project?guid=01eaed56-020c-4ed8-834e-45de67bc9f30"
   },
   "Covid2020": {
     "spc_id": "38590e3a-eaf4-43af-858c-1916470f4dc2",
     "title": "COVID Response - Emergency Food Kits, Santiago Atitlan",
-    "action": "created",
+    "action": "updated",
     "migrated_at": "2026-09-22T11:15:30.221226",
     "spc_url": "https://spc.rotary.org/project?guid=38590e3a-eaf4-43af-858c-1916470f4dc2"
   },
   "GG2574529": {
     "spc_id": "27417eee-83e4-4685-9865-53e7665ba855",
     "title": "Reforesting Santiago",
-    "action": "created",
+    "action": "updated",
     "migrated_at": "2026-09-22T11:20:50.458395",
     "spc_url": "https://spc.rotary.org/project?guid=27417eee-83e4-4685-9865-53e7665ba855"
   },
@@ -59,7 +59,7 @@
     "spc_id": "2054c00d-f11a-4eb9-af9a-3e556c62e128",
     "title": "Wallspring installation Novillero",
     "action": "updated",
-    "migrated_at": "2026-09-22T15:33:53.090516",
+    "migrated_at": "2026-10-04T22:11:42.801980",
     "spc_url": "https://spc.rotary.org/project?guid=2054c00d-f11a-4eb9-af9a-3e556c62e128"
   },
   "GG2684872": {
@@ -93,7 +93,7 @@
   "GG1867690": {
     "spc_id": "04f5aff8-eb84-4a4b-bb09-40dd3c4ed38b",
     "title": "Water & Sanitation for Nuevo Progreso and Chocol, Santa Luc\u00eda Utatl\u00e1n",
-    "action": "created",
+    "action": "updated",
     "migrated_at": "2026-09-23T21:44:44.356511",
     "spc_url": "https://spc.rotary.org/project?guid=04f5aff8-eb84-4a4b-bb09-40dd3c4ed38b"
   },
@@ -107,21 +107,21 @@
   "GG2346063": {
     "spc_id": "98e2d434-2ba0-4a13-b45b-df09d5755769",
     "title": "Amigos de Santa Cruz 1 / Childhood education and basic business skills",
-    "action": "created",
+    "action": "updated",
     "migrated_at": "2026-09-24T08:34:23.103788",
     "spc_url": "https://spc.rotary.org/project?guid=98e2d434-2ba0-4a13-b45b-df09d5755769"
   },
   "GG2459764": {
     "spc_id": "0eb172d1-1bc0-4f7d-9be6-d0f2d4c3a71e",
     "title": "Amigos de Santa Cruz 2 / School tutoring Program",
-    "action": "created",
+    "action": "updated",
     "migrated_at": "2026-09-24T08:34:53.268481",
     "spc_url": "https://spc.rotary.org/project?guid=0eb172d1-1bc0-4f7d-9be6-d0f2d4c3a71e"
   },
   "GG2567164": {
     "spc_id": "574faba3-07c9-4bbf-9993-8382972414ac",
     "title": "Amigos de Santa Cruz 3 / Economic Dev",
-    "action": "created",
+    "action": "updated",
     "migrated_at": "2026-09-24T08:36:16.902569",
     "spc_url": "https://spc.rotary.org/project?guid=574faba3-07c9-4bbf-9993-8382972414ac"
   },
@@ -133,10 +133,80 @@
     "spc_url": "https://spc.rotary.org/project?guid=4d755ff5-bd3d-4aef-97fa-a3c2de8c4a80"
   },
   "GG1871794": {
-    "spc_id": "45125432-EC33-4435-B538-4C81B52638EB",
+    "spc_id": "4ccf5f33-cbc0-42a3-a220-11b7b27ce628",
     "title": "GG1871794 \u2014 C-arm X-ray Fluoroscopy Unit for SLT",
     "action": "updated",
-    "migrated_at": "2026-10-05T19:23:22.000000",
-    "spc_url": "https://spc.rotary.org/project?guid=45125432-EC33-4435-B538-4C81B52638EB"
+    "migrated_at": "2026-09-01T21:51:37",
+    "spc_url": "https://spc.rotary.org/project?guid=4ccf5f33-cbc0-42a3-a220-11b7b27ce628"
+  },
+  "DG_2016_SanFranRotaryChinatown": {
+    "spc_id": "54ca4a1f-a62c-4ccb-8e44-90989aed4b80",
+    "title": "Sunspring Installation San Lucas Toliman",
+    "action": "updated",
+    "migrated_at": "2026-10-05T03:51:10.484462",
+    "spc_url": "https://spc.rotary.org/project?guid=54ca4a1f-a62c-4ccb-8e44-90989aed4b80"
+  },
+  "DG_2016_WatsonVille": {
+    "spc_id": "e79f57a9-001f-41bd-b681-ed27ff568b59",
+    "title": "Sunspring installation G Shafer Clinic, SLT",
+    "action": "updated",
+    "migrated_at": "2026-10-05T18:28:31.016082",
+    "spc_url": "https://spc.rotary.org/project?guid=e79f57a9-001f-41bd-b681-ed27ff568b59"
+  },
+  "GG1526219": {
+    "spc_id": "bd69bcb8-300c-475d-91af-1530a3f295e7",
+    "title": "Mayan Power and Light \u2014 Women's Solar Businesses",
+    "action": "updated",
+    "migrated_at": "2026-10-05T00:34:58.518419",
+    "spc_url": "https://spc.rotary.org/project?guid=bd69bcb8-300c-475d-91af-1530a3f295e7"
+  },
+  "GG1870757": {
+    "spc_id": "2f076ae2-029b-44ea-adc4-632430a4a339",
+    "title": "Maternal Health, Tecpan Chimaltenango",
+    "action": "updated",
+    "migrated_at": "2026-10-05T03:46:20.454783",
+    "spc_url": "https://spc.rotary.org/project?guid=2f076ae2-029b-44ea-adc4-632430a4a339"
+  },
+  "GG1873788": {
+    "spc_id": "17a530c7-4bfb-41c6-beb6-7621ec997494",
+    "title": "Stoves in San Lucas",
+    "action": "updated",
+    "migrated_at": "2026-10-05T18:32:12.591526",
+    "spc_url": "https://spc.rotary.org/project?guid=17a530c7-4bfb-41c6-beb6-7621ec997494"
+  },
+  "GG1985748": {
+    "spc_id": "8b4424c4-7af8-47be-9ad5-a7bf2c7d3926",
+    "title": "David Lamont School in Tzanchaj",
+    "action": "updated",
+    "migrated_at": "2026-10-04T06:31:00.432804",
+    "spc_url": "https://spc.rotary.org/project?guid=8b4424c4-7af8-47be-9ad5-a7bf2c7d3926"
+  },
+  "GG2013637": {
+    "spc_id": "a87a3ffd-7952-4f87-ba6b-c039e34433ec",
+    "title": "Area 4 COVID-19 Community Healthcare Response \u2014 Alameda County CA",
+    "action": "updated",
+    "migrated_at": "2026-10-05T00:38:53.512378",
+    "spc_url": "https://spc.rotary.org/project?guid=a87a3ffd-7952-4f87-ba6b-c039e34433ec"
+  },
+  "GG2125241": {
+    "spc_id": "e1613b10-9bba-4fd4-8ce6-a81ef1a3acee",
+    "title": "El Potrero, WASH",
+    "action": "updated",
+    "migrated_at": "2026-10-05T03:43:12.923911",
+    "spc_url": "https://spc.rotary.org/project?guid=e1613b10-9bba-4fd4-8ce6-a81ef1a3acee"
+  },
+  "GG2352598": {
+    "spc_id": "719a167e-c511-4cfe-bf16-811cf14a17ac",
+    "title": "Healthcare in Patantic & Sanika-ya",
+    "action": "updated",
+    "migrated_at": "2026-10-05T00:48:54.337805",
+    "spc_url": "https://spc.rotary.org/project?guid=719a167e-c511-4cfe-bf16-811cf14a17ac"
+  },
+  "GG2570080": {
+    "spc_id": "7ef8ec9a-694b-44e2-9900-c121d1fe3c30",
+    "title": "Hospitalito Atitlan - Mothers and Infants",
+    "action": "updated",
+    "migrated_at": "2026-02-06T13:54:55",
+    "spc_url": "https://spc.rotary.org/project?guid=7ef8ec9a-694b-44e2-9900-c121d1fe3c30"
   }
 }

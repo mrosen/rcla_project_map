@@ -190,6 +190,19 @@ function getProjectSpcUrl(project) {
   return '';
 }
 
+function renderHeaderSpcBadgeHtml(project) {
+  var spcUrl = getProjectSpcUrl(project);
+  if (!spcUrl) return '';
+  return '<a href="' + escapeHtml(spcUrl) + '" target="_blank" class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;" title="Official project entry on Rotary Service Project Center (SPC)">✓ Synced to Rotary SPC ↗</a>';
+}
+
+function updateDetailHeaderSpcBadge(project) {
+  var container = document.getElementById('detail-header-spc-badge');
+  if (container) {
+    container.innerHTML = renderHeaderSpcBadgeHtml(project);
+  }
+}
+
 function renderDetailSpcBadgeHtml(project) {
   if (!project) return '';
   var gid = String(project.id || project.grant_id || '').trim();
@@ -208,6 +221,7 @@ function updateDetailSpcBadge(project) {
   if (container) {
     container.innerHTML = isMaintenanceMode ? renderDetailSpcBadgeHtml(project) : '';
   }
+  updateDetailHeaderSpcBadge(project);
 }
 
 
@@ -1053,7 +1067,7 @@ function showDetail(idx) {
     + '      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
     + '        <span class="badge badge-type">' + pType + '</span>'
     + '        <span class="badge badge-' + pStatus + '">' + (project.status || '—') + '</span>'
-    + (getProjectSpcUrl(project) ? '        <a href="' + escapeHtml(getProjectSpcUrl(project)) + '" target="_blank" class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-weight:600;" title="Official project entry on Rotary Service Project Center (SPC)">✓ Synced to Rotary SPC ↗</a>' : '')
+    + '        <span id="detail-header-spc-badge">' + renderHeaderSpcBadgeHtml(project) + '</span>'
     + '        <span style="color:#888;font-size:12px;">' + gid + '</span>'
     + '        <span style="color:#888;font-size:12px;">' + (project.start_date || project.start_year || '') + (project.end_date ? ' → ' + project.end_date : '') + '</span>'
     + '      </div>'
@@ -1456,6 +1470,7 @@ window.applyExportedSpcGuid = function (projectId, guid) {
       detailBadge.innerHTML = renderDetailSpcBadgeHtml(p);
     }
   }
+  updateDetailHeaderSpcBadge(p || allProjects[currentIndex]);
   var detailBtn = document.getElementById('detail-spc-view-btn');
   if (detailBtn) {
     detailBtn.href = liveSpcUrl;
@@ -1537,6 +1552,7 @@ window.applyExportedSpcGuid = function (projectId, guid) {
             if (currentView === 'detail' && currentIndex === fIdx) {
               var dBadge = document.getElementById('detail-spc-badge');
               if (dBadge) dBadge.innerHTML = renderDetailSpcBadgeHtml(allProjects[fIdx]);
+              updateDetailHeaderSpcBadge(allProjects[fIdx]);
             }
             if (activeEditIdx === fIdx) {
               var sgc = (allProjects[fIdx].sync_status && allProjects[fIdx].sync_status.grant_center) || {};
@@ -1632,6 +1648,7 @@ window.loadProjectSyncStatus = async function (projectId) {
     if (detailBadge && (p || allProjects[currentIndex])) {
       detailBadge.innerHTML = renderDetailSpcBadgeHtml(p || allProjects[currentIndex]);
     }
+    updateDetailHeaderSpcBadge(p || allProjects[currentIndex]);
     if (liveSpcUrl) {
       var detailBtn = document.getElementById('detail-spc-view-btn');
       if (detailBtn) {
@@ -3769,6 +3786,7 @@ function pollMaintStatus() {
               if (currentView === 'detail' && allProjects[currentIndex]) {
                 var dBadge = document.getElementById('detail-spc-badge');
                 if (dBadge) dBadge.innerHTML = renderDetailSpcBadgeHtml(allProjects[currentIndex]);
+                updateDetailHeaderSpcBadge(allProjects[currentIndex]);
               }
               if (activeEditIdx !== null && activeEditIdx >= 0 && allProjects[activeEditIdx]) {
                 var curP = allProjects[activeEditIdx];
