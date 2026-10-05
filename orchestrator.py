@@ -340,9 +340,6 @@ async def run_spc_export(payload: SPCExportPayload):
         if proc.returncode != 0:
             raise RuntimeError(f"SPC migration script exited with code {proc.returncode}")
 
-        target_pid = payload.project_ids[0] if (payload.project_ids and len(payload.project_ids) == 1) else None
-        await sync_spc_state_to_supabase(target_pid)
-        await emit_log("✓ Synced SPC export state and archive record links to Supabase.")
         await emit_log("✓ SPC export task finished successfully.")
         STATE["status"] = "idle"
         STATE["task"] = None
@@ -351,80 +348,6 @@ async def run_spc_export(payload: SPCExportPayload):
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
         await emit_log(f"ERROR: {str(e)}")
-
-async def sync_spc_state_to_supabase(project_id: Optional[str] = None):
-    """Syncs spc_migration_state.json records to Supabase projects.sync_status and project_links."""
-    spc_state_file = Path("spc_migration_state.json")
-    if not spc_state_file.exists():
-        return
-    try:
-        with open(spc_state_file, "r", encoding="utf-8") as f:
-            raw_spc = json.load(f)
-            spc_data = raw_spc.get("projects", raw_spc)
-    except Exception as e:
-        print(f"Error reading spc_migration_state.json: {e}")
-        return
-
-    key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
-    headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-
-    targets = {project_id: spc_data[project_id]} if (project_id and project_id in spc_data) else ({} if project_id else spc_data)
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        for pid, info in targets.items():
-            spc_id = info.get("spc_id")
-            if not spc_id:
-                continue
-            spc_url = info.get("spc_url") or f"https://spc.rotary.org/project?guid={spc_id}"
-            if "/project/detail/" in spc_url:
-                spc_url = spc_url.replace("/project/detail/", "/project?guid=")
-            migrated_at = info.get("migrated_at")
-
-            # 1. Update projects.sync_status
-            try:
-                r = await client.get(f"{SUPABASE_URL}/rest/v1/projects?id=eq.{pid}&select=id,sync_status", headers=headers)
-                if r.status_code == 200 and r.json():
-                    row = r.json()[0]
-                    sync_status = row.get("sync_status") or {}
-                    spc_status = sync_status.get("spc") or {}
-                    spc_status.update({
-                        "exported": True,
-                        "in_sync": True,
-                        "spc_project_id": spc_id,
-                        "spc_url": spc_url,
-                        "last_exported": migrated_at
-                    })
-                    sync_status["spc"] = spc_status
-
-                    await client.patch(
-                        f"{SUPABASE_URL}/rest/v1/projects?id=eq.{pid}",
-                        headers=headers,
-                        json={"sync_status": sync_status}
-                    )
-
-                # 2. Add or update link in project_links
-                lr = await client.get(f"{SUPABASE_URL}/rest/v1/project_links?project_id=eq.{pid}", headers=headers)
-                existing_links = lr.json() if lr.status_code == 200 else []
-                spc_link = next((l for l in existing_links if "spc.rotary.org" in (l.get("url") or "") or l.get("label") == "Rotary Service Project Center (SPC)"), None)
-                if spc_link:
-                    await client.patch(
-                        f"{SUPABASE_URL}/rest/v1/project_links?id=eq.{spc_link['id']}",
-                        headers=headers,
-                        json={"url": spc_url, "label": "Rotary Service Project Center (SPC)"}
-                    )
-                else:
-                    await client.post(
-                        f"{SUPABASE_URL}/rest/v1/project_links",
-                        headers=headers,
-                        json={
-                            "project_id": pid,
-                            "label": "Rotary Service Project Center (SPC)",
-                            "url": spc_url,
-                            "display_order": len(existing_links)
-                        }
-                    )
-            except Exception as ex:
-                print(f"Error syncing SPC to Supabase for {pid}: {ex}")
 
 @app.post("/api/spc/export")
 async def trigger_spc_export(
@@ -554,27 +477,12 @@ async def get_project_sync_status(project_id: str):
                     if f.name not in report_names:
                         report_names.append(f.name)
 
-    # Check SPC state file
+    # Check Supabase projects.sync_status (single source of truth)
     spc_exported = False
     spc_id = None
     last_exported = None
     spc_url = None
-    spc_state_file = Path("spc_migration_state.json")
-    if spc_state_file.exists():
-        try:
-            with open(spc_state_file, "r", encoding="utf-8") as f:
-                raw_spc = json.load(f)
-                spc_data = raw_spc.get("projects", raw_spc)
-                if pid in spc_data:
-                    spc_info = spc_data[pid]
-                    spc_id = spc_info.get("spc_id")
-                    spc_exported = bool(spc_id)
-                    last_exported = spc_info.get("migrated_at") or spc_info.get("created_at")
-                    spc_url = spc_info.get("spc_url")
-        except Exception:
-            pass
 
-    # Check Supabase projects.sync_status fallback
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             proj_res = await client.get(
@@ -589,11 +497,11 @@ async def get_project_sync_status(project_id: str):
                 if gc_ss.get("report_count") and len(report_names) == 0:
                     report_names = [f"Report_{i+1}.pdf" for i in range(gc_ss.get("report_count"))]
                 spc_ss = ss.get("spc") or {}
-                if spc_ss.get("exported") and not spc_exported:
+                if spc_ss.get("exported"):
                     spc_exported = True
-                    spc_id = spc_ss.get("spc_project_id") or spc_id
-                    spc_url = spc_ss.get("spc_url") or spc_url
-                    last_exported = spc_ss.get("last_exported") or last_exported
+                    spc_id = spc_ss.get("spc_project_id")
+                    spc_url = spc_ss.get("spc_url")
+                    last_exported = spc_ss.get("last_exported")
     except Exception:
         pass
 

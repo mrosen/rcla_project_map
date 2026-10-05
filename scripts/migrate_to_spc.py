@@ -25,12 +25,11 @@ from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
 # --- Configuration & Constants ---
-REPO_ROOT = Path(__file__).resolve().parent if (Path(__file__).resolve().parent / "spc_migration_state.json").exists() else Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent if Path(__file__).resolve().parent.name == "scripts" else Path(__file__).resolve().parent
 ENV_PATHS = [REPO_ROOT / ".env", Path(".env"), Path("/home/msr/grantcenter/.env")]
 for p in ENV_PATHS:
     if p.exists():
         load_dotenv(p)
-STATE_PATH = REPO_ROOT / "spc_migration_state.json"
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://rqhmsincnmxrgtipvkif.supabase.co")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o")
@@ -325,21 +324,25 @@ for p in ENV_PATHS:
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip())
 
-# --- Load Migration State ---
-def load_state() -> dict:
-    if STATE_PATH.exists():
-        try:
-            return json.loads(STATE_PATH.read_text())
-        except Exception:
-            return {}
-    # Seed with the project already created in walkthrough
-    return {
-        "GG1529575": {
-            "spc_id": "ba58cdaf-e167-47da-8b79-68b322ce8df0",
-            "title": "SANIK-YA/ CHITULUL GUATEMALA WATER PROJECT",
-            "migrated_at": "2026-09-16T16:56:58"
-        }
-    }
+# --- Load Migration State from Supabase ---
+def load_state(projects: list = None) -> dict:
+    """Loads migration state directly from Supabase projects (the single source of truth)."""
+    if projects is None:
+        projects = fetch_supabase_projects()
+    state = {}
+    for p in projects:
+        pid = str(p.get("id") or p.get("grant_id") or "").strip()
+        spc = (p.get("sync_status") or {}).get("spc") or {}
+        spc_id = spc.get("spc_project_id")
+        if spc.get("exported") and spc_id:
+            state[pid] = {
+                "spc_id": spc_id,
+                "title": p.get("title") or pid,
+                "action": "updated",
+                "migrated_at": spc.get("last_exported") or "",
+                "spc_url": spc.get("spc_url") or f"https://spc.rotary.org/project?guid={spc_id}"
+            }
+    return state
 
 def sync_spc_state_to_supabase(pid: str, spc_id: str, spc_url: str, migrated_at: str):
     """Updates Supabase projects.sync_status and project_links for a migrated project."""
@@ -409,7 +412,7 @@ def sync_spc_state_to_supabase(pid: str, spc_id: str, spc_url: str, migrated_at:
         print(f"  [Warning] Could not sync SPC state to Supabase for {pid}: {e}")
 
 def save_state(state: dict, updated_pid: str = None):
-    STATE_PATH.write_text(json.dumps(state, indent=2))
+    """Saves SPC migration state directly to Supabase."""
     if updated_pid and updated_pid in state:
         info = state[updated_pid]
         sync_spc_state_to_supabase(
@@ -426,12 +429,17 @@ def fetch_supabase_projects() -> list:
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {SUPABASE_ANON_KEY}"
     })
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read().decode())
-    except Exception as e:
-        print(f"Error: Could not fetch from Supabase: {e}")
-        return []
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return json.loads(resp.read().decode())
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(1.5)
+                continue
+            print(f"Error: Could not fetch from Supabase after 3 attempts: {e}")
+            return []
+    return []
 
 def build_project_list() -> list:
     """Loads all projects directly from Supabase, the single source of truth."""
@@ -1207,10 +1215,10 @@ async def main():
     print("  ROTARY SERVICE PROJECT CENTER (SPC) — AUTOMATED MIGRATOR")
     print("=" * 70)
 
-    state = load_state()
     projects = build_project_list()
-    print(f"Total projects loaded: {len(projects)}")
-    print(f"Projects tracked in state file: {len(state)}")
+    state = load_state(projects)
+    print(f"Total projects loaded from Supabase: {len(projects)}")
+    print(f"Projects marked as exported in Supabase: {len(state)}")
 
     # Parse CLI arguments
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
@@ -1225,7 +1233,7 @@ async def main():
     force_update = "--update" in flags or "-u" in flags or "--force" in flags
 
     unmigrated = [p for p in projects if not state.get(String(p.get("id")).strip(), {}).get("spc_id")]
-    print(f"Projects unmigrated in local state: {len(unmigrated)}")
+    print(f"Projects unmigrated in Supabase: {len(unmigrated)}")
 
     # Check if a specific project ID was passed
     if args:
@@ -1247,7 +1255,7 @@ async def main():
     else:
         # Default safety mode: migrate ONLY 1 project!
         if not unmigrated:
-            print("✓ All projects are already marked as migrated in local state!")
+            print("✓ All projects are already marked as migrated in Supabase!")
             print("  Use 'python migrate_to_spc.py <project_id>' to inspect or update a specific project.")
             print("  Use 'python migrate_to_spc.py --update --all' to force re-check/update all projects.")
             return
@@ -2092,7 +2100,7 @@ async def main():
         print("\n" + "=" * 70)
         print("  MIGRATION BATCH COMPLETE")
         print("=" * 70)
-        print(f"Total tracked projects in state: {len(state)} / {len(projects)}")
+        print(f"Total exported projects in Supabase: {len(state)} / {len(projects)}")
         await browser.close()
 
         if failed_projects:
