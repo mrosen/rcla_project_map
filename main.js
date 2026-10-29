@@ -3629,6 +3629,12 @@ window.toggleMaintenanceMode = function (forceState) {
   sessionStorage.setItem('rcla_maint_mode', isMaintenanceMode ? 'true' : 'false');
   applyMaintenanceModeUI();
 
+  if (isMaintenanceMode) {
+    startMaintainerClient();
+  } else {
+    stopMaintainerClient();
+  }
+
   if (currentView === 'detail' && allProjects[currentIndex]) {
     showDetail(currentIndex);
   }
@@ -3646,10 +3652,27 @@ window.addEventListener('keydown', function (e) {
   }
 });
 
-function initMaintainerClient() {
-  isMaintenanceMode = checkMaintenanceMode();
-  applyMaintenanceModeUI();
+var maintEvtSource = null;
+var maintPollTimeout = null;
+var MAINT_IDLE_POLL_MS = 45000;      // 45s poll when idle in Maintainer Mode
+var MAINT_RUNNING_POLL_MS = 3000;    // 3s poll when an active sync task is running
 
+function scheduleMaintPoll(delayMs) {
+  if (maintPollTimeout) {
+    clearTimeout(maintPollTimeout);
+    maintPollTimeout = null;
+  }
+  if (!isMaintenanceMode) return;
+  // If tab is in background and no sync is actively running, hold off until tab returns
+  if (document.hidden && lastMaintStatus !== 'running') return;
+
+  maintPollTimeout = setTimeout(function () {
+    pollMaintStatus();
+  }, delayMs || MAINT_IDLE_POLL_MS);
+}
+
+function startMaintainerClient() {
+  if (!isMaintenanceMode) return;
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   var currentBackend = getEffectiveBackendUrl();
   if (!isLocal && !currentBackend) {
@@ -3657,49 +3680,91 @@ function initMaintainerClient() {
   }
   var activeBackend = currentBackend || BACKEND_URL;
 
-  // Load existing log history immediately on load
+  // Load existing log history when maintainer mode is opened
   window.fetchLogHistory();
 
-  try {
-    var evtSource = new EventSource(activeBackend + '/api/logs');
-    evtSource.onmessage = function (event) {
-      var line = event.data || '';
-      var logDiv = document.getElementById('log-output');
-      var drawer = document.getElementById('log-drawer');
-      if (logDiv) {
-        var newLine = document.createElement('div');
-        newLine.className = 'log-line';
-        newLine.textContent = line;
-        logDiv.appendChild(newLine);
-        if (drawer) drawer.scrollTop = drawer.scrollHeight;
-      }
+  // Open SSE stream if not already connected
+  if (!maintEvtSource) {
+    try {
+      maintEvtSource = new EventSource(activeBackend + '/api/logs');
+      maintEvtSource.onmessage = function (event) {
+        var line = event.data || '';
+        var logDiv = document.getElementById('log-output');
+        var drawer = document.getElementById('log-drawer');
+        if (logDiv) {
+          var newLine = document.createElement('div');
+          newLine.className = 'log-line';
+          newLine.textContent = line;
+          logDiv.appendChild(newLine);
+          if (drawer) drawer.scrollTop = drawer.scrollHeight;
+        }
 
-      var mPid = line.match(/(?:Processing:\s*|Targeting single specific project:\s*|Supabase projects [(]|SPC export for\s+)([A-Za-z0-9_-]+)/i);
-      if (mPid && mPid[1]) {
-        window.currentActiveProjectId = mPid[1].trim();
-      }
+        var mPid = line.match(/(?:Processing:\s*|Targeting single specific project:\s*|Supabase projects [(]|SPC export for\s+)([A-Za-z0-9_-]+)/i);
+        if (mPid && mPid[1]) {
+          window.currentActiveProjectId = mPid[1].trim();
+        }
 
-      var mGuid = line.match(/(?:(?:Created|Updated)\s+in\s+SPC:\s*|SPC Project Key:\s*|guid=)([0-9a-fA-F-]{32,36})/i);
-      if (mGuid && mGuid[1] && window.currentActiveProjectId) {
-        window.applyExportedSpcGuid(window.currentActiveProjectId, mGuid[1].trim());
-      }
-      if ((line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1 || line.indexOf('Synced to Supabase') !== -1) && window.currentActiveProjectId) {
-        window.loadProjectSyncStatus(window.currentActiveProjectId);
-      }
-      pollMaintStatus();
-    };
+        var mGuid = line.match(/(?:(?:Created|Updated)\s+in\s+SPC:\s*|SPC Project Key:\s*|guid=)([0-9a-fA-F-]{32,36})/i);
+        if (mGuid && mGuid[1] && window.currentActiveProjectId) {
+          window.applyExportedSpcGuid(window.currentActiveProjectId, mGuid[1].trim());
+        }
+        if ((line.indexOf('finished successfully') !== -1 || line.indexOf('Synced SPC export state') !== -1 || line.indexOf('Synced to Supabase') !== -1) && window.currentActiveProjectId) {
+          window.loadProjectSyncStatus(window.currentActiveProjectId);
+          pollMaintStatus();
+        }
+      };
 
-    evtSource.onerror = function () {
-      var badge = document.getElementById('sync-status-badge');
-      if (badge) {
-        badge.textContent = 'Sync: Local Offline';
-        badge.style.background = '#64748b';
-      }
-    };
-  } catch (e) {}
+      maintEvtSource.onerror = function () {
+        var badge = document.getElementById('sync-status-badge');
+        if (badge) {
+          badge.textContent = 'Sync: Local Offline';
+          badge.style.background = '#64748b';
+        }
+      };
+    } catch (e) {}
+  }
 
-  setInterval(pollMaintStatus, 3000);
+  // Immediately poll status once and trigger adaptive schedule
   pollMaintStatus();
+}
+
+function stopMaintainerClient() {
+  if (maintPollTimeout) {
+    clearTimeout(maintPollTimeout);
+    maintPollTimeout = null;
+  }
+  if (maintEvtSource) {
+    try {
+      maintEvtSource.close();
+    } catch (e) {}
+    maintEvtSource = null;
+  }
+}
+
+// Pause/resume polling based on browser tab visibility
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) {
+    if (lastMaintStatus !== 'running') {
+      if (maintPollTimeout) {
+        clearTimeout(maintPollTimeout);
+        maintPollTimeout = null;
+      }
+    }
+  } else {
+    if (isMaintenanceMode) {
+      pollMaintStatus();
+    }
+  }
+});
+
+function initMaintainerClient() {
+  isMaintenanceMode = checkMaintenanceMode();
+  applyMaintenanceModeUI();
+
+  // ONLY connect to Cloud Run / backend if Maintainer Mode is actually enabled
+  if (isMaintenanceMode) {
+    startMaintainerClient();
+  }
 }
 
 window.fetchLogHistory = async function () {
@@ -3789,6 +3854,7 @@ var lastMaintStatus = 'idle';
 var lastMaintTask = null;
 
 function pollMaintStatus() {
+  if (!isMaintenanceMode) return;
   var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   var bUrl = getEffectiveBackendUrl();
   if (!isLocal && !bUrl) return;
@@ -3848,6 +3914,13 @@ function pollMaintStatus() {
 
       lastMaintStatus = data.status;
       lastMaintTask = data.task;
+
+      // Adaptive poll scheduling: fast if running (3s), slow if idle (45s)
+      if (data.status === 'running') {
+        scheduleMaintPoll(MAINT_RUNNING_POLL_MS);
+      } else {
+        scheduleMaintPoll(MAINT_IDLE_POLL_MS);
+      }
     })
     .catch(function () {
       var badge = document.getElementById('sync-status-badge');
@@ -3855,6 +3928,7 @@ function pollMaintStatus() {
         badge.textContent = 'Orchestrator: Offline';
         badge.style.background = '#64748b';
       }
+      scheduleMaintPoll(MAINT_IDLE_POLL_MS);
     });
 }
 
