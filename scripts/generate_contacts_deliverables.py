@@ -66,8 +66,9 @@ def main():
     enriched_districts = enriched_data.get("enriched_districts", [])
     enriched_clubs = enriched_data.get("enriched_clubs", [])
 
-    # Project date lookup mapping pid -> canonical date string
+    # Project date & category lookups mapping pid -> canonical strings
     project_date_lookup = {p["project_id"]: (p.get("date") or "") for p in harvested_data.get("projects", [])}
+    project_category_lookup = {p["project_id"]: (p.get("category") or "") for p in harvested_data.get("projects", [])}
 
     # 1. Build Master Contacts List
     master_contacts_rows = []
@@ -77,6 +78,7 @@ def main():
         country_val = get_country(c, "Guatemala")
         pid = c.get("project_id") or ""
         p_date = c.get("date") or project_date_lookup.get(pid, "")
+        p_cat = c.get("category") or project_category_lookup.get(pid, "")
         master_contacts_rows.append({
             "name": c.get("name") or "",
             "email": c.get("email") or "",
@@ -85,6 +87,7 @@ def main():
             "district": str(c.get("district") or ""),
             "role": c.get("role") or "",
             "date": p_date,
+            "category": p_cat,
             "project_id": pid,
             "project_title": c.get("project_title") or "",
             "archive_link": c.get("archive_link") or "",
@@ -98,6 +101,7 @@ def main():
         for p in c.get("projects", []):
             pid = p.get("id") or ""
             p_date = project_date_lookup.get(pid) or p.get("date") or c.get("leadership_term") or "2025–2026"
+            p_cat = project_category_lookup.get(pid, "")
             master_contacts_rows.append({
                 "name": c.get("current_leader_name") or "",
                 "email": c.get("current_leader_email") or "",
@@ -106,6 +110,7 @@ def main():
                 "district": str(c.get("district_number") or ""),
                 "role": c.get("current_leader_role") or "Current Club President",
                 "date": p_date,
+                "category": p_cat,
                 "project_id": pid,
                 "project_title": p.get("title") or "",
                 "archive_link": f"https://mrosen.github.io/rcla_project_map/?source=supabase&project={pid}",
@@ -119,6 +124,7 @@ def main():
         for p in d.get("projects", []):
             pid = p.get("id") or ""
             p_date = project_date_lookup.get(pid) or p.get("date") or d.get("leadership_term") or "2025–2026"
+            p_cat = project_category_lookup.get(pid, "")
             master_contacts_rows.append({
                 "name": d.get("current_leader_name") or "",
                 "email": d.get("current_leader_email") or "",
@@ -127,6 +133,7 @@ def main():
                 "district": str(d.get("district_number") or ""),
                 "role": d.get("current_leader_role") or "District Governor",
                 "date": p_date,
+                "category": p_cat,
                 "project_id": pid,
                 "project_title": p.get("title") or "",
                 "archive_link": f"https://mrosen.github.io/rcla_project_map/?source=supabase&project={pid}",
@@ -138,7 +145,7 @@ def main():
     master_contacts_rows.sort(key=lambda x: (0 if x["contact_type"] == "Direct Project Contact" else 1, x["country"], x["club"], x["name"]))
 
     # Write rotary_contacts.csv
-    contacts_headers = ["Name", "Email", "Club", "Country", "District", "Role", "Date", "Project Title", "Archive Record Link", "Contact Type"]
+    contacts_headers = ["Name", "Email", "Club", "Country", "District", "Role", "Date", "Category", "Project Title", "Archive Record Link", "Contact Type"]
     with open(CSV_CONTACTS_PATH, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(contacts_headers)
@@ -151,6 +158,7 @@ def main():
                 r["district"],
                 r["role"],
                 r["date"],
+                r["category"],
                 f"[{r['project_id']}] {r['project_title']}",
                 r["archive_link"],
                 r["contact_type"]
@@ -236,6 +244,7 @@ def main():
                 "district": r["district"],
                 "roles": set([r["role"]]),
                 "dates": set([r["date"]]) if r.get("date") else set(),
+                "categories": set([r["category"]]) if r.get("category") else set(),
                 "projects": set([f"[{r['project_id']}] {r['project_title']}"]),
                 "contact_type": r["contact_type"]
             }
@@ -251,6 +260,8 @@ def main():
             unique_persons[name_key]["roles"].add(r["role"])
             if r.get("date"):
                 unique_persons[name_key]["dates"].add(r["date"])
+            if r.get("category"):
+                unique_persons[name_key]["categories"].add(r["category"])
             unique_persons[name_key]["projects"].add(f"[{r['project_id']}] {r['project_title']}")
 
     serialized_unique_persons = []
@@ -263,6 +274,7 @@ def main():
             "district": p["district"],
             "roles": sorted(list(p["roles"])),
             "dates": sorted(list(p["dates"])),
+            "categories": sorted(list(p["categories"])),
             "projects_count": len(p["projects"]),
             "projects": sorted(list(p["projects"])),
             "contact_type": p["contact_type"]
@@ -631,6 +643,17 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
       color: #334155;
       white-space: nowrap;
     }}
+    .category-pill {{
+      display: inline-block;
+      padding: 2px 8px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #1d4ed8;
+      white-space: nowrap;
+    }}
     .email-link {{
       color: var(--primary);
       text-decoration: none;
@@ -670,30 +693,36 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
     <div class="stats-bar">
       <div class="stat-card">
         <div class="label">Total Roster Entries</div>
-        <div class="val">{total_contacts}</div>
+        <div class="val" id="stat-total">{total_contacts}</div>
       </div>
       <div class="stat-card">
         <div class="label">Direct Project Contacts</div>
-        <div class="val">{direct_count}</div>
+        <div class="val" id="stat-direct">{direct_count}</div>
       </div>
       <div class="stat-card">
         <div class="label">Enriched Gap Officers</div>
-        <div class="val">{enriched_count}</div>
+        <div class="val" id="stat-enriched">{enriched_count}</div>
       </div>
       <div class="stat-card">
         <div class="label">Contacts with Email</div>
-        <div class="val">{with_email_count}</div>
+        <div class="val" id="stat-email">{with_email_count}</div>
       </div>
       <div class="stat-card">
         <div class="label">Countries Represented</div>
-        <div class="val">{countries_count}</div>
+        <div class="val" id="stat-countries">{countries_count}</div>
       </div>
     </div>
 
     <div class="controls">
       <div class="controls-row-1">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Search by name, email, club, country, district, date, role, or project..." oninput="renderTable()">
+          <input type="text" id="searchInput" placeholder="Search by name, email, club, country, category, district, date, role, or project..." oninput="renderTable()">
+        </div>
+        <div class="filter-group">
+          <label for="categoryFilter">Category:</label>
+          <select id="categoryFilter" class="filter-select" onchange="renderTable()">
+            <option value="">All Categories</option>
+          </select>
         </div>
         <div class="filter-group">
           <label for="countryFilter">Country:</label>
@@ -729,6 +758,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
             <th class="sortable" onclick="handleSort('district')">Dist. <span class="sort-icon" id="sort-district">↕</span></th>
             <th class="sortable" onclick="handleSort('role')">Role <span class="sort-icon" id="sort-role">↕</span></th>
             <th class="sortable" onclick="handleSort('date')">Date <span class="sort-icon" id="sort-date">↕</span></th>
+            <th class="sortable" onclick="handleSort('category')">Category <span class="sort-icon" id="sort-category">↕</span></th>
             <th class="sortable" onclick="handleSort('project_title')">Project Title <span class="sort-icon" id="sort-project_title">↕</span></th>
             <th class="sortable" onclick="handleSort('contact_type')">Type <span class="sort-icon" id="sort-contact_type">↕</span></th>
           </tr>
@@ -743,18 +773,42 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
   <div id="toast" class="toast">Emails copied to clipboard!</div>
 
   <script>
+    const SUPABASE_URL = 'https://rqhmsincnmxrgtipvkif.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o';
+
     const allContacts = {contacts_json};
     let currentTab = 'all';
     let currentSortCol = 'name';
     let currentSortAsc = true;
 
-    function initCountryFilter() {{
+    function initCategoryFilter(preserveSelection = true) {{
+      const select = document.getElementById('categoryFilter');
+      const prevVal = preserveSelection ? select.value : '';
+      const counts = {{}};
+      allContacts.forEach(c => {{
+        const cat = (c.category || '').trim();
+        if (cat) counts[cat] = (counts[cat] || 0) + 1;
+      }});
+      select.innerHTML = `<option value="">All Categories (${{allContacts.length}})</option>`;
+      Object.keys(counts).sort().forEach(cat => {{
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.innerText = `${{cat}} (${{counts[cat]}})`;
+        select.appendChild(opt);
+      }});
+      if (prevVal && counts[prevVal]) {{
+        select.value = prevVal;
+      }}
+    }}
+
+    function initCountryFilter(preserveSelection = true) {{
+      const select = document.getElementById('countryFilter');
+      const prevVal = preserveSelection ? select.value : '';
       const counts = {{}};
       allContacts.forEach(c => {{
         const country = c.country || 'Unknown';
         counts[country] = (counts[country] || 0) + 1;
       }});
-      const select = document.getElementById('countryFilter');
       select.innerHTML = `<option value="">All Countries (${{allContacts.length}})</option>`;
       Object.keys(counts).sort().forEach(country => {{
         const opt = document.createElement('option');
@@ -762,6 +816,85 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
         opt.innerText = `${{country}} (${{counts[country]}})`;
         select.appendChild(opt);
       }});
+      if (prevVal && counts[prevVal]) {{
+        select.value = prevVal;
+      }}
+    }}
+
+    function applyUrlParams() {{
+      const params = new URLSearchParams(window.location.search);
+      const catParam = params.get('category') || params.get('cat');
+      if (catParam) {{
+        const select = document.getElementById('categoryFilter');
+        const target = catParam.trim().toLowerCase();
+        for (const opt of select.options) {{
+          if (opt.value && (opt.value.toLowerCase() === target || opt.value.toLowerCase().includes(target))) {{
+            select.value = opt.value;
+            break;
+          }}
+        }}
+      }}
+      const countryParam = params.get('country');
+      if (countryParam) {{
+        const select = document.getElementById('countryFilter');
+        const target = countryParam.trim().toLowerCase();
+        for (const opt of select.options) {{
+          if (opt.value && opt.value.toLowerCase() === target) {{
+            select.value = opt.value;
+            break;
+          }}
+        }}
+      }}
+      if (params.get('email') === '1' || params.get('email') === 'true') {{
+        document.getElementById('emailOnlyFilter').checked = true;
+      }}
+      const tabParam = params.get('tab');
+      if (tabParam && ['all', 'direct', 'enriched'].includes(tabParam.toLowerCase())) {{
+        currentTab = tabParam.toLowerCase();
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (currentTab === 'all') document.getElementById('tabAll').classList.add('active');
+        if (currentTab === 'direct') document.getElementById('tabDirect').classList.add('active');
+        if (currentTab === 'enriched') document.getElementById('tabEnriched').classList.add('active');
+      }}
+      const qParam = params.get('q') || params.get('search');
+      if (qParam) {{
+        document.getElementById('searchInput').value = qParam;
+      }}
+    }}
+
+    async function syncCategoriesFromSupabase() {{
+      try {{
+        const resp = await fetch(`${{SUPABASE_URL}}/rest/v1/projects?select=id,category,title`, {{
+          headers: {{
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${{SUPABASE_ANON_KEY}}`
+          }}
+        }});
+        if (!resp.ok) return;
+        const projects = await resp.json();
+        const catMap = {{}};
+        const titleMap = {{}};
+        projects.forEach(p => {{
+          if (p.id) {{
+            catMap[p.id] = (p.category || '').trim();
+            if (p.title) titleMap[p.id] = p.title.trim();
+          }}
+        }});
+        let changed = false;
+        allContacts.forEach(c => {{
+          if (c.project_id && catMap[c.project_id] !== undefined && c.category !== catMap[c.project_id]) {{
+            c.category = catMap[c.project_id];
+            changed = true;
+          }}
+        }});
+        if (changed) {{
+          initCategoryFilter(true);
+          applyUrlParams();
+          renderTable();
+        }}
+      }} catch (e) {{
+        // Ignore offline/network errors; baked-in Supabase categories remain active
+      }}
     }}
 
     function setTab(tab) {{
@@ -785,6 +918,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
 
     function filterData() {{
       const query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const selectedCategory = document.getElementById('categoryFilter').value;
       const selectedCountry = document.getElementById('countryFilter').value;
       const emailOnly = document.getElementById('emailOnlyFilter').checked;
 
@@ -792,6 +926,9 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
         // Tab filter
         if (currentTab === 'direct' && c.contact_type !== 'Direct Project Contact') return false;
         if (currentTab === 'enriched' && c.contact_type === 'Direct Project Contact') return false;
+
+        // Category filter
+        if (selectedCategory && (c.category || '') !== selectedCategory) return false;
 
         // Country filter
         if (selectedCountry && c.country !== selectedCountry) return false;
@@ -809,6 +946,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
           (c.district && c.district.toLowerCase().includes(query)) ||
           (c.role && c.role.toLowerCase().includes(query)) ||
           (c.date && c.date.toLowerCase().includes(query)) ||
+          (c.category && c.category.toLowerCase().includes(query)) ||
           (c.project_id && c.project_id.toLowerCase().includes(query)) ||
           (c.project_title && c.project_title.toLowerCase().includes(query)) ||
           (c.contact_type && c.contact_type.toLowerCase().includes(query))
@@ -818,6 +956,17 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
 
     function renderTable() {{
       let filtered = filterData();
+
+      // Update dynamic KPI stats bar for current filter
+      const directFiltered = filtered.filter(c => c.contact_type === 'Direct Project Contact').length;
+      const enrichedFiltered = filtered.length - directFiltered;
+      const emailFiltered = filtered.filter(c => c.email && c.email.trim()).length;
+      const countriesFiltered = new Set(filtered.map(c => c.country).filter(Boolean)).size;
+      document.getElementById('stat-total').innerText = filtered.length;
+      document.getElementById('stat-direct').innerText = directFiltered;
+      document.getElementById('stat-enriched').innerText = enrichedFiltered;
+      document.getElementById('stat-email').innerText = emailFiltered;
+      document.getElementById('stat-countries').innerText = countriesFiltered;
 
       // Sort data
       filtered.sort((a, b) => {{
@@ -878,6 +1027,10 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
           ? `<span class="country-pill">${{c.country}}</span>`
           : '—';
 
+        const categoryBadge = c.category
+          ? `<span class="category-pill">${{c.category}}</span>`
+          : '—';
+
         html += `
           <tr>
             <td class="nowrap"><strong>${{c.name || '—'}}</strong></td>
@@ -887,6 +1040,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
             <td>${{c.district || '—'}}</td>
             <td>${{c.role || '—'}}</td>
             <td class="nowrap">${{c.date || '—'}}</td>
+            <td>${{categoryBadge}}</td>
             <td>
               <div><strong>[${{c.project_id}}]</strong> ${{c.project_title}}</div>
               ${{archiveLink}}
@@ -897,7 +1051,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
       }});
 
       if (filtered.length === 0) {{
-        html = `<tr><td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">No contacts match your filter criteria.</td></tr>`;
+        html = `<tr><td colspan="10" style="text-align: center; padding: 36px; color: var(--text-muted);">No contacts match your filter criteria.</td></tr>`;
       }}
 
       tbody.innerHTML = html;
@@ -920,7 +1074,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
 
     function exportFilteredCSV() {{
       const filtered = filterData();
-      let csv = 'Name,Email,Club,Country,District,Role,Date,Project Title,Archive Link,Contact Type\\n';
+      let csv = 'Name,Email,Club,Country,District,Role,Date,Category,Project Title,Archive Link,Contact Type\\n';
       filtered.forEach(c => {{
         const row = [
           `"${{(c.name || '').replace(/"/g, '""')}}"`,
@@ -930,6 +1084,7 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
           `"${{(c.district || '').replace(/"/g, '""')}}"`,
           `"${{(c.role || '').replace(/"/g, '""')}}"`,
           `"${{(c.date || '').replace(/"/g, '""')}}"`,
+          `"${{(c.category || '').replace(/"/g, '""')}}"`,
           `"${{(`[${{c.project_id}}] ${{c.project_title}}`).replace(/"/g, '""')}}"`,
           `"${{(c.archive_link || '').replace(/"/g, '""')}}"`,
           `"${{(c.contact_type || '').replace(/"/g, '""')}}"`
@@ -937,10 +1092,12 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
         csv += row.join(',') + '\\n';
       }});
 
+      const selectedCategory = document.getElementById('categoryFilter').value;
+      const catSlug = selectedCategory ? `_${{selectedCategory.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}}` : '';
       const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `rotary_contacts_export_${{currentTab}}.csv`;
+      link.download = `rotary_contacts_export_${{currentTab}}${{catSlug}}.csv`;
       link.click();
     }}
 
@@ -951,9 +1108,12 @@ def generate_html_viewer(master_contacts, gap_rows, unique_persons):
       setTimeout(() => {{ toast.style.display = 'none'; }}, 3000);
     }}
 
-    // Initialize country dropdown and render table
-    initCountryFilter();
+    // Initialize dropdowns, apply URL params, render table, and sync live categories from Supabase
+    initCategoryFilter(false);
+    initCountryFilter(false);
+    applyUrlParams();
     renderTable();
+    syncCategoriesFromSupabase();
   </script>
 </body>
 </html>

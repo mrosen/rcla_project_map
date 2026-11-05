@@ -54,10 +54,12 @@ You can access the directory in any of the following ways:
 *(Note: Per your request, the public top navigation button on the main project map has been removed to keep the directory accessed directly via URL).*
 
 ### Key Interactive Features:
-- **Instant Search**: Type any name, email, club name, country, district number, role keyword, or project title into the search box for real-time filtering.
-- **Country Filter**: Dropdown menu dynamically populated with all 7 represented countries (Guatemala, United States, Canada, Brazil, Honduras, Belize, Germany) and record counts.
+- **Instant Search**: Type any name, email, club name, country, category, district number, role keyword, or project title into the search box for real-time filtering.
+- **Category Filter (Live Synced with Supabase)**: Dropdown menu populated with project categories from Supabase (`Water & Sanitation`, `Health`, `Economic Development`, `Education`, `Environment`, `Community Service`, `Emergency Relief`) with live record counts. Automatically refreshes from Supabase on page load if project categories are updated. Supports direct URL deep-linking (e.g. `./contacts_directory.html?category=Water+%26+Sanitation`).
+- **Country Filter**: Dropdown menu dynamically populated with all represented countries and record counts.
 - **Has Email Only Toggle**: Instant checkbox filter to show only contacts with valid email addresses.
-- **Interactive Column Sorting**: Click any table header (**Name**, **Email**, **Club**, **Country**, **Dist.**, **Role**, **Project Title**, **Type**) to sort ascending (`▲`) or descending (`▼`).
+- **Dynamic KPI Cards**: The 5 top statistics cards automatically recalculate to show counts for the currently active filter.
+- **Interactive Column Sorting**: Click any table header (**Name**, **Email**, **Club**, **Country**, **Dist.**, **Role**, **Date**, **Category**, **Project Title**, **Type**) to sort ascending (`▲`) or descending (`▼`).
 - **Filter Tabs**:
   - `All Contacts` (All 518 records)
   - `Direct Project Contacts` (The 352 project participants)

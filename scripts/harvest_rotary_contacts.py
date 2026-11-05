@@ -509,6 +509,7 @@ def main():
     for p in projects:
         pid = p.get("id")
         title = clean_text(p.get("title") or "")
+        category = clean_text(p.get("category") or "")
         archive_link = f"{ARCHIVE_BASE_URL}{pid}"
 
         # 1. Harvest from PDF dossiers
@@ -565,6 +566,7 @@ def main():
             c["country"] = resolve_country(c["club"], c["district"], res_info)
             c["project_id"] = pid
             c["project_title"] = title
+            c["category"] = category
             c["date"] = p_date
             c["archive_link"] = archive_link
             c["contact_type"] = "Direct Project Contact"
@@ -595,6 +597,7 @@ def main():
         projects_roster.append({
             "project_id": pid,
             "project_title": title,
+            "category": category,
             "project_type": p.get("project_type"),
             "date": p_date,
             "archive_link": archive_link,
