@@ -1,5 +1,5 @@
 {
-  "total_harvested_contacts": 352,
+  "total_harvested_contacts": 346,
   "projects": [
     {
       "project_id": "BarAlto",
@@ -411,7 +411,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitl\u00e1n",
           "district": "4250",
           "role": "Lake Atitl\u00e1n RC sponsor authorizer (progress & final reports)",
@@ -477,11 +477,11 @@
       "project_type": "Global Grant",
       "date": "2014-02-04",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1415576",
-      "contacts_count": 12,
+      "contacts_count": 11,
       "contacts": [
         {
           "name": "August Muller",
-          "email": "",
+          "email": "awmullerjr@comcast.net",
           "club": "Hingham",
           "district": "7950",
           "role": "International primary contact, Rotary Club of Hingham, District 7950",
@@ -570,8 +570,8 @@
           "contact_type": "Direct Project Contact"
         },
         {
-          "name": "Dwight Mara- Poage",
-          "email": "",
+          "name": "Dwight Mara-Poage",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Club President / Signatory",
@@ -631,27 +631,12 @@
         },
         {
           "name": "Dewitt Delawter",
-          "email": "",
+          "email": "dewitt.delawter@raveis.com",
           "club": "Hingham",
           "district": "",
           "role": "Hingham RC; authorized both grant reports (2016, 2017)",
           "source": "Narrative Bullet",
           "country": "United States",
-          "project_id": "GG1415576",
-          "project_title": "Potable Water for Multiple Communities (Sawyer Filters)",
-          "category": "Water & Sanitation",
-          "date": "2014-02-04",
-          "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1415576",
-          "contact_type": "Direct Project Contact"
-        },
-        {
-          "name": "Dwight Mara-Poage",
-          "email": "",
-          "club": "Lake Atitl\u00e1n",
-          "district": "4250",
-          "role": "Lake Atitl\u00e1n RC; authorized both reports",
-          "source": "Narrative Bullet",
-          "country": "Guatemala",
           "project_id": "GG1415576",
           "project_title": "Potable Water for Multiple Communities (Sawyer Filters)",
           "category": "Water & Sanitation",
@@ -681,7 +666,7 @@
       "project_type": "Global Grant",
       "date": "2015",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1525485",
-      "contacts_count": 14,
+      "contacts_count": 13,
       "contacts": [
         {
           "name": "Thomas Dunn",
@@ -715,7 +700,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host Committee Member",
@@ -765,21 +750,6 @@
           "district": "4250",
           "role": "DRFC Chair",
           "source": "GG1525485_Application.pdf (p. 16)",
-          "country": "Guatemala",
-          "project_id": "GG1525485",
-          "project_title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships",
-          "category": "Economic Development",
-          "date": "2015",
-          "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1525485",
-          "contact_type": "Direct Project Contact"
-        },
-        {
-          "name": "Dwight Mara- Poage",
-          "email": "",
-          "club": "Lake Atitlan",
-          "district": "4250",
-          "role": "Club President / Signatory",
-          "source": "GG1525485_Application.pdf (p. 17)",
           "country": "Guatemala",
           "project_id": "GG1525485",
           "project_title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships",
@@ -925,7 +895,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host primary contact, Lake Atitl\u00e1n Rotary Club, District 4250",
@@ -1090,7 +1060,7 @@
         },
         {
           "name": "William Boegel",
-          "email": "",
+          "email": "drboegel@gmail.com",
           "club": "Lake Atitl\u00e1n",
           "district": "4250",
           "role": "Lake Atitl\u00e1n Rotary Club; authorized both progress and final reports",
@@ -1142,7 +1112,7 @@
       "project_type": "Global Grant",
       "date": "2014\u20132017",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1526673",
-      "contacts_count": 15,
+      "contacts_count": 14,
       "contacts": [
         {
           "name": "Bryan Hennessy",
@@ -1176,7 +1146,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host Committee Member",
@@ -1242,21 +1212,6 @@
           "role": "Club President / Signatory",
           "source": "GG1526673_Application.pdf (p. 15)",
           "country": "United States",
-          "project_id": "GG1526673",
-          "project_title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)",
-          "category": "Health",
-          "date": "2014\u20132017",
-          "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1526673",
-          "contact_type": "Direct Project Contact"
-        },
-        {
-          "name": "Dwight Mara- Poage",
-          "email": "",
-          "club": "Lake Atitlan",
-          "district": "4250",
-          "role": "Club President / Signatory",
-          "source": "GG1526673_Application.pdf (p. 15)",
-          "country": "Guatemala",
           "project_id": "GG1526673",
           "project_title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)",
           "category": "Health",
@@ -1401,7 +1356,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host primary contact, E-Club of Lake Atitl\u00e1n",
@@ -1416,7 +1371,7 @@
         },
         {
           "name": "William Boegel",
-          "email": "",
+          "email": "drboegel@gmail.com",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host Committee Member",
@@ -1445,9 +1400,9 @@
           "contact_type": "Direct Project Contact"
         },
         {
-          "name": "Cecelia Babkirk eClub of Silicon",
-          "email": "",
-          "club": "Valley",
+          "name": "Cecelia Babkirk",
+          "email": "rotariancecelia@gmail.com",
+          "club": "eClub of Silicon Valley",
           "district": "5170",
           "role": "DRFC Chair",
           "source": "GG1529575_Application.pdf (p. 15)",
@@ -1536,7 +1491,7 @@
         },
         {
           "name": "Jim Zenner",
-          "email": "",
+          "email": "zennerbiz@aol.com",
           "club": "Santa Cruz, CA",
           "district": "5170",
           "role": "International committee, Santa Cruz; general project manager, secured donations, arranged SunSpring procurement",
@@ -1566,7 +1521,7 @@
         },
         {
           "name": "Karen Gossling",
-          "email": "",
+          "email": "karen.gosling@dignityhealth.org",
           "club": "",
           "district": "",
           "role": "Incoming President, Santa Cruz Sunrise; joined installation team",
@@ -1628,7 +1583,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host Committee Member",
@@ -1748,7 +1703,7 @@
         },
         {
           "name": "Eugenia Duran",
-          "email": "",
+          "email": "eugenia@namaste-direct.org",
           "club": "",
           "district": "",
           "role": "Financial manager, Fundacion Namaste Guatemaya",
@@ -1963,7 +1918,7 @@
         },
         {
           "name": "Norma Bajan",
-          "email": "",
+          "email": "info@estrella-impacto.org",
           "club": "",
           "district": "",
           "role": "Director, Asociaci\u00f3n Estrella de Mar (twice invited to the White House)",
@@ -2150,7 +2105,7 @@
         },
         {
           "name": "Gary Campbell",
-          "email": "",
+          "email": "gary8455@msn.com",
           "club": "Anoka",
           "district": "5960",
           "role": "DDF Authorizer",
@@ -2165,7 +2120,7 @@
         },
         {
           "name": "J. Kyle Haugen",
-          "email": "",
+          "email": "jkylehaugen@gmail.com",
           "club": "Prior Lake",
           "district": "5960",
           "role": "DDF Authorizer",
@@ -2210,7 +2165,7 @@
         },
         {
           "name": "William Boegel",
-          "email": "",
+          "email": "drboegel@gmail.com",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Club President / Signatory",
@@ -2240,7 +2195,7 @@
         },
         {
           "name": "Ragh Singh & Charles Cogan",
-          "email": "",
+          "email": "ccogan@carleton.edu",
           "club": "Northfield RC",
           "district": "",
           "role": "(Northfield RC) \u2014 international committee members",
@@ -2255,7 +2210,7 @@
         },
         {
           "name": "Erick Tok",
-          "email": "",
+          "email": "toccotom@gmail.com",
           "club": "",
           "district": "",
           "role": "original Director, Agua del Pueblo (monitoring & evaluation)",
@@ -2270,7 +2225,7 @@
         },
         {
           "name": "Juanita Hernandez",
-          "email": "",
+          "email": "juavi172003@yahoo.com.mx",
           "club": "",
           "district": "",
           "role": "successor Director, Agua del Pueblo (mid-project)",
@@ -2285,7 +2240,7 @@
         },
         {
           "name": "Carlos Simon",
-          "email": "",
+          "email": "carlos_romeo01@hotmail.com",
           "club": "",
           "district": "",
           "role": "final Director/lead engineer, Agua del Pueblo (project close-out)",
@@ -2373,7 +2328,7 @@
         },
         {
           "name": "Dwight Mara-Poage",
-          "email": "",
+          "email": "dwight@fundamaya.org",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host Committee Member",
@@ -2403,7 +2358,7 @@
         },
         {
           "name": "Gary Campbell",
-          "email": "",
+          "email": "gary8455@msn.com",
           "club": "Anoka",
           "district": "5960",
           "role": "DRFC Chair",
@@ -2433,7 +2388,7 @@
         },
         {
           "name": "William Boegel",
-          "email": "",
+          "email": "drboegel@gmail.com",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Club President / Signatory",
@@ -2463,7 +2418,7 @@
         },
         {
           "name": "Dr. Peter Rohloff",
-          "email": "",
+          "email": "peter@wuqukawoq.org",
           "club": "",
           "district": "",
           "role": "Chief Medical Officer, Maya Health Alliance; Harvard Medical School faculty; oversaw all monitoring and evaluation",
@@ -2493,7 +2448,7 @@
         },
         {
           "name": "Jennifer Brewer, MA, RDN",
-          "email": "",
+          "email": "jenb@mycookkitchen.com",
           "club": "",
           "district": "",
           "role": "Project coordinator/volunteer traveler; coordinated inter-organizational relationships; traveled to Guatemala August 2019",
@@ -2816,7 +2771,7 @@
         },
         {
           "name": "Gary Campbell",
-          "email": "",
+          "email": "gary8455@msn.com",
           "club": "Anoka",
           "district": "5960",
           "role": "DDF Authorizer",
@@ -3033,7 +2988,7 @@
         },
         {
           "name": "Mark Mains",
-          "email": "",
+          "email": "mainsma@gmail.com",
           "club": "Lake Atitlan",
           "district": "4250",
           "role": "Host Committee Member",
@@ -3580,7 +3535,7 @@
         },
         {
           "name": "J. Kyle Haugen",
-          "email": "",
+          "email": "jkylehaugen@gmail.com",
           "club": "Prior Lake",
           "district": "5960",
           "role": "DRFC Chair",
@@ -3625,7 +3580,7 @@
         },
         {
           "name": "Charles Cogan & Vicki Dilley",
-          "email": "",
+          "email": "ccogan@carleton.edu",
           "club": "Northfield",
           "district": "",
           "role": "International committee, Northfield RC",
@@ -3682,11 +3637,11 @@
       "project_type": "Global Grant",
       "date": "2022-04-15",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2125241",
-      "contacts_count": 12,
+      "contacts_count": 11,
       "contacts": [
         {
           "name": "John Trone",
-          "email": "",
+          "email": "john.trone@fortcollinsrotary.org",
           "club": "Fort Collins",
           "district": "5440",
           "role": "Fort Collins Rotary Club; International Primary Contact; financial manager",
@@ -3745,9 +3700,9 @@
           "contact_type": "Direct Project Contact"
         },
         {
-          "name": "Charles Rutenberg Fort Collins-",
+          "name": "Charles Rutenberg",
           "email": "",
-          "club": "Breakfast",
+          "club": "Fort Collins Breakfast",
           "district": "5440",
           "role": "DRFC Chair",
           "source": "GG2125241_Application.pdf (p. 16)",
@@ -3795,21 +3750,6 @@
           "club": "Fort Collins",
           "district": "",
           "role": "Fort Collins RC; International Secondary Contact",
-          "source": "Narrative Bullet",
-          "country": "United States",
-          "project_id": "GG2125241",
-          "project_title": "El Potrero, WASH",
-          "category": "Water & Sanitation",
-          "date": "2022-04-15",
-          "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2125241",
-          "contact_type": "Direct Project Contact"
-        },
-        {
-          "name": "Charles Rutenberg",
-          "email": "",
-          "club": "Fort Collins Breakfast",
-          "district": "5440",
-          "role": "Fort Collins Breakfast RC; DRFC Chair, District 5440",
           "source": "Narrative Bullet",
           "country": "United States",
           "project_id": "GG2125241",
@@ -4981,7 +4921,7 @@
       "contacts": [
         {
           "name": "Lydia Hohman",
-          "email": "",
+          "email": "mark.lydia.jones@gmail.com",
           "club": "Annapolis",
           "district": "7620",
           "role": "International primary contact, RC Annapolis, District 7620",
@@ -5041,7 +4981,7 @@
         },
         {
           "name": "Geetha Jayaram",
-          "email": "",
+          "email": "gjayara1@jhmi.edu",
           "club": "Howard West",
           "district": "7620",
           "role": "DRFC Chair",
@@ -5086,7 +5026,7 @@
         },
         {
           "name": "Jennifer Strong",
-          "email": "",
+          "email": "jenniferstrong@jestrong.com",
           "club": "Lakeport",
           "district": "5130",
           "role": "DDF Authorizer",
@@ -5101,7 +5041,7 @@
         },
         {
           "name": "Jim O'Grady",
-          "email": "",
+          "email": "rotary@jimogrady.com",
           "club": "Petaluma Valley",
           "district": "5130",
           "role": "DDF Authorizer",
@@ -5389,7 +5329,7 @@
       "project_type": "Global Grant",
       "date": "2026-07-15",
       "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2578692",
-      "contacts_count": 12,
+      "contacts_count": 10,
       "contacts": [
         {
           "name": "Clinton White",
@@ -5452,7 +5392,7 @@
           "contact_type": "Direct Project Contact"
         },
         {
-          "name": "Barbara Chamberlain- Skinner",
+          "name": "Barbara Chamberlain-Skinner",
           "email": "",
           "club": "Parole (Annapolis)",
           "district": "7620",
@@ -5482,9 +5422,9 @@
           "contact_type": "Direct Project Contact"
         },
         {
-          "name": "Mandy Granger Dupont Circle",
-          "email": "",
-          "club": "Washington",
+          "name": "Mandy Granger",
+          "email": "office@rotary7620.org",
+          "club": "Dupont Circle Washington",
           "district": "7620",
           "role": "DDF Authorizer",
           "source": "GG2578692_WASH_VistaHermosa_PhaseII_Application.pdf (p. 19)",
@@ -5498,7 +5438,7 @@
         },
         {
           "name": "Sue Weber",
-          "email": "",
+          "email": "sweber@annapolisrotaract.org",
           "club": "Annapolis",
           "district": "7620",
           "role": "DDF Authorizer",
@@ -5528,40 +5468,10 @@
         },
         {
           "name": "Lydia Hohman",
-          "email": "",
+          "email": "mark.lydia.jones@gmail.com",
           "club": "Annapolis",
           "district": "",
           "role": "International secondary contact, RC Annapolis",
-          "source": "Narrative Table",
-          "country": "United States",
-          "project_id": "GG2578692",
-          "project_title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II",
-          "category": "Water & Sanitation",
-          "date": "2026-07-15",
-          "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2578692",
-          "contact_type": "Direct Project Contact"
-        },
-        {
-          "name": "Barbara Chamberlain-Skinner",
-          "email": "",
-          "club": "",
-          "district": "7620",
-          "role": "DRFC Chair, District 7620; DDF and grant authorization",
-          "source": "Narrative Table",
-          "country": "United States",
-          "project_id": "GG2578692",
-          "project_title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II",
-          "category": "Water & Sanitation",
-          "date": "2026-07-15",
-          "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2578692",
-          "contact_type": "Direct Project Contact"
-        },
-        {
-          "name": "Mandy Granger",
-          "email": "",
-          "club": "",
-          "district": "7620",
-          "role": "DDF authorization, RC Dupont Circle / District 7620",
           "source": "Narrative Table",
           "country": "United States",
           "project_id": "GG2578692",
@@ -6342,7 +6252,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitl\u00e1n",
       "district": "4250",
       "role": "Lake Atitl\u00e1n RC sponsor authorizer (progress & final reports)",
@@ -6387,7 +6297,7 @@
     },
     {
       "name": "August Muller",
-      "email": "",
+      "email": "awmullerjr@comcast.net",
       "club": "Hingham",
       "district": "7950",
       "role": "International primary contact, Rotary Club of Hingham, District 7950",
@@ -6476,8 +6386,8 @@
       "contact_type": "Direct Project Contact"
     },
     {
-      "name": "Dwight Mara- Poage",
-      "email": "",
+      "name": "Dwight Mara-Poage",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Club President / Signatory",
@@ -6537,27 +6447,12 @@
     },
     {
       "name": "Dewitt Delawter",
-      "email": "",
+      "email": "dewitt.delawter@raveis.com",
       "club": "Hingham",
       "district": "",
       "role": "Hingham RC; authorized both grant reports (2016, 2017)",
       "source": "Narrative Bullet",
       "country": "United States",
-      "project_id": "GG1415576",
-      "project_title": "Potable Water for Multiple Communities (Sawyer Filters)",
-      "category": "Water & Sanitation",
-      "date": "2014-02-04",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1415576",
-      "contact_type": "Direct Project Contact"
-    },
-    {
-      "name": "Dwight Mara-Poage",
-      "email": "",
-      "club": "Lake Atitl\u00e1n",
-      "district": "4250",
-      "role": "Lake Atitl\u00e1n RC; authorized both reports",
-      "source": "Narrative Bullet",
-      "country": "Guatemala",
       "project_id": "GG1415576",
       "project_title": "Potable Water for Multiple Communities (Sawyer Filters)",
       "category": "Water & Sanitation",
@@ -6597,7 +6492,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host Committee Member",
@@ -6647,21 +6542,6 @@
       "district": "4250",
       "role": "DRFC Chair",
       "source": "GG1525485_Application.pdf (p. 16)",
-      "country": "Guatemala",
-      "project_id": "GG1525485",
-      "project_title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships",
-      "category": "Economic Development",
-      "date": "2015",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1525485",
-      "contact_type": "Direct Project Contact"
-    },
-    {
-      "name": "Dwight Mara- Poage",
-      "email": "",
-      "club": "Lake Atitlan",
-      "district": "4250",
-      "role": "Club President / Signatory",
-      "source": "GG1525485_Application.pdf (p. 17)",
       "country": "Guatemala",
       "project_id": "GG1525485",
       "project_title": "Unlocking the Girl Effect \u2014 Mayan Women Scholarships",
@@ -6792,7 +6672,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host primary contact, Lake Atitl\u00e1n Rotary Club, District 4250",
@@ -6957,7 +6837,7 @@
     },
     {
       "name": "William Boegel",
-      "email": "",
+      "email": "drboegel@gmail.com",
       "club": "Lake Atitl\u00e1n",
       "district": "4250",
       "role": "Lake Atitl\u00e1n Rotary Club; authorized both progress and final reports",
@@ -7017,7 +6897,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host Committee Member",
@@ -7083,21 +6963,6 @@
       "role": "Club President / Signatory",
       "source": "GG1526673_Application.pdf (p. 15)",
       "country": "United States",
-      "project_id": "GG1526673",
-      "project_title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)",
-      "category": "Health",
-      "date": "2014\u20132017",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG1526673",
-      "contact_type": "Direct Project Contact"
-    },
-    {
-      "name": "Dwight Mara- Poage",
-      "email": "",
-      "club": "Lake Atitlan",
-      "district": "4250",
-      "role": "Club President / Signatory",
-      "source": "GG1526673_Application.pdf (p. 15)",
-      "country": "Guatemala",
       "project_id": "GG1526673",
       "project_title": "X-ray & Fluoroscopy for Hospital Schafer, San Lucas Toliman (Phase 1)",
       "category": "Health",
@@ -7227,7 +7092,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host primary contact, E-Club of Lake Atitl\u00e1n",
@@ -7242,7 +7107,7 @@
     },
     {
       "name": "William Boegel",
-      "email": "",
+      "email": "drboegel@gmail.com",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host Committee Member",
@@ -7271,9 +7136,9 @@
       "contact_type": "Direct Project Contact"
     },
     {
-      "name": "Cecelia Babkirk eClub of Silicon",
-      "email": "",
-      "club": "Valley",
+      "name": "Cecelia Babkirk",
+      "email": "rotariancecelia@gmail.com",
+      "club": "eClub of Silicon Valley",
       "district": "5170",
       "role": "DRFC Chair",
       "source": "GG1529575_Application.pdf (p. 15)",
@@ -7362,7 +7227,7 @@
     },
     {
       "name": "Jim Zenner",
-      "email": "",
+      "email": "zennerbiz@aol.com",
       "club": "Santa Cruz, CA",
       "district": "5170",
       "role": "International committee, Santa Cruz; general project manager, secured donations, arranged SunSpring procurement",
@@ -7392,7 +7257,7 @@
     },
     {
       "name": "Karen Gossling",
-      "email": "",
+      "email": "karen.gosling@dignityhealth.org",
       "club": "",
       "district": "",
       "role": "Incoming President, Santa Cruz Sunrise; joined installation team",
@@ -7437,7 +7302,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host Committee Member",
@@ -7557,7 +7422,7 @@
     },
     {
       "name": "Eugenia Duran",
-      "email": "",
+      "email": "eugenia@namaste-direct.org",
       "club": "",
       "district": "",
       "role": "Financial manager, Fundacion Namaste Guatemaya",
@@ -7752,7 +7617,7 @@
     },
     {
       "name": "Norma Bajan",
-      "email": "",
+      "email": "info@estrella-impacto.org",
       "club": "",
       "district": "",
       "role": "Director, Asociaci\u00f3n Estrella de Mar (twice invited to the White House)",
@@ -7902,7 +7767,7 @@
     },
     {
       "name": "Gary Campbell",
-      "email": "",
+      "email": "gary8455@msn.com",
       "club": "Anoka",
       "district": "5960",
       "role": "DDF Authorizer",
@@ -7917,7 +7782,7 @@
     },
     {
       "name": "J. Kyle Haugen",
-      "email": "",
+      "email": "jkylehaugen@gmail.com",
       "club": "Prior Lake",
       "district": "5960",
       "role": "DDF Authorizer",
@@ -7962,7 +7827,7 @@
     },
     {
       "name": "William Boegel",
-      "email": "",
+      "email": "drboegel@gmail.com",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Club President / Signatory",
@@ -7992,7 +7857,7 @@
     },
     {
       "name": "Ragh Singh & Charles Cogan",
-      "email": "",
+      "email": "ccogan@carleton.edu",
       "club": "Northfield RC",
       "district": "",
       "role": "(Northfield RC) \u2014 international committee members",
@@ -8007,7 +7872,7 @@
     },
     {
       "name": "Erick Tok",
-      "email": "",
+      "email": "toccotom@gmail.com",
       "club": "",
       "district": "",
       "role": "original Director, Agua del Pueblo (monitoring & evaluation)",
@@ -8022,7 +7887,7 @@
     },
     {
       "name": "Juanita Hernandez",
-      "email": "",
+      "email": "juavi172003@yahoo.com.mx",
       "club": "",
       "district": "",
       "role": "successor Director, Agua del Pueblo (mid-project)",
@@ -8037,7 +7902,7 @@
     },
     {
       "name": "Carlos Simon",
-      "email": "",
+      "email": "carlos_romeo01@hotmail.com",
       "club": "",
       "district": "",
       "role": "final Director/lead engineer, Agua del Pueblo (project close-out)",
@@ -8097,7 +7962,7 @@
     },
     {
       "name": "Dwight Mara-Poage",
-      "email": "",
+      "email": "dwight@fundamaya.org",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host Committee Member",
@@ -8127,7 +7992,7 @@
     },
     {
       "name": "Gary Campbell",
-      "email": "",
+      "email": "gary8455@msn.com",
       "club": "Anoka",
       "district": "5960",
       "role": "DRFC Chair",
@@ -8157,7 +8022,7 @@
     },
     {
       "name": "William Boegel",
-      "email": "",
+      "email": "drboegel@gmail.com",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Club President / Signatory",
@@ -8187,7 +8052,7 @@
     },
     {
       "name": "Dr. Peter Rohloff",
-      "email": "",
+      "email": "peter@wuqukawoq.org",
       "club": "",
       "district": "",
       "role": "Chief Medical Officer, Maya Health Alliance; Harvard Medical School faculty; oversaw all monitoring and evaluation",
@@ -8217,7 +8082,7 @@
     },
     {
       "name": "Jennifer Brewer, MA, RDN",
-      "email": "",
+      "email": "jenb@mycookkitchen.com",
       "club": "",
       "district": "",
       "role": "Project coordinator/volunteer traveler; coordinated inter-organizational relationships; traveled to Guatemala August 2019",
@@ -8487,7 +8352,7 @@
     },
     {
       "name": "Gary Campbell",
-      "email": "",
+      "email": "gary8455@msn.com",
       "club": "Anoka",
       "district": "5960",
       "role": "DDF Authorizer",
@@ -8682,7 +8547,7 @@
     },
     {
       "name": "Mark Mains",
-      "email": "",
+      "email": "mainsma@gmail.com",
       "club": "Lake Atitlan",
       "district": "4250",
       "role": "Host Committee Member",
@@ -9177,7 +9042,7 @@
     },
     {
       "name": "J. Kyle Haugen",
-      "email": "",
+      "email": "jkylehaugen@gmail.com",
       "club": "Prior Lake",
       "district": "5960",
       "role": "DRFC Chair",
@@ -9222,7 +9087,7 @@
     },
     {
       "name": "Charles Cogan & Vicki Dilley",
-      "email": "",
+      "email": "ccogan@carleton.edu",
       "club": "Northfield",
       "district": "",
       "role": "International committee, Northfield RC",
@@ -9252,7 +9117,7 @@
     },
     {
       "name": "John Trone",
-      "email": "",
+      "email": "john.trone@fortcollinsrotary.org",
       "club": "Fort Collins",
       "district": "5440",
       "role": "Fort Collins Rotary Club; International Primary Contact; financial manager",
@@ -9311,9 +9176,9 @@
       "contact_type": "Direct Project Contact"
     },
     {
-      "name": "Charles Rutenberg Fort Collins-",
+      "name": "Charles Rutenberg",
       "email": "",
-      "club": "Breakfast",
+      "club": "Fort Collins Breakfast",
       "district": "5440",
       "role": "DRFC Chair",
       "source": "GG2125241_Application.pdf (p. 16)",
@@ -9361,21 +9226,6 @@
       "club": "Fort Collins",
       "district": "",
       "role": "Fort Collins RC; International Secondary Contact",
-      "source": "Narrative Bullet",
-      "country": "United States",
-      "project_id": "GG2125241",
-      "project_title": "El Potrero, WASH",
-      "category": "Water & Sanitation",
-      "date": "2022-04-15",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2125241",
-      "contact_type": "Direct Project Contact"
-    },
-    {
-      "name": "Charles Rutenberg",
-      "email": "",
-      "club": "Fort Collins Breakfast",
-      "district": "5440",
-      "role": "Fort Collins Breakfast RC; DRFC Chair, District 5440",
       "source": "Narrative Bullet",
       "country": "United States",
       "project_id": "GG2125241",
@@ -10407,7 +10257,7 @@
     },
     {
       "name": "Lydia Hohman",
-      "email": "",
+      "email": "mark.lydia.jones@gmail.com",
       "club": "Annapolis",
       "district": "7620",
       "role": "International primary contact, RC Annapolis, District 7620",
@@ -10467,7 +10317,7 @@
     },
     {
       "name": "Geetha Jayaram",
-      "email": "",
+      "email": "gjayara1@jhmi.edu",
       "club": "Howard West",
       "district": "7620",
       "role": "DRFC Chair",
@@ -10512,7 +10362,7 @@
     },
     {
       "name": "Jennifer Strong",
-      "email": "",
+      "email": "jenniferstrong@jestrong.com",
       "club": "Lakeport",
       "district": "5130",
       "role": "DDF Authorizer",
@@ -10527,7 +10377,7 @@
     },
     {
       "name": "Jim O'Grady",
-      "email": "",
+      "email": "rotary@jimogrady.com",
       "club": "Petaluma Valley",
       "district": "5130",
       "role": "DDF Authorizer",
@@ -10826,7 +10676,7 @@
       "contact_type": "Direct Project Contact"
     },
     {
-      "name": "Barbara Chamberlain- Skinner",
+      "name": "Barbara Chamberlain-Skinner",
       "email": "",
       "club": "Parole (Annapolis)",
       "district": "7620",
@@ -10856,9 +10706,9 @@
       "contact_type": "Direct Project Contact"
     },
     {
-      "name": "Mandy Granger Dupont Circle",
-      "email": "",
-      "club": "Washington",
+      "name": "Mandy Granger",
+      "email": "office@rotary7620.org",
+      "club": "Dupont Circle Washington",
       "district": "7620",
       "role": "DDF Authorizer",
       "source": "GG2578692_WASH_VistaHermosa_PhaseII_Application.pdf (p. 19)",
@@ -10872,7 +10722,7 @@
     },
     {
       "name": "Sue Weber",
-      "email": "",
+      "email": "sweber@annapolisrotaract.org",
       "club": "Annapolis",
       "district": "7620",
       "role": "DDF Authorizer",
@@ -10902,40 +10752,10 @@
     },
     {
       "name": "Lydia Hohman",
-      "email": "",
+      "email": "mark.lydia.jones@gmail.com",
       "club": "Annapolis",
       "district": "",
       "role": "International secondary contact, RC Annapolis",
-      "source": "Narrative Table",
-      "country": "United States",
-      "project_id": "GG2578692",
-      "project_title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II",
-      "category": "Water & Sanitation",
-      "date": "2026-07-15",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2578692",
-      "contact_type": "Direct Project Contact"
-    },
-    {
-      "name": "Barbara Chamberlain-Skinner",
-      "email": "",
-      "club": "",
-      "district": "7620",
-      "role": "DRFC Chair, District 7620; DDF and grant authorization",
-      "source": "Narrative Table",
-      "country": "United States",
-      "project_id": "GG2578692",
-      "project_title": "Water, Sanitation, Hygiene for Vista Hermosa, Phase II",
-      "category": "Water & Sanitation",
-      "date": "2026-07-15",
-      "archive_link": "https://mrosen.github.io/rcla_project_map/?source=supabase&project=GG2578692",
-      "contact_type": "Direct Project Contact"
-    },
-    {
-      "name": "Mandy Granger",
-      "email": "",
-      "club": "",
-      "district": "7620",
-      "role": "DDF authorization, RC Dupont Circle / District 7620",
       "source": "Narrative Table",
       "country": "United States",
       "project_id": "GG2578692",

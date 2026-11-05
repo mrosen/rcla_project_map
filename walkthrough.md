@@ -19,21 +19,21 @@ We have generated the standalone export package of Rotary contacts and leadershi
 
 ```
 ======================================================
-  Total Master Contact Roster Entries : 518
-  Direct Project Contacts Harvested   : 352
-  Enriched Gap Leadership Entries     : 166
-  Contacts with Verified Email        : 238
+  Total Master Contact Roster Entries : 516
+  Direct Project Contacts Harvested   : 346
+  Enriched Gap Leadership Entries     : 170
+  Contacts with Verified Email        : 253 (104 in Water & Sanitation — 72%)
   Countries Represented               : 7 (Guatemala, USA, Canada, Brazil, Honduras, Belize, Germany)
-  Unique Rotary Clubs Involved        : 96
+  Unique Rotary Clubs Involved        : 95
   Unique Rotary Districts Involved    : 22
 ======================================================
 ```
 
 ### Harvest Highlights
-- **Direct Project Contacts (352)**:
-  - Extracted from Global Grant Application PDFs, Final Reports, Progress Reports, Supabase metadata, and Markdown `narrative` Key Personnel sections.
+- **Direct Project Contacts (346)**:
+  - Extracted from Global Grant Application PDFs, Final Reports, Progress Reports (including `Monitoring and evaluation` blocks), Supabase metadata, and Markdown `narrative` Key Personnel sections.
   - Automatically resolved all recurring RCLA project champions and shepherds (`Michael Rosen`, `Terrence (Joe) Wakely`, `Duncan Aitken`, `Armand Boissy`, `Bruce Clemens`, `Candis Krummel`, `Michelle Fajkus`, `Clinton White`, `Shad Qudsi`, `William Boegel`, `Emilio Crespo Morales`, `Dwight Mara-Poage`).
-  - Extracted direct personal emails from volunteer traveler tables, project report sign-offs, and narrative records (e.g. Todd Thompson, Patrick Coyle, Glenn Kubiak, Jeff Youngsma, Catherine Patel, Brad Fischer, Don Baldus, Dr. Paul Wise, Tom Tocco).
+  - Extracted direct personal emails from volunteer traveler tables, `Monitoring and evaluation` report tables, `matchinggrants.org` historical project pages, district directories, and narrative records (e.g. Todd Thompson, Patrick Coyle, Glenn Kubiak, Jeff Youngsma, Catherine Patel, Brad Fischer, Don Baldus, Dr. Paul Wise, Tom Tocco, Erick Tok, Juanita Hernandez, Carlos Simon, Mark Mains, Lydia Hohman, Sue Weber, Geetha Jayaram, John Trone, August Muller, Dewitt DeLawter, Jim Zenner, Karen Gosling, Cecelia Babkirk, Jennifer Strong, Jim O'Grady, Kyle Haugen, Gary Campbell, Charles Cogan, Dr. Peter Rohloff, Jennifer Brewer).
 - **Gap Entities (118)**:
   - **22 Rotary Districts**: 100% enriched with the 2025–2026 District Governor name, term, district website, country, and verified email or district office contact (e.g. District 4250 Diana Brown, District 5960 Glenn Bowers, District 7620 Mandy Granger, District 6330 Jeffrey Ferweda, District 5440 Karen Morgan, District 6440 Marlene Frisbie, etc.).
   - **96 Rotary Clubs**: Enriched with Country, Current Club Presidents (or DG contact c/o fallback), club website, and verified club contact emails (e.g. Northfield RC Diane Melbye `info@northfieldrotary.org`, Annapolis RC `info@annapolisrotary.org`, Ferndale RC `info@ferndalerotary.org`, Fort Collins RC `rotary@rotarycluboffortcollins.org`, etc.).

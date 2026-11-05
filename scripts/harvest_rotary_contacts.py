@@ -55,6 +55,42 @@ KNOWN_ROTARIAN_EMAILS = {
     "michael rosen": "michael.rosen@gmail.com",
     "mike rosen": "michael.rosen@gmail.com",
     "shad qudsi": "shad@atitlanorganics.com",
+    "william boegel": "drboegel@gmail.com",
+    "will boegel": "drboegel@gmail.com",
+    "dwight mara-poage": "dwight@fundamaya.org",
+    "dwight mara- poage": "dwight@fundamaya.org",
+    "dwight mara poage": "dwight@fundamaya.org",
+    "lydia hohman": "mark.lydia.jones@gmail.com",
+    "sue weber": "sweber@annapolisrotaract.org",
+    "geetha jayaram": "gjayara1@jhmi.edu",
+    "mandy granger": "office@rotary7620.org",
+    "mandy granger dupont circle": "office@rotary7620.org",
+    "mandy warfield granger": "office@rotary7620.org",
+    "john trone": "john.trone@fortcollinsrotary.org",
+    "august muller": "awmullerjr@comcast.net",
+    "dewitt delawter": "dewitt.delawter@raveis.com",
+    "jim zenner": "zennerbiz@aol.com",
+    "karen gossling": "karen.gosling@dignityhealth.org",
+    "karen gosling": "karen.gosling@dignityhealth.org",
+    "cecelia babkirk": "rotariancecelia@gmail.com",
+    "cecelia babkirk eclub of silicon": "rotariancecelia@gmail.com",
+    "jennifer strong": "jenniferstrong@jestrong.com",
+    "jim o'grady": "rotary@jimogrady.com",
+    "j. kyle haugen": "jkylehaugen@gmail.com",
+    "kyle haugen": "jkylehaugen@gmail.com",
+    "gary campbell": "gary8455@msn.com",
+    "charles cogan": "ccogan@carleton.edu",
+    "ragh singh & charles cogan": "ccogan@carleton.edu",
+    "charles cogan & vicki dilley": "ccogan@carleton.edu",
+    "erick tok": "toccotom@gmail.com",
+    "juanita hernandez": "juavi172003@yahoo.com.mx",
+    "carlos simon": "carlos_romeo01@hotmail.com",
+    "mark mains": "mainsma@gmail.com",
+    "eugenia duran": "eugenia@namaste-direct.org",
+    "norma bajan": "info@estrella-impacto.org",
+    "jennifer brewer, ma, rdn": "jenb@mycookkitchen.com",
+    "jennifer brewer": "jenb@mycookkitchen.com",
+    "peter rohloff": "peter@wuqukawoq.org",
 }
 
 # RCLA Shepherd name expansion and emails
@@ -77,8 +113,8 @@ RCLA_SHEPHERDS = {
     "shad qudsi": ("Shad Qudsi", "shad@atitlanorganics.com"),
     "emilio": ("Emilio Crespo Morales", ""),
     "emilio crespo morales": ("Emilio Crespo Morales", ""),
-    "dwight": ("Dwight Mara-Poage", ""),
-    "dwight mara-poage": ("Dwight Mara-Poage", ""),
+    "dwight": ("Dwight Mara-Poage", "dwight@fundamaya.org"),
+    "dwight mara-poage": ("Dwight Mara-Poage", "dwight@fundamaya.org"),
     "will": ("William Boegel", "drboegel@gmail.com"),
     "william boegel": ("William Boegel", "drboegel@gmail.com")
 }
@@ -369,7 +405,12 @@ def normalize_person_key(name):
         return ""
     n = name.lower()
     n = re.sub(r'\(.*?\)', '', n)
-    n = re.sub(r'\b(?:dr|phd|md|prof|mr|mrs|ms)\b\.?', '', n)
+    n = re.sub(r'\b(?:dr|phd|md|prof|mr|mrs|ms|ma|rdn)\b\.?', '', n)
+    n = re.sub(r'-\s+', '-', n)
+    n = re.sub(r'\s+eclub of silicon$', '', n)
+    n = re.sub(r'\s+fort collins-$', '', n)
+    n = re.sub(r'\s+dupont circle$', '', n)
+    n = n.replace(',', ' ')
     return clean_text(n)
 
 RCLA_MEMBER_NAMES = {
@@ -388,6 +429,18 @@ def deduplicate_project_contacts(raw_contacts):
         name = clean_text(c.get("name", "")).strip("*_ ")
         if not name or len(name) < 3:
             continue
+        # Clean up PDF wrapped hyphenated names & club fragments
+        name = re.sub(r'-\s+', '-', name)
+        c_club_override = ""
+        if name.endswith(" eClub of Silicon"):
+            name = name[:-len(" eClub of Silicon")].strip()
+            c_club_override = "eClub of Silicon Valley"
+        elif name.endswith(" Fort Collins-"):
+            name = name[:-len(" Fort Collins-")].strip()
+            c_club_override = "Fort Collins Breakfast"
+        elif name.endswith(" Dupont Circle"):
+            name = name[:-len(" Dupont Circle")].strip()
+            c_club_override = "Dupont Circle Washington"
         # Filter out common header labels and table separators
         if re.match(r'^[-:_| ]+$', name):
             continue
@@ -398,6 +451,9 @@ def deduplicate_project_contacts(raw_contacts):
         key = norm_k if norm_k else name.lower()
 
         c_club = clean_club_name(c.get("club") or "")
+        if c_club_override or c_club in ("Valley", "Breakfast", "Washington"):
+            if c_club_override:
+                c_club = c_club_override
         c_dist = str(c.get("district") or "").strip()
         c_email = c.get("email") or ""
 
