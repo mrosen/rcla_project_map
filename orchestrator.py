@@ -84,11 +84,14 @@ STATE = {
     "status": "idle",       # "idle", "running", "error"
     "task": None,           # "grantcenter_sync", "spc_export"
     "last_run": None,
-    "current_step": "Ready"
+    "current_step": "Ready",
+    "waiting_for_mfa": False
 }
 
 async def emit_log(message: str):
     """Sends a timestamped message to console, memory buffer, and all SSE subscriber queues."""
+    if "[MFA_REQUIRED]" in message:
+        STATE["waiting_for_mfa"] = True
     timestamp = datetime.now().strftime("%H:%M:%S")
     formatted = f"[{timestamp}] {message}"
     print(formatted)
@@ -98,6 +101,150 @@ async def emit_log(message: str):
             await q.put(formatted)
         except Exception:
             pass
+
+class MfaCodePayload(BaseModel):
+    code: str
+
+@app.post("/api/rotary/mfa-code")
+async def submit_rotary_mfa_code(payload: MfaCodePayload):
+    """Receives a 2FA/MFA verification code from the user UI and passes it to the active Playwright login."""
+    clean_code = (payload.code or "").strip()
+    if not clean_code:
+        raise HTTPException(status_code=400, detail="Verification code cannot be empty.")
+    Path("/tmp/rotary_mfa_code.txt").write_text(clean_code, encoding="utf-8")
+    STATE["waiting_for_mfa"] = False
+    await emit_log("✓ MFA verification code received from UI; resuming MyRotary login...")
+    return {"success": True}
+
+# ==========================================
+# MULTI-CLUB REGISTRY ENDPOINTS
+# ==========================================
+
+class ClubRegistryItem(BaseModel):
+    id: str
+    name: str
+    short_name: Optional[str] = None
+    rotary_club_id: Optional[str] = None
+    spc_club_key: Optional[str] = None
+    district: Optional[str] = None
+    country: Optional[str] = "United States"
+    default_city: Optional[str] = ""
+    default_state: Optional[str] = ""
+    default_language: Optional[str] = "English"
+    default_lat: Optional[float] = 14.703454
+    default_lng: Optional[float] = -91.191623
+    default_zoom: Optional[int] = 11
+
+async def fetch_clubs_registry_internal() -> list:
+    key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
+    headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # 1. Try public.clubs table
+        try:
+            res = await client.get(f"{SUPABASE_URL}/rest/v1/clubs?select=*&order=name.asc", headers=headers)
+            if res.status_code == 200 and isinstance(res.json(), list) and len(res.json()) > 0:
+                return res.json()
+        except Exception:
+            pass
+        # 2. Try Supabase Storage system/clubs_registry.json
+        try:
+            res2 = await client.get(f"{SUPABASE_URL}/storage/v1/object/public/project-media/system/clubs_registry.json")
+            if res2.status_code == 200 and isinstance(res2.json(), list) and len(res2.json()) > 0:
+                return res2.json()
+        except Exception:
+            pass
+    return [{
+        "id": "lake-atitlan",
+        "name": "Rotary Club of Lake Atitlán",
+        "short_name": "Lake Atitlán",
+        "rotary_club_id": "84633",
+        "spc_club_key": "7de94f72-4330-4015-9ba9-5fac50225049",
+        "district": "4250",
+        "country": "Guatemala",
+        "default_city": "Panajachel",
+        "default_state": "Sololá Department",
+        "default_language": "Spanish",
+        "default_lat": 14.703454,
+        "default_lng": -91.191623,
+        "default_zoom": 11
+    }]
+
+@app.get("/api/clubs")
+async def list_clubs():
+    clubs = await fetch_clubs_registry_internal()
+    return {"clubs": clubs}
+
+@app.post("/api/clubs")
+async def upsert_club(payload: ClubRegistryItem):
+    import re
+    slug = re.sub(r'[^a-z0-9]+', '-', payload.id.strip().lower()).strip('-')
+    if not slug:
+        raise HTTPException(status_code=400, detail="Invalid club ID.")
+    short = (payload.short_name or re.sub(r'^(?:Rotary\s+Club\s+(?:of\s+)?|Club\s+Rotario\s+(?:de\s+)?)', '', payload.name, flags=re.I)).strip()
+
+    # Auto-lookup spc_club_key & rotary_club_id from spc_resolved_clubs.json if not provided
+    spc_key = payload.spc_club_key or ""
+    rotary_id = payload.rotary_club_id or ""
+    district = payload.district or ""
+    resolved_path = Path("spc_resolved_clubs.json")
+    if resolved_path.exists() and (not spc_key or not rotary_id):
+        try:
+            rdata = json.loads(resolved_path.read_text(encoding="utf-8"))
+            cand = rdata.get(short.lower()) or rdata.get(slug.replace("-", " "))
+            if cand:
+                spc_key = spc_key or cand.get("key", "")
+                rotary_id = rotary_id or str(cand.get("id", ""))
+                district = district or str(cand.get("district", ""))
+        except Exception:
+            pass
+
+    club_obj = {
+        "id": slug,
+        "name": payload.name.strip(),
+        "short_name": short,
+        "rotary_club_id": rotary_id,
+        "spc_club_key": spc_key,
+        "district": district,
+        "country": payload.country or "United States",
+        "default_city": payload.default_city or short,
+        "default_state": payload.default_state or "",
+        "default_language": payload.default_language or "English",
+        "default_lat": payload.default_lat if payload.default_lat is not None else 14.703454,
+        "default_lng": payload.default_lng if payload.default_lng is not None else -91.191623,
+        "default_zoom": payload.default_zoom or 11
+    }
+
+    clubs = await fetch_clubs_registry_internal()
+    updated = False
+    for idx, c in enumerate(clubs):
+        if c.get("id") == slug:
+            clubs[idx] = {**c, **club_obj}
+            updated = True
+            break
+    if not updated:
+        clubs.append(club_obj)
+
+    key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
+    headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # Try upserting into public.clubs if table exists
+        try:
+            await client.post(
+                f"{SUPABASE_URL}/rest/v1/clubs",
+                headers={**headers, "Prefer": "resolution=merge-duplicates"},
+                json=club_obj
+            )
+        except Exception:
+            pass
+        # Always sync to Supabase Storage system/clubs_registry.json
+        await client.post(
+            f"{SUPABASE_URL}/storage/v1/object/project-media/system/clubs_registry.json",
+            headers={**headers, "x-upsert": "true"},
+            content=json.dumps(clubs, indent=2).encode("utf-8")
+        )
+
+    await emit_log(f"✓ Registered/updated club '{club_obj['name']}' ({slug}).")
+    return {"success": True, "club": club_obj, "clubs": clubs}
 
 # ==========================================
 # DIAGNOSTICS & STATUS
@@ -207,63 +354,126 @@ class GrantCenterSyncPayload(BaseModel):
     dry_run: bool = True
     grant_ids: Optional[List[str]] = None
     import_attachments: bool = True
+    rotary_email: Optional[str] = None
+    rotary_password: Optional[str] = None
+    club_id: Optional[str] = None
 
 async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
     STATE["status"] = "running"
     STATE["task"] = "grantcenter_sync"
     STATE["last_run"] = datetime.now().isoformat()
     STATE["current_step"] = "Checking Grant Center Source"
+    STATE["waiting_for_mfa"] = False
     dry_run = payload.dry_run
+    active_club = (payload.club_id or "lake-atitlan").strip()
 
     try:
-        await emit_log(f"Starting Grant Center sync (Dry Run: {dry_run})...")
+        await emit_log(f"Starting Grant Center sync (Dry Run: {dry_run}, Active Club: {active_club})...")
 
-        script_path = GRANTCENTER_DIR / "check_grant_sync.py"
-        if not script_path.exists():
-            await emit_log(f"Notice: Grant Center script not found at {script_path}.")
-            await emit_log("Running Supabase catalog reconciliation check...")
-            await asyncio.sleep(1)
-            # Reconcile directly with Supabase
+        repo_downloader = Path(__file__).resolve().parent / "scripts" / "download_grant_center.py"
+        if not repo_downloader.exists():
+            raise FileNotFoundError(f"Grant Center downloader not found at {repo_downloader}")
+
+        env = os.environ.copy()
+        gc_env = GRANTCENTER_DIR / ".env"
+        if gc_env.exists():
+            for eline in gc_env.read_text().splitlines():
+                if "=" in eline and not eline.startswith("#"):
+                    ek, ev = eline.split("=", 1)
+                    env.setdefault(ek.strip(), ev.strip())
+
+        if payload.rotary_email:
+            env["ROTARY_EMAIL"] = payload.rotary_email.strip()
+            env["ROTARY_USERNAME"] = payload.rotary_email.strip()
+        if payload.rotary_password:
+            env["ROTARY_PASSWORD"] = payload.rotary_password.strip()
+        if active_club:
+            env["ACTIVE_CLUB_ID"] = active_club
+
+        cmd = [
+            sys.executable,
+            "-u",
+            str(repo_downloader),
+            "--headless",
+            "--club", active_club,
+            "--audit" if dry_run else "--sync-new"
+        ]
+
+        newly_imported_grants = []
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            cwd=str(Path(__file__).resolve().parent),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=env
+        )
+        while True:
+            line = await proc.stdout.readline()
+            if not line:
+                break
+            text = line.decode("utf-8", errors="replace").rstrip()
+            if text:
+                await emit_log(text)
+                if "[NEW_GRANT_IMPORTED]" in text:
+                    parts = text.split("[NEW_GRANT_IMPORTED]", 1)
+                    if len(parts) > 1 and parts[1].strip():
+                        newly_imported_grants.append(parts[1].strip())
+        await proc.wait()
+        if proc.returncode != 0:
+            raise RuntimeError(f"download_grant_center.py returned exit code {proc.returncode}")
+
+        # Auto-synthesize any newly imported grants from their downloaded Application PDF
+        if not dry_run and newly_imported_grants:
             key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
-            headers = {"apikey": key, "Authorization": f"Bearer {key}"}
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(f"{SUPABASE_URL}/rest/v1/projects?select=id,title,grant_id,status", headers=headers)
-                if res.status_code == 200:
-                    projects = res.json()
-                    await emit_log(f"Supabase contains {len(projects)} registered projects.")
-                    gg_count = sum(1 for p in projects if str(p.get('id', '')).startswith('GG'))
-                    await emit_log(f"Found {gg_count} Global Grants in active catalog.")
-                else:
-                    await emit_log(f"Supabase response code: {res.status_code}")
-        else:
-            proc = await asyncio.create_subprocess_exec(
-                sys.executable,
-                "-u",
-                str(script_path),
-                cwd=str(GRANTCENTER_DIR),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                env=os.environ.copy()
-            )
-            while True:
-                line = await proc.stdout.readline()
-                if not line:
-                    break
-                text = line.decode("utf-8", errors="replace").rstrip()
-                if text:
-                    await emit_log(text)
-            await proc.wait()
-            if proc.returncode != 0:
-                raise RuntimeError(f"check_grant_sync.py returned exit code {proc.returncode}")
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            for ng in newly_imported_grants:
+                try:
+                    await emit_log(f"Running Gemini AI synthesis & geocoding for newly imported grant {ng}...")
+                    syn_res = await synthesize_project_data(ng, SynthesizePayload(source="pdf"))
+                    draft = syn_res.get("draft") if isinstance(syn_res, dict) else None
+                    if draft and isinstance(draft, dict):
+                        det = draft.get("details") or {}
+                        det["club_id"] = active_club if active_club != "all" else "lake-atitlan"
+                        loc = draft.get("location") or {}
+                        if loc.get("city"): det["city"] = loc["city"]
+                        if loc.get("state"): det["state"] = loc["state"]
+                        if loc.get("country"): det["country"] = loc["country"]
+                        patch_body = {
+                            "brief_overview": draft.get("brief_overview") or "",
+                            "complete_overview": draft.get("complete_overview") or "",
+                            "description": draft.get("brief_overview") or "",
+                            "narrative": draft.get("complete_overview") or "",
+                            "start_date": draft.get("start_date") or "",
+                            "end_date": draft.get("end_date") or "",
+                            "timeline": draft.get("timeline") or {"backstory": "", "milestones": []},
+                            "details": det
+                        }
+                        if det.get("budget"):
+                            patch_body["budget"] = str(det["budget"])
+                            patch_body["amount"] = str(det["budget"])
+                        if det.get("international_club"):
+                            patch_body["international_club_name"] = det["international_club"]
+                        if det.get("international_district"):
+                            patch_body["international_club_district"] = str(det["international_district"])
+                        if loc.get("latitude") and loc.get("longitude"):
+                            patch_body["position_lat"] = float(loc["latitude"])
+                            patch_body["position_lng"] = float(loc["longitude"])
+                        async with httpx.AsyncClient(timeout=15.0) as client:
+                            await client.patch(f"{SUPABASE_URL}/rest/v1/projects?id=eq.{ng}", headers=headers, json=patch_body)
+                        await emit_log(f"  ✓ Auto-populated {ng} in Supabase via Gemini AI.")
+                except Exception as se:
+                    await emit_log(f"  Notice: Auto-synthesis skipped for {ng}: {se}")
 
         mode_text = "DRY RUN AUDIT COMPLETE" if dry_run else "GRANT CENTER SYNC COMPLETE"
         await emit_log(f"✓ {mode_text}.")
         STATE["status"] = "idle"
         STATE["task"] = None
         STATE["current_step"] = "Complete"
+        STATE["waiting_for_mfa"] = False
     except Exception as e:
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
+        STATE["waiting_for_mfa"] = False
         await emit_log(f"ERROR: {str(e)}")
 
 @app.post("/api/grantcenter/sync")
@@ -278,6 +488,8 @@ async def trigger_grantcenter_sync(
 
     if payload is None:
         payload = GrantCenterSyncPayload(dry_run=dry_run)
+    else:
+        payload.dry_run = dry_run if payload.dry_run is None else payload.dry_run
 
     background_tasks.add_task(run_grantcenter_sync, payload)
     return {"message": "Grant Center sync initiated", "dry_run": payload.dry_run}
@@ -291,12 +503,16 @@ class SPCExportPayload(BaseModel):
     project_ids: Optional[List[str]] = None
     spc_username: Optional[str] = None
     spc_password: Optional[str] = None
+    rotary_email: Optional[str] = None
+    rotary_password: Optional[str] = None
+    club_id: Optional[str] = None
 
 async def run_spc_export(payload: SPCExportPayload):
     STATE["status"] = "running"
     STATE["task"] = "spc_export"
     STATE["last_run"] = datetime.now().isoformat()
     STATE["current_step"] = "Launching SPC Automation"
+    STATE["waiting_for_mfa"] = False
     dry_run = payload.dry_run
 
     try:
@@ -307,10 +523,15 @@ async def run_spc_export(payload: SPCExportPayload):
             raise FileNotFoundError(f"Migration script not found at {script_path}")
 
         env = os.environ.copy()
-        if payload.spc_username:
-            env["ROTARY_USERNAME"] = payload.spc_username
-        if payload.spc_password:
-            env["ROTARY_PASSWORD"] = payload.spc_password
+        user_email = (payload.rotary_email or payload.spc_username or "").strip()
+        user_pass = (payload.rotary_password or payload.spc_password or "").strip()
+        if user_email:
+            env["ROTARY_EMAIL"] = user_email
+            env["ROTARY_USERNAME"] = user_email
+        if user_pass:
+            env["ROTARY_PASSWORD"] = user_pass
+        if payload.club_id:
+            env["ACTIVE_CLUB_ID"] = payload.club_id.strip()
         if dry_run:
             env["SPC_DRY_RUN"] = "true"
 
@@ -344,9 +565,11 @@ async def run_spc_export(payload: SPCExportPayload):
         STATE["status"] = "idle"
         STATE["task"] = None
         STATE["current_step"] = "Complete"
+        STATE["waiting_for_mfa"] = False
     except Exception as e:
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
+        STATE["waiting_for_mfa"] = False
         await emit_log(f"ERROR: {str(e)}")
 
 @app.post("/api/spc/export")
@@ -636,7 +859,7 @@ async def synthesize_project_data(project_id: str, payload: SynthesizePayload):
         raise HTTPException(status_code=400, detail=f"Unsupported source: {payload.source}")
 
     prompt = f"""
-You are an expert archivist and project manager for the Rotary Club of Lake Atitlán (RCLA) in Guatemala.
+You are an expert Rotary International archivist and project manager.
 Analyze the following {'Rotary Foundation Grant Application' if payload.source == 'pdf' else 'project notes'} for project '{pid}'.
 
 Extract and generate a clean, strictly formatted JSON response meeting these EXACT criteria:
@@ -668,6 +891,12 @@ CRITICAL CONSTRAINTS:
    - "partner_districts": Array of strings of ALL contributing/partner districts (e.g. ["7620", "6690"]). Do NOT break out individual amounts; just list all district numbers.
    - "cooperating_organizations": Array of strings of ALL partner NGOs, cooperating organizations, government entities, and community groups (e.g. ["Mayan Families", "AdP", "Hospitalito Atitlán"]).
    - "key_personnel": Array of objects: [{{"name": "...", "role": "..."}}]
+7. "location":
+   - "city": Community, town, or municipality where the project takes place (e.g. "Santa Lucía Utatlán")
+   - "state": State, department, or province (e.g. "Sololá Department")
+   - "country": Country name (e.g. "Guatemala")
+   - "latitude": Approximate decimal latitude of the project community (numeric, e.g. 14.7714)
+   - "longitude": Approximate decimal longitude of the project community (numeric, e.g. -91.2675)
 
 DOCUMENT CONTENT:
 \"\"\"
@@ -793,11 +1022,18 @@ Return ONLY valid JSON matching this schema.
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini generation error: {str(e)}")
 
-async def run_fetch_ri_files(project_id: str):
+class SingleProjectRotaryPayload(BaseModel):
+    rotary_email: Optional[str] = None
+    rotary_password: Optional[str] = None
+    club_id: Optional[str] = None
+    dry_run: Optional[bool] = True
+
+async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRotaryPayload] = None):
     STATE["status"] = "running"
     STATE["task"] = f"fetch_ri_files_{project_id}"
     STATE["last_run"] = datetime.now().isoformat()
     STATE["current_step"] = f"Fetching files from Grant Center for {project_id}"
+    STATE["waiting_for_mfa"] = False
 
     try:
         clean_pid = project_id.upper().replace("-", "").replace(" ", "")
@@ -818,6 +1054,14 @@ async def run_fetch_ri_files(project_id: str):
                     if "=" in eline and not eline.startswith("#"):
                         ek, ev = eline.split("=", 1)
                         env.setdefault(ek.strip(), ev.strip())
+
+            if payload and payload.rotary_email:
+                env["ROTARY_EMAIL"] = payload.rotary_email.strip()
+                env["ROTARY_USERNAME"] = payload.rotary_email.strip()
+            if payload and payload.rotary_password:
+                env["ROTARY_PASSWORD"] = payload.rotary_password.strip()
+            if payload and payload.club_id:
+                env["ACTIVE_CLUB_ID"] = payload.club_id.strip()
 
             proc = await asyncio.create_subprocess_exec(
                 sys.executable,
@@ -921,29 +1165,43 @@ async def run_fetch_ri_files(project_id: str):
         STATE["status"] = "idle"
         STATE["task"] = None
         STATE["current_step"] = "Complete"
+        STATE["waiting_for_mfa"] = False
     except Exception as e:
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
+        STATE["waiting_for_mfa"] = False
         await emit_log(f"ERROR: {str(e)}")
 
 @app.post("/api/projects/{project_id}/fetch-ri-files")
-async def trigger_fetch_ri_files(project_id: str, background_tasks: BackgroundTasks):
+async def trigger_fetch_ri_files(
+    project_id: str,
+    background_tasks: BackgroundTasks,
+    payload: Optional[SingleProjectRotaryPayload] = None
+):
     if STATE["status"] == "running":
         raise HTTPException(status_code=409, detail=f"Job already running: {STATE.get('task')}")
-    background_tasks.add_task(run_fetch_ri_files, project_id)
+    background_tasks.add_task(run_fetch_ri_files, project_id, payload)
     return {"message": f"Fetching RI files for {project_id} initiated"}
 
 @app.post("/api/projects/{project_id}/export-spc")
 async def trigger_single_spc_export(
     project_id: str,
     background_tasks: BackgroundTasks,
-    dry_run: bool = True
+    dry_run: bool = True,
+    payload: Optional[SingleProjectRotaryPayload] = None
 ):
     if STATE["status"] == "running":
         raise HTTPException(status_code=409, detail=f"Job already running: {STATE.get('task')}")
-    payload = SPCExportPayload(dry_run=dry_run, project_ids=[project_id])
-    background_tasks.add_task(run_spc_export, payload)
-    return {"message": f"SPC export for {project_id} initiated", "dry_run": dry_run}
+    effective_dry = payload.dry_run if (payload and payload.dry_run is not None) else dry_run
+    spc_payload = SPCExportPayload(
+        dry_run=effective_dry,
+        project_ids=[project_id],
+        rotary_email=payload.rotary_email if payload else None,
+        rotary_password=payload.rotary_password if payload else None,
+        club_id=payload.club_id if payload else None
+    )
+    background_tasks.add_task(run_spc_export, spc_payload)
+    return {"message": f"SPC export for {project_id} initiated", "dry_run": effective_dry}
 
 # Static file serving
 BASE_DIR = Path(__file__).resolve().parent

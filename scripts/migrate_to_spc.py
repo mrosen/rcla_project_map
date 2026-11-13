@@ -119,6 +119,79 @@ def save_resolved_clubs():
 
 load_resolved_clubs()
 
+CLUBS_REGISTRY_CACHE = []
+
+def load_clubs_registry() -> list:
+    global CLUBS_REGISTRY_CACHE
+    if CLUBS_REGISTRY_CACHE:
+        return CLUBS_REGISTRY_CACHE
+    # 1. Try public.clubs table in Supabase
+    headers = {"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {SUPABASE_ANON_KEY}"}
+    try:
+        req = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/clubs?select=*", headers=headers)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            if r.status == 200:
+                data = json.loads(r.read().decode("utf-8"))
+                if isinstance(data, list) and len(data) > 0:
+                    CLUBS_REGISTRY_CACHE = data
+                    return CLUBS_REGISTRY_CACHE
+    except Exception:
+        pass
+    # 2. Try clubs_registry.json in Supabase Storage
+    try:
+        req2 = urllib.request.Request(f"{SUPABASE_URL}/storage/v1/object/public/project-media/system/clubs_registry.json")
+        with urllib.request.urlopen(req2, timeout=8) as r2:
+            if r2.status == 200:
+                data2 = json.loads(r2.read().decode("utf-8"))
+                if isinstance(data2, list) and len(data2) > 0:
+                    CLUBS_REGISTRY_CACHE = data2
+                    return CLUBS_REGISTRY_CACHE
+    except Exception:
+        pass
+    # 3. Default fallback
+    CLUBS_REGISTRY_CACHE = [{
+        "id": "lake-atitlan",
+        "name": "Rotary Club of Lake Atitlán",
+        "short_name": "Lake Atitlan",
+        "rotary_club_id": ROTARY_LAKE_ATITLAN_CLUB_ID,
+        "spc_club_key": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+        "district": "4250",
+        "country": "Guatemala",
+        "default_city": "Panajachel",
+        "default_state": "Sololá Department",
+        "default_language": "Spanish",
+        "default_lat": 14.703454,
+        "default_lng": -91.191623
+    }]
+    return CLUBS_REGISTRY_CACHE
+
+def get_club_meta(club_slug_or_name: str = "") -> dict:
+    registry = load_clubs_registry()
+    target = (club_slug_or_name or os.getenv("ACTIVE_CLUB_ID") or "lake-atitlan").strip().lower()
+    if target in ("", "all"):
+        target = "lake-atitlan"
+    for c in registry:
+        if c.get("id", "").lower() == target or c.get("short_name", "").lower() == target or c.get("name", "").lower() == target:
+            return c
+    # Also check RESOLVED_CLUBS_CACHE if not in registry
+    resolved = RESOLVED_CLUBS_CACHE.get(target)
+    if resolved and resolved.get("key"):
+        return {
+            "id": re.sub(r'[^a-z0-9]+', '-', target).strip('-'),
+            "name": f"Rotary Club of {resolved.get('name', club_slug_or_name)}",
+            "short_name": resolved.get("name", club_slug_or_name),
+            "rotary_club_id": str(resolved.get("id") or ""),
+            "spc_club_key": resolved.get("key"),
+            "district": str(resolved.get("district") or ""),
+            "country": resolved.get("country") or "United States",
+            "default_city": resolved.get("name", ""),
+            "default_state": resolved.get("state") or "",
+            "default_language": "English",
+            "default_lat": 14.703454,
+            "default_lng": -91.191623
+        }
+    return registry[0]
+
 KNOWN_DISTRICTS = {
     "7620": {"key": "9445e695-1a25-4e21-941e-3eff587a0a8f", "name": "7620"},
     "6330": {"key": "", "name": "6330"},
@@ -777,13 +850,26 @@ def construct_spc_payload(p: dict) -> dict:
 
     # Rel Links
     rel_links = []
+    details_pre = p.get("details") or {}
+    if isinstance(details_pre, str):
+        try: details_pre = json.loads(details_pre)
+        except Exception: details_pre = {}
+    club_meta = get_club_meta(p.get("club_id") or details_pre.get("club_id") or details_pre.get("host_club"))
+    host_club_slug = club_meta.get("id") or "lake-atitlan"
+    host_club_key = club_meta.get("spc_club_key") or ROTARY_LAKE_ATITLAN_CLUB_KEY
+    host_club_short = (club_meta.get("short_name") or "Lake Atitlan").strip()
+    host_country = club_meta.get("country") or "Guatemala"
+    host_city = club_meta.get("default_city") or "Panajachel"
+    host_state = club_meta.get("default_state") or "Sololá Department"
+    host_lang = club_meta.get("default_language") or "Spanish"
+
     # Always include the permanent deep link back to our project archive map!
-    map_url = f"https://mrosen.github.io/rcla_project_map/?source=supabase&project={gid}"
+    map_url = f"https://mrosen.github.io/rcla_project_map/?source=supabase&club={host_club_slug}&project={gid}"
     b64_map_url = base64.b64encode(map_url.encode()).decode()
     rel_links.append({
         "relLinkType": "5",
         "url": b64_map_url,
-        "caption": "RCLA Project Map Archive Record",
+        "caption": f"{host_club_short} Project Map Archive Record"[:50],
         "IsCoverPhoto": "0"
     })
 
@@ -801,19 +887,14 @@ def construct_spc_payload(p: dict) -> dict:
             })
 
     # Funding Sources & Partners
-    details = p.get("details") or {}
-    if isinstance(details, str):
-        try:
-            details = json.loads(details)
-        except Exception:
-            details = {}
+    details = details_pre
 
     partners = []
     fundings = []
 
     # Always ensure host club is registered
     partners.append({
-        "partnerOrganizationKey": ROTARY_LAKE_ATITLAN_CLUB_KEY,
+        "partnerOrganizationKey": host_club_key,
         "Hour": "",
         "MoneyDonated": "",
         "NoOfVolunteer": "",
@@ -1054,10 +1135,10 @@ def construct_spc_payload(p: dict) -> dict:
                 fundings.append({
                     "fundingSource": "Rotary Club",
                     "fundingAmount": budget_str,
-                    "fundingClubKey": ROTARY_LAKE_ATITLAN_CLUB_KEY
+                    "fundingClubKey": host_club_key
                 })
 
-        if partner_club_key and partner_club_key != ROTARY_LAKE_ATITLAN_CLUB_KEY and is_valid_guid(partner_club_key):
+        if partner_club_key and partner_club_key != host_club_key and is_valid_guid(partner_club_key):
             partners.append({
                 "partnerOrganizationKey": partner_club_key,
                 "Hour": "",
@@ -1074,7 +1155,11 @@ def construct_spc_payload(p: dict) -> dict:
             f_src = f.get("fundingSource", "Other")
             f_type_id = FUNDING_TYPE_APINEW_MAP.get(f_src, FUNDING_TYPE_APINEW_MAP["Other"])
             ckey = f.get("fundingClubKey") or ""
-            is_impl = (str(ckey).lower() == ROTARY_LAKE_ATITLAN_CLUB_KEY.lower() or "lake atitlan" in str(f.get("fundingOtherName", "")).lower())
+            is_impl = (
+                str(ckey).lower() == host_club_key.lower()
+                or str(ckey).lower() == ROTARY_LAKE_ATITLAN_CLUB_KEY.lower()
+                or host_club_short.lower() in str(f.get("fundingOtherName", "")).lower()
+            )
             clean_fundings.append({
                 "fundingTypeId": f_type_id,
                 "fundingAmount": str(int(f_amt)),
@@ -1088,7 +1173,7 @@ def construct_spc_payload(p: dict) -> dict:
     for pt in partners:
         pkey = pt.get("partnerOrganizationKey")
         if is_valid_guid(pkey):
-            is_host = (str(pkey).lower() == ROTARY_LAKE_ATITLAN_CLUB_KEY.lower())
+            is_host = (str(pkey).lower() == host_club_key.lower() or str(pkey).lower() == ROTARY_LAKE_ATITLAN_CLUB_KEY.lower())
             clean_partners.append({
                 "partnerOrganizationKey": pkey,
                 "partnerCategoryId": PARTNER_CATEGORY_IMPLEMENTING if is_host else PARTNER_CATEGORY_CONTRIBUTING,
@@ -1116,8 +1201,11 @@ def construct_spc_payload(p: dict) -> dict:
         clean_aof = re.sub(r'\s+', ' ', clean_aof).strip()
         if clean_aof and clean_aof not in tag_list:
             tag_list.append(clean_aof[:35].strip())
-    tag_list.append("Guatemala")
-    tag_list.append("Lake Atitlan")
+    if host_country and host_country not in tag_list:
+        tag_list.append(host_country[:35])
+    clean_club_tag = re.sub(r'[,.\'\"()\/\\;:!?]', ' ', host_club_short).strip()
+    if clean_club_tag and clean_club_tag not in tag_list:
+        tag_list.append(clean_club_tag[:35])
 
     shortened_tags = []
     cur_len = 0
@@ -1149,7 +1237,7 @@ def construct_spc_payload(p: dict) -> dict:
         "description": full_desc,
         "startDate": start_date,
         "endDate": end_date if is_completed else "",
-        "countryId": "Guatemala",
+        "countryId": details.get("country") or host_country,
         "tags": tags_payload,
         "communityImpact": "",
         "projectImpact": "",
@@ -1167,8 +1255,8 @@ def construct_spc_payload(p: dict) -> dict:
         "address1": "",
         "address2": "",
         "address3": "",
-        "locationCity": "Panajachel",
-        "locationState": "Sololá Department",
+        "locationCity": details.get("city") or host_city,
+        "locationState": details.get("state") or host_state,
         "stateId": "",
         "locationPostalCode": "",
         "latitude": lat,
@@ -1200,7 +1288,7 @@ def construct_spc_payload(p: dict) -> dict:
             {"nonRotaryPartnerKey": guid}
             for guid in matched_ri_partners
         ],
-        "language1": "Spanish",
+        "language1": host_lang,
         "language2": ""
     }
 
@@ -1434,10 +1522,16 @@ async def main():
 
         print("  Submitted login form. Waiting for authentication to finalize...", flush=True)
 
-        # Wait until we leave the login page
+        # Wait until we leave the login page (supporting Okta MFA code verification)
         await page.wait_for_timeout(3000)
         authenticated = False
-        for _ in range(60):
+        mfa_file = Path("/tmp/rotary_mfa_code.txt")
+        if mfa_file.exists():
+            try: mfa_file.unlink()
+            except Exception: pass
+        mfa_prompted = False
+
+        for _ in range(90):
             cur_url = page.url.lower()
             if "login" not in cur_url and ("rotary.org" in cur_url):
                 authenticated = True
@@ -1447,6 +1541,24 @@ async def main():
                 err_text = await err_box.inner_text()
                 if "error" in err_text.lower() or "unable" in err_text.lower():
                     print(f"  ❌ Okta error banner: {err_text}", flush=True)
+                    raise RuntimeError(f"MyRotary login failed: {err_text}")
+
+            mfa_input = await page.query_selector("input[name='credentials.passcode'], input[name='answer'], input.o-form-input-name-answer")
+            if mfa_input and await mfa_input.is_visible():
+                if not mfa_prompted:
+                    print("[MFA_REQUIRED] MyRotary requested a 2FA verification code. Please enter it in the prompt...", flush=True)
+                    mfa_prompted = True
+                if mfa_file.exists():
+                    code = mfa_file.read_text(encoding="utf-8").strip()
+                    try: mfa_file.unlink()
+                    except Exception: pass
+                    if code:
+                        print("  Submitting MFA verification code...", flush=True)
+                        await mfa_input.fill(code)
+                        verify_btn = await page.query_selector("input[type='submit'], button[type='submit']")
+                        if verify_btn:
+                            await verify_btn.click()
+                        mfa_prompted = False
             await page.wait_for_timeout(1000)
 
         if not authenticated:
@@ -1652,8 +1764,11 @@ async def main():
             print(f"  [Notice] SPC auth status: {auth_status.get('error')}", flush=True)
 
         # Step 3: Fetch existing club projects from SPC to prevent duplicates
-        print("\n[3.5/4] Querying Rotary SPC for existing Lake Atitlán projects to prevent duplicates...")
-        existing_spc_projects = await page.evaluate("""async (clubKey) => {
+        active_club_meta = get_club_meta()
+        active_club_key = active_club_meta.get("spc_club_key") or ROTARY_LAKE_ATITLAN_CLUB_KEY
+        active_club_short = (active_club_meta.get("short_name") or "Lake Atitlan").strip()
+        print(f"\n[3.5/4] Querying Rotary SPC for existing {active_club_short} projects to prevent duplicates...")
+        existing_spc_projects = await page.evaluate("""async ([clubKey, clubName]) => {
             try {
                 const res = await fetch('https://spc.rotary.org/api/Search', {
                     method: 'POST',
@@ -1666,7 +1781,7 @@ async def main():
                         clubKey: clubKey,
                         limit: '500',
                         funding: '', areaOfFocus: '', category: '', riyear: '', country: '',
-                        zone: '', district: '', clubType: '', clubName: 'Lake Atitlan',
+                        zone: '', district: '', clubType: '', clubName: clubName,
                         status: '', keyword: '', photo: '', memberId: '', languages: '',
                         City: '', latitude: '', longitude: '', distance: '', variation: 'en'
                     })
@@ -1676,7 +1791,7 @@ async def main():
             } catch (e) {
                 return [];
             }
-        }""", ROTARY_LAKE_ATITLAN_CLUB_KEY)
+        }""", [active_club_key, active_club_short])
 
         print(f"  Found {len(existing_spc_projects)} existing project(s) on SPC for our club.")
         for ep in existing_spc_projects:

@@ -99,9 +99,11 @@
     .timeline-title { font-weight: 600; font-size: 13px; color: #1e293b; margin-top: 1px; }
     .timeline-notes { font-size: 12px; color: #475569; margin-top: 2px; }
 
-    /* AI Notes Modal */
-    #ai-notes-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 999999; align-items: center; justify-content: center; }
+    /* AI Notes Modal & Multi-Club / Auth Modals */
+    #ai-notes-modal, #rotary-auth-modal, #add-club-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 999999; align-items: center; justify-content: center; }
     .ai-modal-content { background: #fff; width: 640px; max-width: 95vw; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; }
+    #club-selector { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.35); border-radius: 4px; padding: 4px 8px; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; margin-left: 10px; }
+    #club-selector option { background: #1e293b; color: #fff; }
   </style>
 </head>
 <body>
@@ -114,6 +116,7 @@
       <span id="sync-step" class="local-only-btn" style="color: #94a3b8;"></span>
     </div>
     <div class="maint-group">
+      <button id="btn-rotary-account" class="maint-btn" onclick="openRotaryAuthModal()" style="background:#0284c7;" title="Configure your MyRotary.org credentials for Grant Center Sync & SPC Export">🔐 MyRotary Account</button>
       <button class="maint-btn btn-new" onclick="openCreateForm()">➕ New Project</button>
       <button id="btn-sync-dry" class="maint-btn btn-dry local-only-btn" onclick="triggerSync(true)" title="Audit and check Grant Center against catalog">Grant Sync (Dry)</button>
       <button id="btn-sync-live" class="maint-btn btn-sync local-only-btn" onclick="triggerSync(false)" title="Full import and sync from Grant Center">Grant Sync (Live)</button>
@@ -127,7 +130,13 @@
   <div id="log-drawer"><div id="log-output">-- Orchestrator log stream initialized --</div></div>
 
   <div id="nav">
-    <span class="club-name" ondblclick="toggleMaintenanceMode()" title="Rotary Club of Lake Atitlán — Projects">Rotary Club of Lake Atitlán — Projects</span>
+    <div style="display:flex;align-items:center;margin-right:auto;min-width:0;">
+      <span class="club-name" id="nav-club-title" ondblclick="toggleMaintenanceMode()" style="margin-right:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="Rotary Club — Projects">Rotary Club of Lake Atitlán — Projects</span>
+      <select id="club-selector" onchange="handleClubSelectionChange(this.value)" title="Switch Rotary Club view">
+        <option value="lake-atitlan">Rotary Club of Lake Atitlán (D4250)</option>
+        <option value="all">🌎 All Rotary Clubs</option>
+      </select>
+    </div>
     <button id="btn-overview" class="active">Overview</button>
     <button id="btn-list">Projects</button>
     <button id="btn-maint-toggle" onclick="toggleMaintenanceMode()" style="display:none;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;margin-left:8px;font-weight:600;align-items:center;gap:4px;" title="Toggle Maintainer Tools Bar (Ctrl+Shift+M)">🛠️ Maintainer Mode</button>
@@ -165,6 +174,108 @@
     </div>
   </div>
 
+  <!-- MyRotary Session Credentials & MFA Modal -->
+  <div id="rotary-auth-modal">
+    <div class="ai-modal-content" style="width:520px;">
+      <div style="background:#0284c7;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:14px;color:white;">🔐 MyRotary.org Account Credentials</h3>
+        <button type="button" onclick="closeRotaryAuthModal()" style="background:none;border:none;color:white;font-size:16px;cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:16px;">
+        <p style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.45;">
+          Enter your <strong>MyRotary.org</strong> login to import grants from Grant Center or export projects to Service Project Center (SPC) under your own Rotary identity. Credentials are stored <strong>only in this browser tab</strong> (<code>sessionStorage</code>) and are never saved to the database.
+        </p>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:3px;color:#1e293b;">MyRotary Email Address</label>
+          <input type="email" id="rotary-email-input" placeholder="you@example.com" autocomplete="username" style="width:100%;padding:7px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:3px;color:#1e293b;">MyRotary Password</label>
+          <input type="password" id="rotary-password-input" placeholder="Enter your MyRotary.org password" autocomplete="current-password" style="width:100%;padding:7px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;">
+        </div>
+        <div id="rotary-mfa-section" style="display:none;margin-top:12px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;">
+          <div style="font-size:12px;font-weight:bold;color:#b45309;margin-bottom:4px;">📲 Multi-Factor Verification Required</div>
+          <p style="font-size:11px;color:#92400e;margin-bottom:8px;">MyRotary (Okta) requested a verification code. Enter the 6-digit code from your authenticator app or email:</p>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="rotary-mfa-input" placeholder="6-digit code" maxlength="8" style="flex:1;padding:6px 10px;border:1px solid #f59e0b;border-radius:4px;font-size:14px;font-weight:bold;letter-spacing:2px;">
+            <button type="button" onclick="submitRotaryMfaCode()" style="padding:6px 14px;background:#d97706;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">Submit Code</button>
+          </div>
+          <div id="rotary-mfa-status" style="font-size:11px;color:#059669;margin-top:4px;display:none;"></div>
+        </div>
+        <div id="rotary-auth-status" style="font-size:11px;color:#64748b;margin-top:6px;"></div>
+      </div>
+      <div style="background:#f8fafc;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;">
+        <div style="display:flex;gap:6px;">
+          <button type="button" onclick="clearRotaryCredentials()" style="padding:6px 10px;background:#e2e8f0;color:#475569;border:none;border-radius:4px;cursor:pointer;font-size:11px;">Clear Session</button>
+          <button type="button" onclick="useServerDefaultRotaryCredentials()" style="padding:6px 10px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:4px;cursor:pointer;font-size:11px;" title="Use credentials configured in the server's .env file">Use Server Default</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" onclick="closeRotaryAuthModal()" style="padding:6px 12px;background:#94a3b8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>
+          <button type="button" id="btn-save-rotary-auth" onclick="saveRotaryCredentialsAndContinue()" style="padding:6px 16px;background:#0284c7;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">Save &amp; Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Configure Rotary Club Modal -->
+  <div id="add-club-modal">
+    <div class="ai-modal-content" style="width:560px;">
+      <div style="background:#1a3a5c;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:14px;color:white;">➕ Add / Configure Rotary Club</h3>
+        <button type="button" onclick="closeAddClubModal()" style="background:none;border:none;color:white;font-size:16px;cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:16px;">
+        <p style="font-size:12px;color:#475569;margin-bottom:12px;">
+          Register a Rotary Club to track its Local/Direct projects, District Grants, and shared Global Grants on the map.
+        </p>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Full Club Name *</label>
+            <input type="text" id="new-club-name" placeholder="e.g. Rotary Club of Denver" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">District</label>
+            <input type="text" id="new-club-district" placeholder="e.g. 5450" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Country</label>
+            <input type="text" id="new-club-country" placeholder="e.g. United States" value="United States" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">City / Municipality</label>
+            <input type="text" id="new-club-city" placeholder="e.g. Denver" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">State / Department</label>
+            <input type="text" id="new-club-state" placeholder="e.g. Colorado" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Default Map Latitude</label>
+            <input type="text" id="new-club-lat" placeholder="14.7400" value="14.7400" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Default Map Longitude</label>
+            <input type="text" id="new-club-lng" placeholder="-91.2000" value="-91.2000" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+          </div>
+          <button type="button" onclick="geocodeNewClubCity()" style="padding:6px 10px;background:#e2e8f0;color:#1e293b;border:1px solid #cbd5e1;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;">📍 Lookup City</button>
+        </div>
+        <div style="margin-bottom:6px;">
+          <label style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">Club Overview Description (Optional)</label>
+          <textarea id="new-club-description" rows="3" placeholder="Brief description of the club and its service projects for the Overview tab..." style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;box-sizing:border-box;"></textarea>
+        </div>
+        <div id="add-club-error" style="display:none;color:#dc2626;font-size:12px;margin-top:6px;"></div>
+      </div>
+      <div style="background:#f8fafc;padding:10px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #e2e8f0;">
+        <button type="button" onclick="closeAddClubModal()" style="padding:6px 14px;background:#94a3b8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>
+        <button type="button" id="btn-save-new-club" onclick="saveNewClub()" style="padding:6px 16px;background:#059669;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;">➕ Register Club</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
@@ -175,7 +286,7 @@
     <!--    
     <script src="https://mrosen.github.io/rcla_project_map/main.js"></script>
     -->
-    <script src="main.js?v=2.0.9"></script>
+    <script src="main.js?v=2.1.0"></script>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCO2h4ZlPyPDPuZaK1ljB2Rq3ZR_-b9178&libraries=places&callback=initMap" async defer></script>
 </body>
 </html>

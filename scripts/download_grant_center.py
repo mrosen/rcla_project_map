@@ -557,21 +557,128 @@ async def process_grant_page(grant_page, context, gn: str, force: bool = False, 
     return True
 
 async def login(page, email, password):
-    log("Logging in to My Rotary...")
+    masked_email = email[:3] + "..." + email[email.find("@"):] if "@" in email else "..."
+    log(f"Logging in to My Rotary as {masked_email}...")
     await page.goto(SPC_LOGIN_URL, wait_until="domcontentloaded")
     await page.wait_for_timeout(3000)
     await dismiss_cookies(page)
 
-    await page.wait_for_selector("#okta-signin-username, input[name='username']", timeout=30000)
-    await page.fill("#okta-signin-username, input[name='username']", email)
+    await page.wait_for_selector("#okta-signin-username, input[name='username'], input[name='identifier']", timeout=30000)
+    await page.fill("#okta-signin-username, input[name='username'], input[name='identifier']", email)
     await page.fill("#okta-signin-password, input[type='password']", password)
     await page.click("#okta-signin-submit, input[type='submit']")
 
-    for _ in range(60):
+    mfa_file = Path("/tmp/rotary_mfa_code.txt")
+    if mfa_file.exists():
+        try: mfa_file.unlink()
+        except Exception: pass
+
+    mfa_prompted = False
+    for _ in range(90):
         await page.wait_for_timeout(1000)
         if "spc.rotary.org" in page.url and "frmTicket" not in page.url:
             break
+
+        # Check for invalid credentials error message
+        err_el = await page.query_selector(".okta-form-infobox-error, .o-form-error-container .infobox-error")
+        if err_el and await err_el.is_visible():
+            err_txt = (await err_el.inner_text()).strip()
+            if err_txt:
+                raise RuntimeError(f"MyRotary login failed: {err_txt}")
+
+        # Check for Okta MFA verification code input
+        mfa_input = await page.query_selector("input[name='credentials.passcode'], input[name='answer'], input.o-form-input-name-answer")
+        if mfa_input and await mfa_input.is_visible():
+            if not mfa_prompted:
+                log("[MFA_REQUIRED] MyRotary requested a 2FA verification code. Please enter it in the prompt...")
+                mfa_prompted = True
+            if mfa_file.exists():
+                code = mfa_file.read_text(encoding="utf-8").strip()
+                try: mfa_file.unlink()
+                except Exception: pass
+                if code:
+                    log("  Submitting MFA verification code...")
+                    await mfa_input.fill(code)
+                    verify_btn = await page.query_selector("input[type='submit'], button[type='submit']")
+                    if verify_btn:
+                        await verify_btn.click()
+                    mfa_prompted = False
     log("  Logged in successfully.")
+
+def normalize_portal_status(section: str) -> str:
+    s = (section or "").lower()
+    if "past" in s or "closed" in s or "complete" in s:
+        return "closed"
+    if "approved" in s or "progress" in s or "active" in s:
+        return "approved"
+    if "draft" in s or "submitted" in s or "auth" in s or "proposed" in s:
+        return "proposed"
+    return "approved"
+
+def fetch_supabase_projects(sb_url: str, sb_key: str) -> dict:
+    if not sb_url or not sb_key:
+        return {}
+    headers = {"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
+    try:
+        r = requests.get(f"{sb_url}/rest/v1/projects?select=id,title,status,details,sync_status", headers=headers, timeout=15)
+        if r.status_code == 200 and isinstance(r.json(), list):
+            return {str(row.get("id", "")).strip().upper(): row for row in r.json() if row.get("id")}
+    except Exception as e:
+        log(f"  Warning fetching Supabase projects: {e}")
+    return {}
+
+def upsert_supabase_grant_stub(gn: str, title: str, year: str, status: str, club_id: str, sb_url: str, sb_key: str) -> bool:
+    if not sb_url or not sb_key:
+        return False
+    headers = {
+        "apikey": sb_key,
+        "Authorization": f"Bearer {sb_key}",
+        "Content-Type": "application/json"
+    }
+    clean_club = (club_id or "lake-atitlan").strip() or "lake-atitlan"
+    if clean_club == "all":
+        clean_club = "lake-atitlan"
+
+    # Fetch club defaults if available
+    default_lat, default_lng = 14.703454, -91.191623
+    try:
+        cr = requests.get(f"{sb_url}/storage/v1/object/public/project-media/system/clubs_registry.json", timeout=10)
+        if cr.status_code == 200 and isinstance(cr.json(), list):
+            for c in cr.json():
+                if c.get("id") == clean_club:
+                    default_lat = float(c.get("default_lat") or default_lat)
+                    default_lng = float(c.get("default_lng") or default_lng)
+                    break
+    except Exception:
+        pass
+
+    p_type = "Global Grant" if gn.startswith("GG") else "District Grant"
+    start_yr = int(year) if (year and str(year).isdigit()) else datetime.now().year
+    payload = {
+        "id": gn,
+        "title": title or gn,
+        "project_type": p_type,
+        "category": "Community Service",
+        "status": status or "approved",
+        "start_year": start_yr,
+        "end_year": start_yr,
+        "start_date": f"{start_yr}-01-01",
+        "position_lat": default_lat,
+        "position_lng": default_lng,
+        "brief_overview": (title or gn)[:100],
+        "complete_overview": title or gn,
+        "details": {"club_id": clean_club}
+    }
+    try:
+        chk = requests.get(f"{sb_url}/rest/v1/projects?id=eq.{gn}&select=id", headers=headers, timeout=15)
+        if chk.status_code == 200 and chk.json():
+            r = requests.patch(f"{sb_url}/rest/v1/projects?id=eq.{gn}", headers=headers, json={"status": status}, timeout=15)
+        else:
+            r = requests.post(f"{sb_url}/rest/v1/projects", headers=headers, json=payload, timeout=15)
+        return r.status_code in (200, 201, 204)
+    except Exception as e:
+        log(f"  Warning upserting grant stub {gn}: {e}")
+        return False
 
 async def load_mygrants(page):
     log("  Navigating to Grant Center...")
@@ -608,38 +715,56 @@ async def load_mygrants(page):
 async def get_all_grants(page):
     all_grants = {}
 
-    rows = await page.evaluate("""() => {
-        const results = [];
-        const trs = document.querySelectorAll('tr.rwc-table__default');
-        for (const tr of trs) {
-            const span = tr.querySelector('span[class*="rwc-button"]');
-            if (!span) continue;
-            const gn = span.textContent.trim().toUpperCase();
-            if (!/^(GG|DG)[0-9]{5,}$/.test(gn)) continue;
-            let title = '', year = '', status = '';
-            tr.querySelectorAll('td').forEach(td => {
-                const badge = td.querySelector('[data-slot="badge"]');
-                if (badge) { status = badge.textContent.trim(); return; }
-                const hdr = td.querySelector('.rwc-table__mobile-header');
-                const text = hdr ? td.textContent.replace(hdr.textContent, '').trim() : td.textContent.trim();
-                const dm = text.match(/^[0-9]{2}\\/[0-9]{2}\\/([0-9]{4})$/);
-                if (dm && !year) { year = dm[1]; return; }
-                if (/^(GG|DG)[0-9]{5,}$/.test(text)) return;
-                if (text.length > 8 && !title) title = text.substring(0, 80);
-            });
-            results.push({ gn, title, year, status });
-        }
-        return results;
-    }""")
+    for _ in range(15):
+        rows = await page.evaluate("""() => {
+            const results = [];
+            const trs = document.querySelectorAll('tr.rwc-table__default');
+            for (const tr of trs) {
+                const span = tr.querySelector('span[class*="rwc-button"]');
+                if (!span) continue;
+                const gn = span.textContent.trim().toUpperCase();
+                if (!/^(GG|DG)[0-9]{5,}$/.test(gn)) continue;
+                let title = '', year = '', status = '';
+                tr.querySelectorAll('td').forEach(td => {
+                    const badge = td.querySelector('[data-slot="badge"]');
+                    if (badge) { status = badge.textContent.trim(); return; }
+                    const hdr = td.querySelector('.rwc-table__mobile-header');
+                    const text = hdr ? td.textContent.replace(hdr.textContent, '').trim() : td.textContent.trim();
+                    const dm = text.match(/^[0-9]{2}\\/[0-9]{2}\\/([0-9]{4})$/);
+                    if (dm && !year) { year = dm[1]; return; }
+                    if (/^(GG|DG)[0-9]{5,}$/.test(text)) return;
+                    if (text.length > 8 && !title) title = text.substring(0, 80);
+                });
+                results.push({ gn, title, year, status });
+            }
+            return results;
+        }""")
 
-    for r in rows:
-        gn = r['gn']
-        if gn in all_grants or gn in EXCLUDE_GRANTS:
-            continue
-        all_grants[gn] = (r['title'], r['year'])
-        log(f"    + {gn} ({r['year']}): {r['title'][:50]}")
+        for r in rows:
+            gn = r['gn']
+            if gn in all_grants or gn in EXCLUDE_GRANTS:
+                continue
+            all_grants[gn] = (r['title'], r['year'], r.get('status') or '')
+            log(f"    + {gn} ({r['year']}) [{r.get('status') or 'Active'}]: {r['title'][:50]}")
 
-    return [(gn, t, y) for gn, (t, y) in all_grants.items()]
+        selects = await page.query_selector_all("select.pagination-select")
+        advanced = False
+        for sel in selects:
+            try:
+                opts = [await o.get_attribute("value") for o in await sel.query_selector_all("option")]
+                cur = await sel.evaluate("el => el.value")
+                idx = opts.index(cur) if cur in opts else -1
+                if idx >= 0 and idx + 1 < len(opts):
+                    await sel.select_option(value=opts[idx + 1])
+                    await page.wait_for_timeout(2000)
+                    advanced = True
+                    break
+            except Exception:
+                pass
+        if not advanced:
+            break
+
+    return [(gn, t, y, s) for gn, (t, y, s) in all_grants.items()]
 
 async def find_and_click_grant(page, context, gn: str):
     for attempt in range(120):
@@ -685,6 +810,9 @@ async def main():
     parser.add_argument("--headless", action="store_true", default=False, help="Run browser headless")
     parser.add_argument("--headful", action="store_true", default=False, help="Run browser with visible UI")
     parser.add_argument("--discover-only", action="store_true", help="Discover and list grants without downloading")
+    parser.add_argument("--audit", action="store_true", help="Audit and reconcile MyRotary grants against Supabase (Dry Run)")
+    parser.add_argument("--sync-new", action="store_true", help="Reconcile MyRotary grants, create new grant rows in Supabase, and download files")
+    parser.add_argument("--club", type=str, default="", help="Active club slug (e.g. lake-atitlan)")
     parser.add_argument("--save-local", type=str, default="", help="Optional local directory to save backup copies")
     args = parser.parse_args()
 
@@ -692,8 +820,9 @@ async def main():
     print("  Rotary Grant Center Downloader (Supabase Datastore Architecture)")
     print("=" * 65)
 
-    email = os.environ.get("ROTARY_EMAIL", "")
+    email = os.environ.get("ROTARY_EMAIL") or os.environ.get("ROTARY_USERNAME", "")
     password = os.environ.get("ROTARY_PASSWORD", "")
+    active_club = (args.club or os.environ.get("ACTIVE_CLUB_ID") or "lake-atitlan").strip()
     supabase_url = os.environ.get("SUPABASE_URL", "https://rqhmsincnmxrgtipvkif.supabase.co")
     supabase_key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
 
@@ -734,15 +863,76 @@ async def main():
             await browser.close()
             return
 
-        to_process = []
-        if target_grant:
+        if args.audit or args.sync_new:
+            discovered = await get_all_grants(page)
+            sb_projects = fetch_supabase_projects(supabase_url, supabase_key)
+            portal_dict = {
+                gn: {"id": gn, "title": t, "year": y, "section": s, "mapped_status": normalize_portal_status(s)}
+                for gn, t, y, s in discovered
+            }
+            portal_ids = set(portal_dict.keys())
+            sb_ids = set(sb_projects.keys())
+            new_on_portal = sorted(portal_ids - sb_ids)
+            common_ids = sorted(portal_ids & sb_ids)
+
+            status_diffs = []
+            for gid in common_ids:
+                cur_status = (sb_projects[gid].get("status") or "").strip().lower()
+                new_status = portal_dict[gid]["mapped_status"]
+                if cur_status and new_status and cur_status != new_status:
+                    status_diffs.append((gid, cur_status, new_status, portal_dict[gid]["section"]))
+
+            print("\n" + "=" * 60)
+            print(f"  SUPABASE GRANT RECONCILIATION AUDIT (Club: {active_club})")
+            print("=" * 60)
+            print(f"Total Grants Found on MyRotary: {len(portal_ids)}")
+            print(f"Total Projects in Supabase:     {len(sb_ids)}")
+            print(f"Matching Grants in Supabase:    {len(common_ids)}")
+            print("-" * 60)
+            if new_on_portal:
+                print(f"➕ NEW GRANTS ON MYROTARY (Not yet in Supabase) [{len(new_on_portal)}]:")
+                for gid in new_on_portal:
+                    g = portal_dict[gid]
+                    print(f"   • {gid} [{g['mapped_status']}] ({g['year']}): {g['title']}")
+            else:
+                print("✔ No unlisted grants on MyRotary.")
+            print("-" * 60)
+            if status_diffs:
+                print(f"⚠️ STATUS UPDATES DETECTED [{len(status_diffs)}]:")
+                for gid, old_s, new_s, sec in status_diffs:
+                    print(f"   • {gid}: Supabase '{old_s}' ➔ MyRotary '{new_s}' ({sec})")
+            else:
+                print("✔ All common grant statuses are in sync.")
+            print("=" * 60 + "\n")
+
+            if args.audit:
+                await browser.close()
+                return
+
+            # Live Sync Mode (--sync-new): update statuses & import new grants
+            headers = {"apikey": supabase_key, "Authorization": f"Bearer {supabase_key}", "Content-Type": "application/json"}
+            for gid, old_s, new_s, _ in status_diffs:
+                try:
+                    requests.patch(f"{supabase_url}/rest/v1/projects?id=eq.{gid}", headers=headers, json={"status": new_s}, timeout=15)
+                    log(f"  ✓ Updated status in Supabase for {gid}: {old_s} -> {new_s}")
+                except Exception as se:
+                    log(f"  Warning updating status for {gid}: {se}")
+
+            for gid in new_on_portal:
+                g = portal_dict[gid]
+                if upsert_supabase_grant_stub(gid, g["title"], g["year"], g["mapped_status"], active_club, supabase_url, supabase_key):
+                    log(f"  ✓ Created new grant record in Supabase: {gid} ({g['title'][:45]})")
+                    log(f"[NEW_GRANT_IMPORTED] {gid}")
+
+            to_process = [(gn, t, y) for gn, t, y, _ in discovered]
+        elif target_grant:
             clean_tg = target_grant.replace("-", "").replace(" ", "")
             log(f"Targeting single grant: {clean_tg}")
             to_process = [(clean_tg, clean_tg, "")]
         else:
             discovered = await get_all_grants(page)
             log(f"Found {len(discovered)} grants on MyGrants.")
-            to_process = discovered
+            to_process = [(gn, t, y) for gn, t, y, _ in discovered]
 
         log(f"Grants to evaluate: {len(to_process)}")
 

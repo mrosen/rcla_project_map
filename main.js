@@ -101,6 +101,8 @@ try {
 })();
 
 let allProjects       = [];
+let allClubs          = [];
+let currentClubId     = 'lake-atitlan';
 let map               = null;
 let markers           = [];
 let searchMarker      = null;
@@ -113,6 +115,294 @@ let mapClickListener  = null;
 let overviewChart     = null;
 let isUploadingImage  = false;
 let globalPasteAbortCtrl = null;
+let pendingRotaryAction  = null;
+let mfaPromptShownForRun = false;
+
+const DEFAULT_CLUBS = [
+  {
+    id: 'lake-atitlan',
+    name: 'Rotary Club of Lake Atitlán',
+    short_name: 'Lake Atitlán',
+    rotary_club_id: '84633',
+    spc_club_key: '7de94f72-4330-4015-9ba9-5fac50225049',
+    district: '4250',
+    country: 'Guatemala',
+    default_city: 'Panajachel',
+    default_state: 'Sololá Department',
+    default_lat: 14.703454,
+    default_lng: -91.191623,
+    default_zoom: 10,
+    language_iso: 'Spanish',
+    description: 'The Rotary Club of Lake Atitlán funds community development projects across Guatemala through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.'
+  },
+  {
+    id: 'annapolis',
+    name: 'Rotary Club of Annapolis',
+    short_name: 'Annapolis',
+    rotary_club_id: '5853',
+    spc_club_key: '6ef2a008-17d8-424b-b280-c59dfdaedce3',
+    district: '7620',
+    country: 'United States',
+    default_city: 'Annapolis',
+    default_state: 'Maryland',
+    default_lat: 38.9784,
+    default_lng: -76.4922,
+    default_zoom: 6,
+    language_iso: 'English',
+    description: 'The Rotary Club of Annapolis (District 7620) supports local community service initiatives in Maryland and international humanitarian Global Grants worldwide.'
+  },
+  {
+    id: 'northfield',
+    name: 'Rotary Club of Northfield',
+    short_name: 'Northfield',
+    rotary_club_id: '2157',
+    spc_club_key: 'bc4485ed-daef-494e-b006-97c0b22a4ee7',
+    district: '5960',
+    country: 'United States',
+    default_city: 'Northfield',
+    default_state: 'Minnesota',
+    default_lat: 44.4583,
+    default_lng: -93.1616,
+    default_zoom: 6,
+    language_iso: 'English',
+    description: 'The Rotary Club of Northfield (District 5960) partners on international Global Grants and local community development projects.'
+  },
+  {
+    id: 'fort-collins',
+    name: 'Rotary Club of Fort Collins',
+    short_name: 'Fort Collins',
+    rotary_club_id: '1100',
+    spc_club_key: 'cb49c6f4-80fe-424b-b280-c59dfdaedce3',
+    district: '5440',
+    country: 'United States',
+    default_city: 'Fort Collins',
+    default_state: 'Colorado',
+    default_lat: 40.5853,
+    default_lng: -105.0844,
+    default_zoom: 6,
+    language_iso: 'English',
+    description: 'The Rotary Club of Fort Collins (District 5440) supports local and international service projects and Global Grants.'
+  }
+];
+
+allClubs = DEFAULT_CLUBS.slice();
+
+function normalizeClubCompareText(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function getInitialClubIdFromUrl() {
+  var params = new URLSearchParams(window.location.search);
+  var raw = (params.get('club') || '').trim().toLowerCase();
+  if (!raw) return 'lake-atitlan';
+  return raw;
+}
+
+currentClubId = getInitialClubIdFromUrl();
+
+function getClubMetaById(clubId) {
+  if (!clubId || clubId === 'all') return null;
+  var found = allClubs.find(function (c) {
+    return String(c.id || '').toLowerCase() === String(clubId).toLowerCase();
+  });
+  return found || allClubs[0] || DEFAULT_CLUBS[0];
+}
+
+function getCurrentClubMeta() {
+  return getClubMetaById(currentClubId) || DEFAULT_CLUBS[0];
+}
+
+async function loadClubsRegistry() {
+  var loaded = null;
+  // 1. Try public.clubs table in Supabase
+  if (supabaseClient) {
+    try {
+      var res = await supabaseClient.from('clubs').select('*').order('name');
+      if (!res.error && res.data && res.data.length > 0) {
+        loaded = res.data;
+      }
+    } catch (e) {}
+  }
+  // 2. Fallback to Supabase Storage system/clubs_registry.json
+  if (!loaded) {
+    try {
+      var storageUrl = SUPABASE_URL + '/storage/v1/object/public/project-media/system/clubs_registry.json?t=' + Date.now();
+      var sRes = await fetch(storageUrl);
+      if (sRes.ok) {
+        var sData = await sRes.json();
+        if (Array.isArray(sData) && sData.length > 0) {
+          loaded = sData;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (loaded && loaded.length > 0) {
+    // Merge with DEFAULT_CLUBS so Lake Atitlan is always first and descriptions are preserved
+    var byId = {};
+    DEFAULT_CLUBS.forEach(function (c) { byId[c.id] = Object.assign({}, c); });
+    loaded.forEach(function (c) {
+      if (c && c.id) {
+        byId[c.id] = Object.assign({}, byId[c.id] || {}, c);
+      }
+    });
+    var merged = Object.values(byId);
+    merged.sort(function (a, b) {
+      if (a.id === 'lake-atitlan') return -1;
+      if (b.id === 'lake-atitlan') return 1;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+    allClubs = merged;
+  }
+
+  renderClubSelectorOptions();
+  updateClubBrandingUI();
+}
+
+function renderClubSelectorOptions() {
+  var sel = document.getElementById('club-selector');
+  if (!sel) return;
+  var html = '';
+  allClubs.forEach(function (c) {
+    var distLabel = c.district ? ' (D' + c.district + ')' : '';
+    var isSel = (currentClubId === c.id) ? 'selected' : '';
+    html += '<option value="' + escapeHtml(c.id) + '" ' + isSel + '>' + escapeHtml(c.name + distLabel) + '</option>';
+  });
+  var allSel = (currentClubId === 'all') ? 'selected' : '';
+  html += '<option value="all" ' + allSel + '>🌎 All Rotary Clubs (' + allProjects.length + ')</option>';
+  html += '<option value="__add_club__">➕ Add Rotary Club…</option>';
+  sel.innerHTML = html;
+}
+
+function updateClubBrandingUI() {
+  var titleEl = document.getElementById('nav-club-title');
+  var ovDescEl = document.getElementById('ov-club-description');
+  if (currentClubId === 'all') {
+    if (titleEl) {
+      titleEl.textContent = 'Rotary Multi-Club — Project Map';
+      titleEl.title = 'Viewing projects across all registered Rotary Clubs';
+    }
+    document.title = 'Rotary Multi-Club — Project Map';
+    if (ovDescEl) {
+      ovDescEl.textContent = 'Viewing community development projects, Global Grants, District Grants, and direct club initiatives across all participating Rotary Clubs.';
+    }
+  } else {
+    var meta = getCurrentClubMeta();
+    var cName = (meta && meta.name) || 'Rotary Club of Lake Atitlán';
+    if (titleEl) {
+      titleEl.textContent = cName + ' — Projects';
+      titleEl.title = cName + ' — Projects';
+    }
+    document.title = cName + ' — Project Map';
+    if (ovDescEl) {
+      ovDescEl.textContent = (meta && meta.description) ||
+        (cName + (meta && meta.district ? ' (District ' + meta.district + ')' : '') + ' funds and partners on community development projects through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.');
+    }
+  }
+}
+
+function projectMatchesClub(p, clubId) {
+  if (!p) return false;
+  if (!clubId || clubId === 'all') return true;
+
+  var targetId = String(clubId).toLowerCase().trim();
+  var pClubId = String(p.club_id || (p.details && p.details.club_id) || '').toLowerCase().trim();
+  if (pClubId && pClubId === targetId) return true;
+
+  // Legacy default fallback: if project has no explicit club_id and we're viewing lake-atitlan
+  if (!pClubId && targetId === 'lake-atitlan') return true;
+
+  var meta = getClubMetaById(targetId);
+  if (!meta) return false;
+
+  var shortNorm = normalizeClubCompareText(meta.short_name || meta.name.replace(/^Rotary Club of\s+/i, ''));
+  var fullNorm = normalizeClubCompareText(meta.name);
+  if (!shortNorm) return false;
+
+  var d = p.details || {};
+  var candidates = [
+    d.host_club,
+    d.international_club,
+    p.international_club_name,
+    p.partner
+  ];
+
+  if (Array.isArray(d.partner_clubs)) {
+    candidates = candidates.concat(d.partner_clubs);
+  } else if (typeof d.partner_clubs === 'string' && d.partner_clubs) {
+    candidates = candidates.concat(d.partner_clubs.split(/[,;\n]+/));
+  }
+
+  for (var i = 0; i < candidates.length; i++) {
+    var cNorm = normalizeClubCompareText(candidates[i]);
+    if (!cNorm) continue;
+    if (cNorm.includes(shortNorm) || (fullNorm && cNorm.includes(fullNorm))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+window.handleClubSelectionChange = function (val) {
+  if (val === '__add_club__') {
+    var sel = document.getElementById('club-selector');
+    if (sel) sel.value = currentClubId;
+    window.openAddClubModal();
+    return;
+  }
+
+  currentClubId = val || 'lake-atitlan';
+  var newUrl = new URL(window.location);
+  if (currentClubId === 'lake-atitlan') {
+    newUrl.searchParams.delete('club');
+  } else {
+    newUrl.searchParams.set('club', currentClubId);
+  }
+  window.history.replaceState({}, '', newUrl);
+
+  updateClubBrandingUI();
+  renderClubSelectorOptions();
+
+  if (currentView === 'overview') {
+    updateOverviewContent();
+  } else if (currentView === 'list') {
+    renderListRows();
+  } else {
+    showOverview();
+  }
+
+  fitMapToClubProjects();
+};
+
+function fitMapToClubProjects() {
+  if (!map || !window.google || !google.maps) return;
+  var filtered = getFilteredProjects();
+  var pts = [];
+  filtered.forEach(function (p) {
+    var c = getProjectCoords(p);
+    if (c) pts.push(c);
+  });
+
+  if (pts.length > 1) {
+    var bounds = new google.maps.LatLngBounds();
+    pts.forEach(function (pt) { bounds.extend(pt); });
+    map.fitBounds(bounds);
+  } else if (pts.length === 1) {
+    map.setCenter(pts[0]);
+    map.setZoom(12);
+  } else if (currentClubId !== 'all') {
+    var meta = getCurrentClubMeta();
+    if (meta && Number.isFinite(Number(meta.default_lat)) && Number.isFinite(Number(meta.default_lng))) {
+      map.setCenter({ lat: Number(meta.default_lat), lng: Number(meta.default_lng) });
+      map.setZoom(Number(meta.default_zoom) || 10);
+    }
+  }
+}
 
 let currentFilters = {
   type: '',
@@ -267,10 +557,14 @@ window.initMap = function () {
   initMaintainerClient();
   wireNavButtons();
   initDivider();
+  updateRotaryAccountButtonUI();
+  loadClubsRegistry();
 
   loadData()
     .then(function (projects) {
       allProjects = projects;
+      renderClubSelectorOptions();
+      updateClubBrandingUI();
       buildMap();
 
       // --- Deep-link handler ---
@@ -295,10 +589,13 @@ window.initMap = function () {
       }
 
       showOverview();
+      if (currentClubId !== 'lake-atitlan') {
+        fitMapToClubProjects();
+      }
     })
     .catch(function (err) {
       var rp = document.getElementById('right-pane');
-      if (rp) rp.innerHTML = '<div style="padding:20px;color:red;">Error loading CSV: ' + err.message + '</div>';
+      if (rp) rp.innerHTML = '<div style="padding:20px;color:red;">Error loading project data: ' + err.message + '</div>';
     });
 };
 
@@ -560,6 +857,7 @@ function getFilteredProjects() {
   var q = (currentFilters.search || '').trim().toLowerCase();
 
   return allProjects.filter(function (p) {
+    if (!projectMatchesClub(p, currentClubId)) return false;
     if (t && getProjectType(p).toLowerCase() !== t) return false;
     if (s && String(p.status || '').trim().toLowerCase() !== s) return false;
     if (syncVal) {
@@ -652,7 +950,7 @@ function showOverview() {
       + '  <h2>Club Projects Overview <span id="ov-filter-notice"></span></h2>'
       +    renderFilterBar()
       + '  <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:14px;line-height:1.7;margin-bottom:16px;">'
-      + '    <p>The Rotary Club of Lake Atitlán funds community development projects across Guatemala through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.</p>'
+      + '    <p id="ov-club-description">The Rotary Club of Lake Atitlán funds community development projects across Guatemala through Global Grants, District Grants, Club-to-Club collaborations, and direct club donations.</p>'
       + '  </div>'
       + '  <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:16px;">'
       + '    <div style="background:white;border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;">'
@@ -677,6 +975,7 @@ function showOverview() {
     attachFilterListeners();
   }
 
+  updateClubBrandingUI();
   updateOverviewContent();
 }
 
@@ -688,10 +987,18 @@ function updateOverviewContent() {
   var ggCount = filtered.filter(function (p) { return getProjectType(p) === 'Global Grant'; }).length;
   var directCount = filtered.filter(function (p) { return getProjectType(p) !== 'Global Grant'; }).length;
 
-  var isFiltered = currentFilters.type || currentFilters.status || currentFilters.sync || currentFilters.category || currentFilters.year || currentFilters.search;
+  var isFiltered = currentFilters.type || currentFilters.status || currentFilters.sync || currentFilters.category || currentFilters.year || currentFilters.search || (currentClubId && currentClubId !== 'all');
   var noticeEl = document.getElementById('ov-filter-notice');
   if (noticeEl) {
-    noticeEl.innerHTML = isFiltered ? '<span style="font-size:12px;color:#d97706;font-weight:normal;"> (Filtered: ' + filtered.length + ' of ' + allProjects.length + ')</span>' : '';
+    var clubTotal = allProjects.filter(function (p) { return projectMatchesClub(p, currentClubId); }).length;
+    var hasSubFilter = currentFilters.type || currentFilters.status || currentFilters.sync || currentFilters.category || currentFilters.year || currentFilters.search;
+    if (hasSubFilter) {
+      noticeEl.innerHTML = '<span style="font-size:12px;color:#d97706;font-weight:normal;"> (Filtered: ' + filtered.length + ' of ' + clubTotal + ')</span>';
+    } else if (currentClubId !== 'all' && clubTotal < allProjects.length) {
+      noticeEl.innerHTML = '<span style="font-size:12px;color:#64748b;font-weight:normal;"> (' + filtered.length + ' club projects of ' + allProjects.length + ' total)</span>';
+    } else {
+      noticeEl.innerHTML = '';
+    }
   }
 
   var countEl = document.getElementById('ov-total-count');
@@ -1719,83 +2026,108 @@ window.loadProjectSyncStatus = async function (projectId) {
 
 window.triggerProjectRiFetch = async function (projectId) {
   window.currentActiveProjectId = projectId;
-  if (!confirm('Fetch files and reconcile attachments from Rotary Grant Center for ' + projectId + '?')) return;
-  if (window.toggleLogConsole) window.toggleLogConsole(true);
-  if (window.startLogPolling) window.startLogPolling();
-  try {
-    var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
-    var res = await fetch(bUrl + '/api/projects/' + encodeURIComponent(projectId) + '/fetch-ri-files', { method: 'POST' });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Fetch failed');
-  } catch (e) {
-    alert('Error triggering RI fetch: ' + e.message);
-  }
+  ensureRotaryCredentials(async function (creds) {
+    if (!confirm('Fetch files and reconcile attachments from Rotary Grant Center for ' + projectId + '?')) return;
+    mfaPromptShownForRun = false;
+    if (window.toggleLogConsole) window.toggleLogConsole(true);
+    if (window.startLogPolling) window.startLogPolling();
+    try {
+      var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+      var res = await fetch(bUrl + '/api/projects/' + encodeURIComponent(projectId) + '/fetch-ri-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rotary_email: creds.email || null,
+          rotary_password: creds.password || null,
+          club_id: currentClubId !== 'all' ? currentClubId : 'lake-atitlan'
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Fetch failed');
+    } catch (e) {
+      alert('Error triggering RI fetch: ' + e.message);
+    }
+  });
 };
 
 window.triggerProjectSpcExport = async function (projectId, dryRun) {
   window.currentActiveProjectId = projectId;
   if (dryRun === undefined) dryRun = true;
-  if (!dryRun) {
-    if (!confirm('Proceed with LIVE export to Rotary Service Project Center (SPC) for project ' + projectId + '?\n\nThis will launch the SPC automation, authenticate with My Rotary, and create the project entry in Rotary International.')) {
-      return;
-    }
-  }
-
-  var currentBackend = getEffectiveBackendUrl();
-  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal && !currentBackend) {
-    var userUrl = prompt(
-      '☁️ Google Cloud Run Backend Required\n\n' +
-      'To export directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
-      '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
-      'Or click Cancel to run via local orchestrator (http://localhost:8000).',
-      localStorage.getItem('rcla_backend_url') || ''
-    );
-    if (userUrl && userUrl.trim()) {
-      currentBackend = userUrl.trim().replace(/\/+$/, '');
-      localStorage.setItem('rcla_backend_url', currentBackend);
-    } else {
-      var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
-      if (openLocal) {
-        window.open('http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true', '_blank');
+  ensureRotaryCredentials(async function (creds) {
+    if (!dryRun) {
+      var acctNote = creds.email ? ('MyRotary account: ' + creds.email) : 'Server default MyRotary account';
+      if (!confirm('Proceed with LIVE export to Rotary Service Project Center (SPC) for project ' + projectId + '?\n\nAccount: ' + acctNote + '\nClub: ' + (getCurrentClubMeta().name || currentClubId) + '\n\nThis will launch the SPC automation, authenticate with My Rotary, and create/update the project entry in Rotary International.')) {
+        return;
       }
-      return;
     }
-  }
 
-  // Immediately open the log console and print an instant status line
-  if (window.toggleLogConsole) window.toggleLogConsole(true);
-  var logDiv = document.getElementById('log-output');
-  if (logDiv) {
-    var startLine = document.createElement('div');
-    startLine.className = 'log-line';
-    startLine.style.color = '#38bdf8';
-    startLine.textContent = '[' + new Date().toLocaleTimeString() + '] Initiating SPC export for ' + projectId + ' (' + (dryRun ? 'Dry Run' : 'Live') + ')...';
-    logDiv.appendChild(startLine);
-    var drawer = document.getElementById('log-drawer');
-    if (drawer) drawer.scrollTop = drawer.scrollHeight;
-  }
+    var currentBackend = getEffectiveBackendUrl();
+    var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal && !currentBackend) {
+      var userUrl = prompt(
+        '☁️ Google Cloud Run Backend Required\n\n' +
+        'To export directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
+        '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
+        'Or click Cancel to run via local orchestrator (http://localhost:8000).',
+        localStorage.getItem('rcla_backend_url') || ''
+      );
+      if (userUrl && userUrl.trim()) {
+        currentBackend = userUrl.trim().replace(/\/+$/, '');
+        localStorage.setItem('rcla_backend_url', currentBackend);
+      } else {
+        var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
+        if (openLocal) {
+          window.open('http://localhost:8000/?project=' + encodeURIComponent(projectId) + '&edit=true', '_blank');
+        }
+        return;
+      }
+    }
 
-  // Start polling log history so the output appears in real-time
-  if (window.startLogPolling) window.startLogPolling();
+    mfaPromptShownForRun = false;
 
-  try {
-    var res = await fetch((currentBackend || BACKEND_URL) + '/api/projects/' + encodeURIComponent(projectId) + '/export-spc?dry_run=' + (dryRun ? 'true' : 'false'), { method: 'POST' });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Export failed');
-  } catch (e) {
+    // Immediately open the log console and print an instant status line
+    if (window.toggleLogConsole) window.toggleLogConsole(true);
+    var logDiv = document.getElementById('log-output');
     if (logDiv) {
-      var errLine = document.createElement('div');
-      errLine.className = 'log-line';
-      errLine.style.color = '#f87171';
-      var msg = e.message;
-      if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
-        msg += ' — Cannot reach orchestrator at ' + (currentBackend || 'http://localhost:8000') + '. Ensure the cloud service or local server is running.';
-      }
-      errLine.textContent = '❌ Error triggering SPC export: ' + msg;
-      logDiv.appendChild(errLine);
+      var startLine = document.createElement('div');
+      startLine.className = 'log-line';
+      startLine.style.color = '#38bdf8';
+      startLine.textContent = '[' + new Date().toLocaleTimeString() + '] Initiating SPC export for ' + projectId + ' (' + (dryRun ? 'Dry Run' : 'Live') + ')...';
+      logDiv.appendChild(startLine);
+      var drawer = document.getElementById('log-drawer');
+      if (drawer) drawer.scrollTop = drawer.scrollHeight;
     }
-  }
+
+    // Start polling log history so the output appears in real-time
+    if (window.startLogPolling) window.startLogPolling();
+
+    try {
+      var res = await fetch((currentBackend || BACKEND_URL) + '/api/projects/' + encodeURIComponent(projectId) + '/export-spc?dry_run=' + (dryRun ? 'true' : 'false'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dry_run: Boolean(dryRun),
+          rotary_email: creds.email || null,
+          rotary_password: creds.password || null,
+          club_id: currentClubId !== 'all' ? currentClubId : 'lake-atitlan'
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Export failed');
+    } catch (e) {
+      if (logDiv) {
+        var errLine = document.createElement('div');
+        errLine.className = 'log-line';
+        errLine.style.color = '#f87171';
+        var msg = e.message;
+        if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
+          msg += ' — Cannot reach orchestrator at ' + (currentBackend || 'http://localhost:8000') + '. Ensure the cloud service or local server is running.';
+        }
+        errLine.textContent = '❌ Error triggering SPC export: ' + msg;
+        logDiv.appendChild(errLine);
+      }
+    }
+  });
 };
 
 window.renderMilestonesBuilder = function (milestones, isGlobalGrant) {
@@ -1909,7 +2241,12 @@ window.getDetailsPayload = function () {
     });
   }
 
+  var curP = (activeEditIdx !== null && activeEditIdx >= 0) ? allProjects[activeEditIdx] : null;
+  var existingClubId = (curP && (curP.club_id || (curP.details && curP.details.club_id))) || '';
+  var effectiveClubId = existingClubId || (currentClubId && currentClubId !== 'all' ? currentClubId : 'lake-atitlan');
+
   return {
+    club_id: effectiveClubId,
     world_fund: wf,
     district_ddf: ddf,
     club_contributions: cash,
@@ -2063,7 +2400,14 @@ window.synthesizeWithGeminiDirect = async function (projectId, source, notesText
     + '   - "partner_clubs": Array of strings of ALL contributing/partner Rotary clubs mentioned anywhere in the application or funding lists.\n'
     + '   - "partner_districts": Array of strings of ALL contributing/partner districts.\n'
     + '   - "cooperating_organizations": Array of strings of ALL partner NGOs, cooperating organizations, government entities, and community groups.\n'
-    + '   - "key_personnel": Array of objects: [{"name": "...", "role": "..."}]\n\n'
+    + '   - "key_personnel": Array of objects: [{"name": "...", "role": "..."}]\n'
+    + '7. "location":\n'
+    + '   - "community_name": Specific village, school, town, or neighborhood where the project takes place\n'
+    + '   - "municipality": Municipality or city\n'
+    + '   - "department_or_state": Department or state\n'
+    + '   - "country": Country name\n'
+    + '   - "latitude": Best-estimate decimal latitude of the community/project site (numeric)\n'
+    + '   - "longitude": Best-estimate decimal longitude of the community/project site (numeric)\n\n'
     + 'Return ONLY valid JSON matching this schema.';
 
   var parts = [];
@@ -2294,6 +2638,20 @@ window.applyAiDraftToForm = function (draft) {
       if (coopInp) coopInp.value = orgsStr;
       var partnerInp = document.getElementById('edit-partner');
       if (partnerInp) partnerInp.value = orgsStr;
+    }
+  }
+  if (draft.location && Number.isFinite(Number(draft.location.latitude)) && Number.isFinite(Number(draft.location.longitude))) {
+    var dLat = Number(draft.location.latitude);
+    var dLng = Number(draft.location.longitude);
+    if (dLat !== 0 && dLng !== 0) {
+      var latInp = document.getElementById('edit-lat');
+      var lngInp = document.getElementById('edit-lng');
+      if (latInp) latInp.value = dLat.toFixed(6);
+      if (lngInp) lngInp.value = dLng.toFixed(6);
+      if (editMarker && window.google && google.maps) {
+        editMarker.setPosition({ lat: dLat, lng: dLng });
+        if (map) map.panTo({ lat: dLat, lng: dLng });
+      }
     }
   }
 };
@@ -3285,8 +3643,15 @@ window.openCreateForm = function () {
   activeEditIdx = -1;
 
   var currentYear = new Date().getFullYear();
-  var defaultGid = 'CLUB_' + currentYear + '_NewProject';
-  var defaultCoords = { lat: 14.703454, lng: -91.191623 };
+  var clubMeta = getCurrentClubMeta();
+  var clubPrefix = (currentClubId && currentClubId !== 'all' && currentClubId !== 'lake-atitlan')
+    ? currentClubId.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 8)
+    : 'CLUB';
+  var defaultGid = clubPrefix + '_' + currentYear + '_NewProject';
+  var defaultCoords = {
+    lat: (clubMeta && Number.isFinite(Number(clubMeta.default_lat))) ? Number(clubMeta.default_lat) : 14.703454,
+    lng: (clubMeta && Number.isFinite(Number(clubMeta.default_lng))) ? Number(clubMeta.default_lng) : -91.191623
+  };
   var rp = document.getElementById('right-pane');
 
   var newUrl = new URL(window.location);
@@ -3449,6 +3814,8 @@ window.saveNewProject = async function () {
   });
 
   if (getDataSourceMode() !== 'csv' && supabaseClient) {
+    var activeClubId = (currentClubId && currentClubId !== 'all') ? currentClubId : 'lake-atitlan';
+    var activeClubMeta = getClubMetaById(activeClubId) || DEFAULT_CLUBS[0];
     var fullPayload = {
       id: gid,
       title: title,
@@ -3467,7 +3834,11 @@ window.saveNewProject = async function () {
       start_date: startDateVal || null,
       end_date: endDateVal || null,
       timeline: { backstory: '', milestones: initialMilestones },
-      details: {}
+      details: {
+        club_id: activeClubId,
+        host_club: activeClubMeta.name || 'Rotary Club of Lake Atitlán',
+        host_district: activeClubMeta.district || '4250'
+      }
     };
 
     var saveWarning = null;
@@ -3699,6 +4070,11 @@ function startMaintainerClient() {
           if (drawer) drawer.scrollTop = drawer.scrollHeight;
         }
 
+        if (line.indexOf('[MFA_REQUIRED]') !== -1 && !mfaPromptShownForRun) {
+          mfaPromptShownForRun = true;
+          showMfaPromptInModal();
+        }
+
         var mPid = line.match(/(?:Processing:\s*|Targeting single specific project:\s*|Supabase projects [(]|SPC export for\s+)([A-Za-z0-9_-]+)/i);
         if (mPid && mPid[1]) {
           window.currentActiveProjectId = mPid[1].trim();
@@ -3873,6 +4249,11 @@ function pollMaintStatus() {
         badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
       }
 
+      if (data.waiting_for_mfa && !mfaPromptShownForRun) {
+        mfaPromptShownForRun = true;
+        showMfaPromptInModal();
+      }
+
       // Detect transition from 'running' to completed ('idle' or 'error')
       if (lastMaintStatus === 'running' && data.status !== 'running') {
         window.fetchLogHistory();
@@ -3894,7 +4275,13 @@ function pollMaintStatus() {
           loadData().then(function (projects) {
             if (projects && projects.length > 0) {
               allProjects = projects;
-              if (currentView === 'detail' && allProjects[currentIndex]) {
+              rebuildMarkers();
+              renderClubSelectorOptions();
+              if (currentView === 'overview') {
+                updateOverviewContent();
+              } else if (currentView === 'list') {
+                renderListRows();
+              } else if (currentView === 'detail' && allProjects[currentIndex]) {
                 var dBadge = document.getElementById('detail-spc-badge');
                 if (dBadge) dBadge.innerHTML = renderDetailSpcBadgeHtml(allProjects[currentIndex]);
                 updateDetailHeaderSpcBadge(allProjects[currentIndex]);
@@ -3932,74 +4319,403 @@ function pollMaintStatus() {
     });
 }
 
-window.triggerSync = function (dryRun) {
-  if (dryRun === undefined) dryRun = true;
-  var currentBackend = getEffectiveBackendUrl();
-  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal && !currentBackend) {
-    var userUrl = prompt(
-      '☁️ Google Cloud Run / Backend Required\n\n' +
-      'To run Grant Center sync directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
-      '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
-      'Or click Cancel to run via local orchestrator (http://localhost:8000).',
-      localStorage.getItem('rcla_backend_url') || ''
-    );
-    if (userUrl && userUrl.trim()) {
-      currentBackend = userUrl.trim().replace(/\/+$/, '');
-      localStorage.setItem('rcla_backend_url', currentBackend);
+// --- Per-User MyRotary Session Credentials & MFA Modal ---
+function getSessionRotaryCredentials() {
+  return {
+    email: sessionStorage.getItem('rcla_rotary_email') || '',
+    password: sessionStorage.getItem('rcla_rotary_password') || '',
+    useDefault: sessionStorage.getItem('rcla_rotary_use_default') === 'true'
+  };
+}
+
+function updateRotaryAccountButtonUI() {
+  var btn = document.getElementById('btn-rotary-account');
+  if (!btn) return;
+  var creds = getSessionRotaryCredentials();
+  if (creds.email) {
+    var shortEmail = creds.email.length > 22 ? creds.email.slice(0, 20) + '…' : creds.email;
+    btn.textContent = '🔐 MyRotary: ' + shortEmail;
+    btn.style.background = '#059669';
+    btn.title = 'Active MyRotary session account: ' + creds.email + ' (Click to change or enter MFA code)';
+  } else if (creds.useDefault) {
+    btn.textContent = '🔐 MyRotary: Server Default';
+    btn.style.background = '#0284c7';
+    btn.title = 'Using server default (.env) MyRotary credentials (Click to switch to your own MyRotary account)';
+  } else {
+    btn.textContent = '🔐 MyRotary Account';
+    btn.style.background = '#0284c7';
+    btn.title = 'Configure your MyRotary.org credentials for Grant Center Sync & SPC Export';
+  }
+}
+
+function ensureRotaryCredentials(actionCallback) {
+  var creds = getSessionRotaryCredentials();
+  if ((creds.email && creds.password) || creds.useDefault) {
+    actionCallback(creds);
+    return;
+  }
+  pendingRotaryAction = actionCallback;
+  window.openRotaryAuthModal();
+}
+
+window.openRotaryAuthModal = function (showMfa) {
+  var modal = document.getElementById('rotary-auth-modal');
+  if (!modal) return;
+  var creds = getSessionRotaryCredentials();
+  var emailInp = document.getElementById('rotary-email-input');
+  var passInp = document.getElementById('rotary-password-input');
+  var mfaSec = document.getElementById('rotary-mfa-section');
+  var statusEl = document.getElementById('rotary-auth-status');
+
+  if (emailInp) emailInp.value = creds.email || '';
+  if (passInp) passInp.value = creds.password || '';
+  if (mfaSec) mfaSec.style.display = showMfa ? 'block' : 'none';
+  if (statusEl) {
+    if (creds.email) {
+      statusEl.textContent = '✓ Session configured for ' + creds.email;
+      statusEl.style.color = '#059669';
+    } else if (creds.useDefault) {
+      statusEl.textContent = 'ℹ️ Currently using Server Default (.env) credentials.';
+      statusEl.style.color = '#0284c7';
     } else {
-      var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
-      if (openLocal) {
-        window.open('http://localhost:8000/', '_blank');
-      }
-      return;
+      statusEl.textContent = '';
     }
   }
-  window.toggleLogConsole(true);
-  window.startLogPolling();
-  fetch((currentBackend || BACKEND_URL) + '/api/grantcenter/sync?dry_run=' + dryRun, { method: 'POST' });
+
+  modal.style.display = 'flex';
+  if (showMfa) {
+    var mfaInp = document.getElementById('rotary-mfa-input');
+    if (mfaInp) { mfaInp.value = ''; mfaInp.focus(); }
+  } else if (emailInp) {
+    emailInp.focus();
+  }
+};
+
+window.closeRotaryAuthModal = function () {
+  var modal = document.getElementById('rotary-auth-modal');
+  if (modal) modal.style.display = 'none';
+  pendingRotaryAction = null;
+};
+
+function showMfaPromptInModal() {
+  window.openRotaryAuthModal(true);
+}
+
+window.saveRotaryCredentialsAndContinue = function () {
+  var emailInp = document.getElementById('rotary-email-input');
+  var passInp = document.getElementById('rotary-password-input');
+  var statusEl = document.getElementById('rotary-auth-status');
+  var email = (emailInp && emailInp.value.trim()) || '';
+  var password = (passInp && passInp.value) || '';
+
+  if (!email || !password) {
+    if (statusEl) {
+      statusEl.textContent = '⚠️ Please enter both your MyRotary email and password, or click "Use Server Default".';
+      statusEl.style.color = '#dc2626';
+    }
+    return;
+  }
+
+  sessionStorage.setItem('rcla_rotary_email', email);
+  sessionStorage.setItem('rcla_rotary_password', password);
+  sessionStorage.removeItem('rcla_rotary_use_default');
+  updateRotaryAccountButtonUI();
+
+  var cb = pendingRotaryAction;
+  pendingRotaryAction = null;
+  var modal = document.getElementById('rotary-auth-modal');
+  if (modal) modal.style.display = 'none';
+
+  if (typeof cb === 'function') {
+    cb(getSessionRotaryCredentials());
+  }
+};
+
+window.useServerDefaultRotaryCredentials = function () {
+  sessionStorage.removeItem('rcla_rotary_email');
+  sessionStorage.removeItem('rcla_rotary_password');
+  sessionStorage.setItem('rcla_rotary_use_default', 'true');
+  updateRotaryAccountButtonUI();
+
+  var cb = pendingRotaryAction;
+  pendingRotaryAction = null;
+  var modal = document.getElementById('rotary-auth-modal');
+  if (modal) modal.style.display = 'none';
+
+  if (typeof cb === 'function') {
+    cb(getSessionRotaryCredentials());
+  }
+};
+
+window.clearRotaryCredentials = function () {
+  sessionStorage.removeItem('rcla_rotary_email');
+  sessionStorage.removeItem('rcla_rotary_password');
+  sessionStorage.removeItem('rcla_rotary_use_default');
+  var emailInp = document.getElementById('rotary-email-input');
+  var passInp = document.getElementById('rotary-password-input');
+  var statusEl = document.getElementById('rotary-auth-status');
+  if (emailInp) emailInp.value = '';
+  if (passInp) passInp.value = '';
+  if (statusEl) {
+    statusEl.textContent = 'Cleared session credentials.';
+    statusEl.style.color = '#64748b';
+  }
+  updateRotaryAccountButtonUI();
+};
+
+window.submitRotaryMfaCode = async function () {
+  var mfaInp = document.getElementById('rotary-mfa-input');
+  var mfaStatus = document.getElementById('rotary-mfa-status');
+  var code = (mfaInp && mfaInp.value.trim()) || '';
+  if (!code) return;
+
+  var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+  try {
+    var res = await fetch(bUrl + '/api/rotary/mfa-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code })
+    });
+    if (res.ok) {
+      if (mfaStatus) {
+        mfaStatus.style.display = 'block';
+        mfaStatus.textContent = '✅ Verification code sent to MyRotary session!';
+      }
+      setTimeout(function () {
+        var modal = document.getElementById('rotary-auth-modal');
+        if (modal) modal.style.display = 'none';
+      }, 1000);
+    }
+  } catch (e) {
+    alert('Failed to submit MFA code: ' + e.message);
+  }
+};
+
+// --- Add / Configure Rotary Club Modal ---
+window.openAddClubModal = function () {
+  var modal = document.getElementById('add-club-modal');
+  var errEl = document.getElementById('add-club-error');
+  if (errEl) errEl.style.display = 'none';
+  if (modal) {
+    modal.style.display = 'flex';
+    var nameInp = document.getElementById('new-club-name');
+    if (nameInp) { nameInp.value = ''; nameInp.focus(); }
+  }
+};
+
+window.closeAddClubModal = function () {
+  var modal = document.getElementById('add-club-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.geocodeNewClubCity = function () {
+  var city = (document.getElementById('new-club-city') && document.getElementById('new-club-city').value.trim()) || '';
+  var state = (document.getElementById('new-club-state') && document.getElementById('new-club-state').value.trim()) || '';
+  var country = (document.getElementById('new-club-country') && document.getElementById('new-club-country').value.trim()) || '';
+  var addr = [city, state, country].filter(Boolean).join(', ');
+  if (!addr) {
+    alert('Please enter a City / Municipality or Country first.');
+    return;
+  }
+  if (window.google && google.maps && google.maps.Geocoder) {
+    var geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: addr }, function (results, status) {
+      if (status === 'OK' && results && results[0] && results[0].geometry && results[0].geometry.location) {
+        var loc = results[0].geometry.location;
+        var latInp = document.getElementById('new-club-lat');
+        var lngInp = document.getElementById('new-club-lng');
+        if (latInp) latInp.value = loc.lat().toFixed(4);
+        if (lngInp) lngInp.value = loc.lng().toFixed(4);
+      } else {
+        alert('Could not geocode "' + addr + '": ' + status);
+      }
+    });
+  } else {
+    alert('Google Maps Geocoder is not available yet.');
+  }
+};
+
+window.saveNewClub = async function () {
+  var name = (document.getElementById('new-club-name') && document.getElementById('new-club-name').value.trim()) || '';
+  var district = (document.getElementById('new-club-district') && document.getElementById('new-club-district').value.trim()) || '';
+  var country = (document.getElementById('new-club-country') && document.getElementById('new-club-country').value.trim()) || 'United States';
+  var city = (document.getElementById('new-club-city') && document.getElementById('new-club-city').value.trim()) || '';
+  var state = (document.getElementById('new-club-state') && document.getElementById('new-club-state').value.trim()) || '';
+  var lat = parseFloat((document.getElementById('new-club-lat') && document.getElementById('new-club-lat').value) || '14.74');
+  var lng = parseFloat((document.getElementById('new-club-lng') && document.getElementById('new-club-lng').value) || '-91.20');
+  var desc = (document.getElementById('new-club-description') && document.getElementById('new-club-description').value.trim()) || '';
+  var errEl = document.getElementById('add-club-error');
+
+  if (!name) {
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter the Club Name.'; }
+    return;
+  }
+
+  var shortName = name.replace(/^(?:Rotary Club of\s+|Club Rotario de\s+)/i, '').trim() || name;
+  var slug = shortName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'rotary-club';
+
+  var newClubObj = {
+    id: slug,
+    name: name,
+    short_name: shortName,
+    district: district,
+    country: country,
+    default_city: city,
+    default_state: state,
+    default_lat: Number.isFinite(lat) ? lat : 14.74,
+    default_lng: Number.isFinite(lng) ? lng : -91.20,
+    default_zoom: 9,
+    language_iso: country.toLowerCase().includes('guatemala') ? 'Spanish' : 'English',
+    description: desc || (name + (district ? ' (District ' + district + ')' : '') + ' community service projects, District Grants, and Global Grants.')
+  };
+
+  var btn = document.getElementById('btn-save-new-club');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  try {
+    // 1. Try backend /api/clubs first (which also resolves spc_club_key from spc_resolved_clubs.json)
+    var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+    if (bUrl) {
+      try {
+        var bRes = await fetch(bUrl + '/api/clubs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newClubObj)
+        });
+        if (bRes.ok) {
+          var bData = await bRes.json();
+          if (bData && bData.club) {
+            newClubObj = Object.assign(newClubObj, bData.club);
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. Also persist to Supabase Storage system/clubs_registry.json so it works serverless
+    var existingIdx = allClubs.findIndex(function (c) { return c.id === newClubObj.id; });
+    if (existingIdx >= 0) {
+      allClubs[existingIdx] = Object.assign({}, allClubs[existingIdx], newClubObj);
+    } else {
+      allClubs.push(newClubObj);
+    }
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('clubs').upsert(newClubObj);
+      } catch (e) {}
+      try {
+        var blob = new Blob([JSON.stringify(allClubs, null, 2)], { type: 'application/json' });
+        await supabaseClient.storage.from('project-media').upload('system/clubs_registry.json', blob, {
+          upsert: true,
+          contentType: 'application/json'
+        });
+      } catch (e) {}
+    }
+
+    closeAddClubModal();
+    handleClubSelectionChange(newClubObj.id);
+  } finally {
+    if (btn) { btn.textContent = '➕ Register Club'; btn.disabled = false; }
+  }
+};
+
+window.triggerSync = function (dryRun) {
+  if (dryRun === undefined) dryRun = true;
+  ensureRotaryCredentials(function (creds) {
+    var currentBackend = getEffectiveBackendUrl();
+    var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal && !currentBackend) {
+      var userUrl = prompt(
+        '☁️ Google Cloud Run / Backend Required\n\n' +
+        'To run Grant Center sync directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
+        '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
+        'Or click Cancel to run via local orchestrator (http://localhost:8000).',
+        localStorage.getItem('rcla_backend_url') || ''
+      );
+      if (userUrl && userUrl.trim()) {
+        currentBackend = userUrl.trim().replace(/\/+$/, '');
+        localStorage.setItem('rcla_backend_url', currentBackend);
+      } else {
+        var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
+        if (openLocal) {
+          window.open('http://localhost:8000/', '_blank');
+        }
+        return;
+      }
+    }
+    mfaPromptShownForRun = false;
+    window.toggleLogConsole(true);
+    window.startLogPolling();
+    fetch((currentBackend || BACKEND_URL) + '/api/grantcenter/sync?dry_run=' + dryRun, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dry_run: Boolean(dryRun),
+        rotary_email: creds.email || null,
+        rotary_password: creds.password || null,
+        club_id: currentClubId !== 'all' ? currentClubId : 'lake-atitlan'
+      })
+    });
+  });
 };
 
 window.triggerSpcExport = function (dryRun) {
   if (dryRun === undefined) dryRun = true;
-  var currentBackend = getEffectiveBackendUrl();
-  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (!isLocal && !currentBackend) {
-    var userUrl = prompt(
-      '☁️ Google Cloud Run / Backend Required\n\n' +
-      'To export directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
-      '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
-      'Or click Cancel to run via local orchestrator (http://localhost:8000).',
-      localStorage.getItem('rcla_backend_url') || ''
-    );
-    if (userUrl && userUrl.trim()) {
-      currentBackend = userUrl.trim().replace(/\/+$/, '');
-      localStorage.setItem('rcla_backend_url', currentBackend);
-    } else {
-      var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
-      if (openLocal) {
-        window.open('http://localhost:8000/', '_blank');
-      }
-      return;
-    }
-  }
-  window.toggleLogConsole(true);
-  window.startLogPolling();
-  fetch((currentBackend || BACKEND_URL) + '/api/spc/export?dry_run=' + dryRun, { method: 'POST' })
-    .catch(function (e) {
-      var logDiv = document.getElementById('log-output');
-      if (logDiv) {
-        var errLine = document.createElement('div');
-        errLine.className = 'log-line';
-        errLine.style.color = '#f87171';
-        var msg = e.message;
-        if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
-          msg += ' — Cannot reach orchestrator at ' + (currentBackend || 'http://localhost:8000') + '. Ensure the cloud service or local server is running.';
+  ensureRotaryCredentials(function (creds) {
+    var currentBackend = getEffectiveBackendUrl();
+    var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal && !currentBackend) {
+      var userUrl = prompt(
+        '☁️ Google Cloud Run / Backend Required\n\n' +
+        'To export directly from production without running Python on your laptop, enter your Google Cloud Run service URL:\n' +
+        '(Example: https://rcla-orchestrator-xxxx-uc.a.run.app)\n\n' +
+        'Or click Cancel to run via local orchestrator (http://localhost:8000).',
+        localStorage.getItem('rcla_backend_url') || ''
+      );
+      if (userUrl && userUrl.trim()) {
+        currentBackend = userUrl.trim().replace(/\/+$/, '');
+        localStorage.setItem('rcla_backend_url', currentBackend);
+      } else {
+        var openLocal = confirm('Would you like to open your local server at http://localhost:8000 instead?');
+        if (openLocal) {
+          window.open('http://localhost:8000/', '_blank');
         }
-        errLine.textContent = '❌ Error triggering SPC export: ' + msg;
-        logDiv.appendChild(errLine);
+        return;
       }
-    });
+    }
+    mfaPromptShownForRun = false;
+    window.toggleLogConsole(true);
+    window.startLogPolling();
+    fetch((currentBackend || BACKEND_URL) + '/api/spc/export?dry_run=' + dryRun, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dry_run: Boolean(dryRun),
+        rotary_email: creds.email || null,
+        rotary_password: creds.password || null,
+        club_id: currentClubId !== 'all' ? currentClubId : 'lake-atitlan'
+      })
+    })
+      .catch(function (e) {
+        var logDiv = document.getElementById('log-output');
+        if (logDiv) {
+          var errLine = document.createElement('div');
+          errLine.className = 'log-line';
+          errLine.style.color = '#f87171';
+          var msg = e.message;
+          if (msg === 'Failed to fetch' || (msg && msg.indexOf('fetch') !== -1)) {
+            msg += ' — Cannot reach orchestrator at ' + (currentBackend || 'http://localhost:8000') + '. Ensure the cloud service or local server is running.';
+          }
+          errLine.textContent = '❌ Error triggering SPC export: ' + msg;
+          logDiv.appendChild(errLine);
+        }
+      });
+  });
 };
 
 window.toggleLogConsole = function (forceOpen) {

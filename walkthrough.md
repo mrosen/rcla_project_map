@@ -81,3 +81,30 @@ All four pipeline components are committed in the `scripts/` directory for ongoi
 2. `python3 scripts/analyze_rotary_gaps.py` — Identifies clubs and districts lacking contacts or emails.
 3. `python3 scripts/enrich_officers.py` — Resolves and enriches gap entities with current officers.
 4. `python3 scripts/generate_contacts_deliverables.py` — Builds the final CSVs, JSON, and HTML viewer.
+
+---
+
+# 🌎 Multi-Club & Per-User MyRotary Account Support
+
+The Project Map now supports multiple Rotary Clubs on the shared Supabase database while defaulting to **Rotary Club of Lake Atitlán** (`lake-atitlan`).
+
+## 1. Club Switcher & Shared Global Grants ([index.html](./index.html), [main.js](./main.js))
+- **Header Club Switcher (`#club-selector`)**:
+  - Defaults to `Rotary Club of Lake Atitlán (D4250)` when no `?club=` query parameter is present.
+  - Supports switching to any registered Rotary Club (e.g., `?club=annapolis`, `?club=northfield`, `?club=fort-collins`), viewing `🌎 All Rotary Clubs` (`?club=all`), or clicking `➕ Add Rotary Club…` to register a new club.
+- **Shared Global Grants**:
+  - Global Grants (`GGxxxxxxx`) remain single canonical records in `projects` and automatically appear in the view of **every participating club** (whether that club is the Host Club, International Sponsor, or listed in `details.partner_clubs`), while Club Direct/Donation and District Grant projects are scoped to their owning club (`details.club_id`).
+- **Dynamic Map Bounds & Club Onboarding (`#add-club-modal`)**:
+  - Switching clubs automatically updates the header title, overview description, KPI totals, and pans/fits the Google Map to the selected club's projects (or default coordinates).
+  - Registering a new club automatically resolves its Rotary Club ID and Service Project Center (`spc_club_key`) GUID from [spc_resolved_clubs.json](./spc_resolved_clubs.json) and persists the registry to Supabase (`public.clubs` and `project-media/system/clubs_registry.json`).
+
+## 2. Per-User MyRotary Session Credentials & MFA ([orchestrator.py](./orchestrator.py), [scripts/download_grant_center.py](./scripts/download_grant_center.py), [scripts/migrate_to_spc.py](./scripts/migrate_to_spc.py))
+- **Session-Only MyRotary Modal (`#rotary-auth-modal`)**:
+  - Clicking `🔐 MyRotary Account` in the Maintainer Bar (or triggering **Grant Sync** / **SPC Export** / **Fetch RI Files**) prompts for the user's MyRotary.org email and password, or allows selecting **Use Server Default** for local `.env` credentials.
+  - Credentials are stored strictly in browser tab memory (`sessionStorage`) and passed per-job to the backend without ever being written to Supabase or disk.
+- **Dynamic Identity & Club Metadata in SPC Exports**:
+  - [scripts/migrate_to_spc.py](./scripts/migrate_to_spc.py) dynamically extracts the logged-in user's `individualkey`, `memberId`, `userName`, and `userLoginEmail` from Rotary's Redux/Auth state and uses the active club's `spc_club_key`, country, city, state/department, and language when constructing SPC payloads.
+- **Interactive Okta MFA Support**:
+  - If MyRotary challenges a user's login with an Okta 2FA/MFA verification prompt, the backend emits `[MFA_REQUIRED]` and the UI automatically opens the 6-digit MFA code input inside `#rotary-auth-modal`, forwarding the code to `/api/rotary/mfa-code` so the Playwright session completes authentication seamlessly.
+- **Automated Grant Center Import + Gemini AI Synthesis**:
+  - Running `Grant Sync (Dry)` or `Grant Sync (Live)` executes [scripts/download_grant_center.py](./scripts/download_grant_center.py) (`--audit` or `--sync-new --club <slug>`), creates/updates stub records in Supabase `projects`, uploads Application & Report PDFs to `project-media`, and automatically invokes Gemini AI synthesis (including community geolocation coordinates) for newly imported grants.
