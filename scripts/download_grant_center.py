@@ -820,11 +820,21 @@ async def main():
     print("  Rotary Grant Center Downloader (Supabase Datastore Architecture)")
     print("=" * 65)
 
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except Exception:
+        pass
+
     email = os.environ.get("ROTARY_EMAIL") or os.environ.get("ROTARY_USERNAME", "")
     password = os.environ.get("ROTARY_PASSWORD", "")
     active_club = (args.club or os.environ.get("ACTIVE_CLUB_ID") or "lake-atitlan").strip()
     supabase_url = os.environ.get("SUPABASE_URL", "https://rqhmsincnmxrgtipvkif.supabase.co")
-    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
+    supabase_key = (
+        os.environ.get("SUPABASE_SERVICE_KEY")
+        or os.environ.get("SUPABASE_ANON_KEY")
+        or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaG1zaW5jbm14cmd0aXB2a2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTgwMzUsImV4cCI6MjEwNTA5NDAzNX0.XJY9Q6akA4KF0Ei5Ri8blJ1yxfNM75l-oNK9nR1H40o"
+    )
 
     if not email or not password:
         print("ERROR: ROTARY_EMAIL and ROTARY_PASSWORD environment variables are required.")
@@ -837,11 +847,16 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=is_headless,
-            slow_mo=100,
+            slow_mo=50 if not is_headless else 0,
             args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
                 "--disable-extensions",
                 "--disable-plugins",
                 "--disable-blink-features=AutomationControlled",
+                "--no-first-run",
             ]
         )
         context = await browser.new_context(

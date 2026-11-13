@@ -382,6 +382,11 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
                     ek, ev = eline.split("=", 1)
                     env.setdefault(ek.strip(), ev.strip())
 
+        env["SUPABASE_URL"] = SUPABASE_URL
+        env["SUPABASE_ANON_KEY"] = SUPABASE_ANON_KEY
+        if SUPABASE_SERVICE_KEY:
+            env["SUPABASE_SERVICE_KEY"] = SUPABASE_SERVICE_KEY
+
         if payload.rotary_email:
             env["ROTARY_EMAIL"] = payload.rotary_email.strip()
             env["ROTARY_USERNAME"] = payload.rotary_email.strip()
@@ -389,6 +394,11 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
             env["ROTARY_PASSWORD"] = payload.rotary_password.strip()
         if active_club:
             env["ACTIVE_CLUB_ID"] = active_club
+
+        if not (env.get("ROTARY_EMAIL") or env.get("ROTARY_USERNAME")) or not env.get("ROTARY_PASSWORD"):
+            raise RuntimeError(
+                "MyRotary.org credentials required. Please click '🔐 MyRotary Account' in the top bar and enter your MyRotary email and password."
+            )
 
         cmd = [
             sys.executable,
@@ -1054,6 +1064,11 @@ async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRot
                     if "=" in eline and not eline.startswith("#"):
                         ek, ev = eline.split("=", 1)
                         env.setdefault(ek.strip(), ev.strip())
+
+            env["SUPABASE_URL"] = SUPABASE_URL
+            env["SUPABASE_ANON_KEY"] = SUPABASE_ANON_KEY
+            if SUPABASE_SERVICE_KEY:
+                env["SUPABASE_SERVICE_KEY"] = SUPABASE_SERVICE_KEY
 
             if payload and payload.rotary_email:
                 env["ROTARY_EMAIL"] = payload.rotary_email.strip()

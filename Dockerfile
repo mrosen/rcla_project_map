@@ -1,5 +1,5 @@
 # Google Cloud Run Dockerfile for Rotary Grant & SPC Orchestrator
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 # Prevent Python from buffering stdout/stderr (essential for Cloud Run real-time logging)
 ENV PYTHONUNBUFFERED=1 \
