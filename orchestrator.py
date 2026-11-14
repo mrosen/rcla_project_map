@@ -443,7 +443,28 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
                     draft = syn_res.get("draft") if isinstance(syn_res, dict) else None
                     if draft and isinstance(draft, dict):
                         det = draft.get("details") or {}
-                        det["club_id"] = active_club if active_club != "all" else "lake-atitlan"
+                        resolved_club_id = active_club if active_club != "all" else "lake-atitlan"
+                        try:
+                            clubs_reg = load_clubs_registry()
+                            grant_club_blobs = " | ".join([
+                                str(det.get("host_club") or ""),
+                                str(det.get("international_club") or ""),
+                                " ".join(str(x) for x in (det.get("partner_clubs") or []))
+                            ]).lower()
+                            if grant_club_blobs.strip(" |"):
+                                active_club_obj = next((c for c in clubs_reg if c.get("id") == resolved_club_id), None)
+                                active_short = (active_club_obj.get("short_name") or "").lower() if active_club_obj else ""
+                                if not active_short or active_short not in grant_club_blobs:
+                                    # Match against any registered club mentioned on the grant application
+                                    matched_reg = next(
+                                        (c["id"] for c in clubs_reg if (c.get("short_name") or "").lower() and (c.get("short_name") or "").lower() in grant_club_blobs),
+                                        None
+                                    )
+                                    if matched_reg:
+                                        resolved_club_id = matched_reg
+                        except Exception:
+                            pass
+                        det["club_id"] = resolved_club_id
                         loc = draft.get("location") or {}
                         if loc.get("city"): det["city"] = loc["city"]
                         if loc.get("state"): det["state"] = loc["state"]

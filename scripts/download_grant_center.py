@@ -45,10 +45,8 @@ SPC_LOGIN_URL = "https://my.rotary.org/login?destination=/en/secure/showcase"
 MYGRANTS_URL  = "https://spc.rotary.org/mygrants"
 GRANTS_BASE   = "https://grants.rotary.org"
 
-# Grants to skip — personal / external to club
-EXCLUDE_GRANTS = {
-    "GG1528500",  # Sustainable Pediatric Care (personal)
-}
+# Grants to skip — empty now that multi-club mode supports all clubs' Global Grants (including GG1528500 in El Salvador)
+EXCLUDE_GRANTS = set()
 
 PDF_MARGIN = {"top": "10mm", "bottom": "10mm", "left": "10mm", "right": "10mm"}
 
@@ -798,7 +796,7 @@ async def get_all_grants(page):
                 const span = tr.querySelector('span[class*="rwc-button"]');
                 if (!span) continue;
                 const gn = span.textContent.trim().toUpperCase();
-                if (!/^(GG|DG)[0-9]{5,}$/.test(gn)) continue;
+                if (!/^GG[0-9]{5,}$/.test(gn)) continue;
                 let title = '', year = '', status = '';
                 tr.querySelectorAll('td').forEach(td => {
                     const badge = td.querySelector('[data-slot="badge"]');
@@ -1014,7 +1012,17 @@ async def main():
                     log(f"  ✓ Created new grant record in Supabase: {gid} ({g['title'][:45]})")
                     log(f"[NEW_GRANT_IMPORTED] {gid}")
 
-            to_process = [(gn, t, y) for gn, t, y, _ in discovered]
+            to_process = []
+            for gn, t, y, _ in discovered:
+                if gn in new_on_portal or args.force:
+                    to_process.append((gn, t, y))
+                else:
+                    existing_files = get_existing_supabase_assets(gn, supabase_url, supabase_key)
+                    mapped_st = portal_dict[gn]["mapped_status"]
+                    if f"{gn}_Application.pdf" not in existing_files or mapped_st != "closed":
+                        to_process.append((gn, t, y))
+                    else:
+                        log(f"  ✓ {gn} (closed) already has {len(existing_files)} file(s) in Supabase — skipping tab download.")
         elif target_grant:
             clean_tg = target_grant.replace("-", "").replace(" ", "")
             log(f"Targeting single grant: {clean_tg}")
