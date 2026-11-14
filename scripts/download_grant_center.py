@@ -559,14 +559,57 @@ async def process_grant_page(grant_page, context, gn: str, force: bool = False, 
 async def login(page, email, password):
     masked_email = email[:3] + "..." + email[email.find("@"):] if "@" in email else "..."
     log(f"Logging in to My Rotary as {masked_email}...")
-    await page.goto(SPC_LOGIN_URL, wait_until="domcontentloaded")
+    await page.goto(SPC_LOGIN_URL, wait_until="domcontentloaded", timeout=45000)
     await page.wait_for_timeout(3000)
     await dismiss_cookies(page)
 
-    await page.wait_for_selector("#okta-signin-username, input[name='username'], input[name='identifier']", timeout=30000)
-    await page.fill("#okta-signin-username, input[name='username'], input[name='identifier']", email)
-    await page.fill("#okta-signin-password, input[type='password']", password)
-    await page.click("#okta-signin-submit, input[type='submit']")
+    user_input = None
+    for _ in range(15):
+        await dismiss_cookies(page)
+        for sel in ["#okta-signin-username", "input[name='username']", "input[name='identifier']", "input[type='email']"]:
+            try:
+                el = await page.query_selector(sel)
+                if el:
+                    user_input = el
+                    break
+            except Exception:
+                pass
+        if user_input:
+            break
+        await page.wait_for_timeout(2000)
+
+    if not user_input:
+        raise RuntimeError(f"Okta login input not found on page: {page.url}")
+
+    await user_input.fill(email)
+    await page.wait_for_timeout(400)
+    await page.fill("#okta-signin-password, input[name='password'], input[type='password']", password)
+    await page.wait_for_timeout(400)
+
+    try:
+        await page.evaluate("""() => {
+            for (const id of ['onetrust-banner-sdk', 'onetrust-consent-sdk']) {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+            }
+            const dark = document.querySelector('.onetrust-pc-dark-filter');
+            if (dark) dark.remove();
+        }""")
+    except Exception:
+        pass
+
+    submitted = False
+    for btn_sel in ["#okta-signin-submit", "input[type='submit']", "button[type='submit']"]:
+        try:
+            btn = await page.query_selector(btn_sel)
+            if btn:
+                await btn.click(force=True)
+                submitted = True
+                break
+        except Exception:
+            pass
+    if not submitted:
+        await page.keyboard.press("Enter")
 
     mfa_file = Path("/tmp/rotary_mfa_code.txt")
     if mfa_file.exists():
@@ -574,35 +617,49 @@ async def login(page, email, password):
         except Exception: pass
 
     mfa_prompted = False
+    post_login_ticks = 0
     for _ in range(90):
         await page.wait_for_timeout(1000)
-        if "spc.rotary.org" in page.url and "frmTicket" not in page.url:
+        cur_url = page.url.lower()
+        if "spc.rotary.org" in cur_url and "frmticket" not in cur_url:
             break
+        if "my.rotary.org" in cur_url and "login" not in cur_url:
+            post_login_ticks += 1
+            if post_login_ticks >= 8:
+                break
 
-        # Check for invalid credentials error message
-        err_el = await page.query_selector(".okta-form-infobox-error, .o-form-error-container .infobox-error")
-        if err_el and await err_el.is_visible():
-            err_txt = (await err_el.inner_text()).strip()
-            if err_txt:
-                raise RuntimeError(f"MyRotary login failed: {err_txt}")
+        login_error_msg = None
+        try:
+            # Check for invalid credentials error message (guard against mid-navigation context destruction)
+            err_el = await page.query_selector(".okta-form-infobox-error, .o-form-error-container .infobox-error")
+            if err_el and await err_el.is_visible():
+                err_txt = (await err_el.inner_text()).strip()
+                if err_txt:
+                    login_error_msg = f"MyRotary login failed: {err_txt}"
 
-        # Check for Okta MFA verification code input
-        mfa_input = await page.query_selector("input[name='credentials.passcode'], input[name='answer'], input.o-form-input-name-answer")
-        if mfa_input and await mfa_input.is_visible():
-            if not mfa_prompted:
-                log("[MFA_REQUIRED] MyRotary requested a 2FA verification code. Please enter it in the prompt...")
-                mfa_prompted = True
-            if mfa_file.exists():
-                code = mfa_file.read_text(encoding="utf-8").strip()
-                try: mfa_file.unlink()
-                except Exception: pass
-                if code:
-                    log("  Submitting MFA verification code...")
-                    await mfa_input.fill(code)
-                    verify_btn = await page.query_selector("input[type='submit'], button[type='submit']")
-                    if verify_btn:
-                        await verify_btn.click()
-                    mfa_prompted = False
+            # Check for Okta MFA verification code input
+            mfa_input = await page.query_selector("input[name='credentials.passcode'], input[name='answer'], input.o-form-input-name-answer")
+            if mfa_input and await mfa_input.is_visible():
+                if not mfa_prompted:
+                    log("[MFA_REQUIRED] MyRotary requested a 2FA verification code. Please enter it in the prompt...")
+                    mfa_prompted = True
+                if mfa_file.exists():
+                    code = mfa_file.read_text(encoding="utf-8").strip()
+                    try: mfa_file.unlink()
+                    except Exception: pass
+                    if code:
+                        log("  Submitting MFA verification code...")
+                        await mfa_input.fill(code)
+                        verify_btn = await page.query_selector("input[type='submit'], button[type='submit']")
+                        if verify_btn:
+                            await verify_btn.click(force=True)
+                        mfa_prompted = False
+        except Exception:
+            # Ignore transient Playwright execution-context errors during page redirects
+            pass
+
+        if login_error_msg:
+            raise RuntimeError(login_error_msg)
     log("  Logged in successfully.")
 
 def normalize_portal_status(section: str) -> str:
@@ -691,13 +748,16 @@ async def load_mygrants(page):
 
     log("  Clicking View My Grants...")
     for _ in range(20):
-        btn = await page.query_selector("a:has-text('View My Grants'), button:has-text('View My Grants')")
-        if btn:
-            await btn.scroll_into_view_if_needed()
-            await btn.click()
-            await page.wait_for_load_state("domcontentloaded")
-            await page.wait_for_timeout(4000)
-            break
+        try:
+            btn = await page.query_selector("a:has-text('View My Grants'), button:has-text('View My Grants')")
+            if btn:
+                await btn.scroll_into_view_if_needed()
+                await btn.click()
+                await page.wait_for_load_state("domcontentloaded")
+                await page.wait_for_timeout(4000)
+                break
+        except Exception:
+            pass
         await page.wait_for_timeout(1000)
     else:
         log("  Navigating directly to mygrants...")
@@ -705,10 +765,25 @@ async def load_mygrants(page):
         await page.wait_for_timeout(4000)
     await dismiss_cookies(page)
 
+    # Wait up to 15s for grant table rows to populate before scrolling
+    for _ in range(15):
+        try:
+            if await page.query_selector("tr.rwc-table__default"):
+                break
+        except Exception:
+            pass
+        await page.wait_for_timeout(1000)
+
     for _ in range(50):
-        await page.evaluate("window.scrollBy(0, 300)")
+        try:
+            await page.evaluate("window.scrollBy(0, 300)")
+        except Exception:
+            break
         await page.wait_for_timeout(100)
-    await page.evaluate("window.scrollTo(0, 0)")
+    try:
+        await page.evaluate("window.scrollTo(0, 0)")
+    except Exception:
+        pass
     await page.wait_for_timeout(1500)
     await dismiss_cookies(page)
 

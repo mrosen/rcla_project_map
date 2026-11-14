@@ -1536,29 +1536,35 @@ async def main():
             if "login" not in cur_url and ("rotary.org" in cur_url):
                 authenticated = True
                 break
-            err_box = await page.query_selector(".okta-form-infobox-error, .infobox-error")
-            if err_box and await err_box.is_visible():
-                err_text = await err_box.inner_text()
-                if "error" in err_text.lower() or "unable" in err_text.lower():
-                    print(f"  ❌ Okta error banner: {err_text}", flush=True)
-                    raise RuntimeError(f"MyRotary login failed: {err_text}")
+            login_err_to_raise = None
+            try:
+                err_box = await page.query_selector(".okta-form-infobox-error, .infobox-error")
+                if err_box and await err_box.is_visible():
+                    err_text = await err_box.inner_text()
+                    if "error" in err_text.lower() or "unable" in err_text.lower():
+                        print(f"  ❌ Okta error banner: {err_text}", flush=True)
+                        login_err_to_raise = f"MyRotary login failed: {err_text}"
 
-            mfa_input = await page.query_selector("input[name='credentials.passcode'], input[name='answer'], input.o-form-input-name-answer")
-            if mfa_input and await mfa_input.is_visible():
-                if not mfa_prompted:
-                    print("[MFA_REQUIRED] MyRotary requested a 2FA verification code. Please enter it in the prompt...", flush=True)
-                    mfa_prompted = True
-                if mfa_file.exists():
-                    code = mfa_file.read_text(encoding="utf-8").strip()
-                    try: mfa_file.unlink()
-                    except Exception: pass
-                    if code:
-                        print("  Submitting MFA verification code...", flush=True)
-                        await mfa_input.fill(code)
-                        verify_btn = await page.query_selector("input[type='submit'], button[type='submit']")
-                        if verify_btn:
-                            await verify_btn.click()
-                        mfa_prompted = False
+                mfa_input = await page.query_selector("input[name='credentials.passcode'], input[name='answer'], input.o-form-input-name-answer")
+                if mfa_input and await mfa_input.is_visible():
+                    if not mfa_prompted:
+                        print("[MFA_REQUIRED] MyRotary requested a 2FA verification code. Please enter it in the prompt...", flush=True)
+                        mfa_prompted = True
+                    if mfa_file.exists():
+                        code = mfa_file.read_text(encoding="utf-8").strip()
+                        try: mfa_file.unlink()
+                        except Exception: pass
+                        if code:
+                            print("  Submitting MFA verification code...", flush=True)
+                            await mfa_input.fill(code)
+                            verify_btn = await page.query_selector("input[type='submit'], button[type='submit']")
+                            if verify_btn:
+                                await verify_btn.click(force=True)
+                            mfa_prompted = False
+            except Exception:
+                pass
+            if login_err_to_raise:
+                raise RuntimeError(login_err_to_raise)
             await page.wait_for_timeout(1000)
 
         if not authenticated:
