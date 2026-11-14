@@ -660,15 +660,15 @@ async def login(page, email, password):
             raise RuntimeError(login_error_msg)
     log("  Logged in successfully.")
 
-def normalize_portal_status(section: str) -> str:
-    s = (section or "").lower()
-    if "past" in s or "closed" in s or "complete" in s:
+def normalize_portal_status(section: str, badge_status: str = "") -> str:
+    combined = f"{section or ''} {badge_status or ''}".lower()
+    if "past" in combined or "closed" in combined or "complete" in combined:
         return "closed"
-    if "approved" in s or "progress" in s or "active" in s:
-        return "approved"
-    if "draft" in s or "submitted" in s or "auth" in s or "proposed" in s:
+    if "draft" in combined or "submitted" in combined or "auth" in combined or "proposed" in combined or "pending" in combined or "review" in combined:
         return "proposed"
-    return "approved"
+    if "approved" in combined or "progress" in combined:
+        return "approved"
+    return "proposed"
 
 def fetch_supabase_projects(sb_url: str, sb_key: str) -> dict:
     if not sb_url or not sb_key:
@@ -763,84 +763,241 @@ async def load_mygrants(page):
         await page.wait_for_timeout(4000)
     await dismiss_cookies(page)
 
-    # Wait up to 15s for grant table rows to populate before scrolling
-    for _ in range(15):
+    # Wait up to 30s for grant table rows to populate
+    for _ in range(30):
         try:
-            if await page.query_selector("tr.rwc-table__default"):
+            count = await page.evaluate("() => document.querySelectorAll('tr.rwc-table__default').length")
+            if count > 0:
                 break
         except Exception:
             pass
         await page.wait_for_timeout(1000)
 
-    for _ in range(50):
+    # Slow scroll to trigger lazy-loading of all sections and their paginators
+    for _ in range(80):
         try:
             await page.evaluate("window.scrollBy(0, 300)")
         except Exception:
             break
-        await page.wait_for_timeout(100)
+        await page.wait_for_timeout(150)
+    await page.wait_for_timeout(3000)
     try:
         await page.evaluate("window.scrollTo(0, 0)")
     except Exception:
         pass
-    await page.wait_for_timeout(1500)
+    await page.wait_for_timeout(2000)
     await dismiss_cookies(page)
 
 async def get_all_grants(page):
+    """
+    The mygrants page has multiple sections ('My Actions', 'Drafts',
+    'Authorization Required', 'Submitted', 'Approved', 'Past Applications'),
+    each with its own table and paginator.
+    We scroll to each section in KEEP, iterate its pages, and scrape only
+    Global Grants (GG...) between that section's heading and the next heading,
+    skipping 'My Actions', 'Drafts', District Grants (DG...), and Cancelled rows.
+    """
     all_grants = {}
 
-    for _ in range(15):
-        rows = await page.evaluate("""() => {
+    SECTIONS = [
+        'My Actions',
+        'Drafts',
+        'Authorization Required',
+        'Submitted',
+        'Approved',
+        'Past Applications',
+    ]
+    KEEP = {'Authorization Required', 'Submitted', 'Approved', 'Past Applications'}
+
+    async def scroll_to_section(name):
+        found = await page.evaluate(f"""() => {{
+            for (const h of document.querySelectorAll('h1,h2,h3,h4')) {{
+                if (h.textContent.trim().toLowerCase().includes('{name.lower()}')) {{
+                    h.scrollIntoView({{block: 'start'}});
+                    return true;
+                }}
+            }}
+            return false;
+        }}""")
+        await page.wait_for_timeout(2000)
+        return found
+
+    _current_section = {"name": ""}
+
+    async def get_section_paginator(section_name):
+        return await page.evaluate_handle(f"""() => {{
+            const name = '{section_name.lower()}';
+            const headings = [...document.querySelectorAll('h1,h2,h3,h4')];
+            const sectionHeading = headings.find(h => h.textContent.trim().toLowerCase().includes(name));
+            if (!sectionHeading) return null;
+            const idx = headings.indexOf(sectionHeading);
+            const nextHeading = headings[idx + 1] || null;
+            const paginators = [...document.querySelectorAll('select.pagination-select')];
+            for (const sel of paginators) {{
+                const pos = sectionHeading.compareDocumentPosition(sel);
+                if (!(pos & 4)) continue;
+                if (nextHeading) {{
+                    const pos2 = nextHeading.compareDocumentPosition(sel);
+                    if (!(pos2 & 2)) continue;
+                }}
+                return sel;
+            }}
+            return null;
+        }}""")
+
+    async def get_page_opts(section_name=""):
+        if not section_name:
+            section_name = _current_section["name"]
+        handle = await get_section_paginator(section_name)
+        if not handle or await handle.evaluate("el => !el"):
+            return []
+        opts = await handle.evaluate("el => [...el.options].map(o => o.value)")
+        await handle.dispose()
+        return opts
+
+    async def set_page(n, section_name=""):
+        if not section_name:
+            section_name = _current_section["name"]
+        handle = await get_section_paginator(section_name)
+        if not handle or await handle.evaluate("el => !el"):
+            return
+        await handle.evaluate("el => el.scrollIntoView()")
+        prev_gns = await page.evaluate(f"""() => {{
+            const target = '{section_name.lower()}';
+            const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
+            let inSection = false;
+            const gns = [];
+            for (const el of els) {{
+                if (el.tagName.match(/^H[1-4]$/i)) {{
+                    const t = el.textContent.trim().toLowerCase();
+                    if (t.includes(target)) {{ inSection = true; continue; }}
+                    if (inSection) break;
+                    continue;
+                }}
+                if (!inSection) continue;
+                const span = el.querySelector('span[class*="rwc-button"]');
+                if (span) gns.push(span.textContent.trim());
+            }}
+            return gns;
+        }}""")
+        await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
+        await handle.dispose()
+        for _ in range(16):
+            await page.wait_for_timeout(500)
+            cur_gns = await page.evaluate(f"""() => {{
+                const target = '{section_name.lower()}';
+                const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
+                let inSection = false;
+                const gns = [];
+                for (const el of els) {{
+                    if (el.tagName.match(/^H[1-4]$/i)) {{
+                        const t = el.textContent.trim().toLowerCase();
+                        if (t.includes(target)) {{ inSection = true; continue; }}
+                        if (inSection) break;
+                        continue;
+                    }}
+                    if (!inSection) continue;
+                    const span = el.querySelector('span[class*="rwc-button"]');
+                    if (span) gns.push(span.textContent.trim());
+                }}
+                return gns;
+            }}""")
+            if cur_gns != prev_gns:
+                break
+        await page.wait_for_timeout(500)
+
+    async def scrape_section_rows(section_name):
+        rows = await page.evaluate(f"""() => {{
             const results = [];
-            const trs = document.querySelectorAll('tr.rwc-table__default');
-            for (const tr of trs) {
-                const span = tr.querySelector('span[class*="rwc-button"]');
+            const target = '{section_name.lower()}';
+            const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
+            let inSection = false;
+            for (const el of els) {{
+                if (el.tagName.match(/^H[1-4]$/i)) {{
+                    const t = el.textContent.trim().toLowerCase();
+                    if (t.includes(target)) {{ inSection = true; continue; }}
+                    if (inSection) break;
+                    continue;
+                }}
+                if (!inSection) continue;
+                const span = el.querySelector('span[class*="rwc-button"]');
                 if (!span) continue;
                 const gn = span.textContent.trim().toUpperCase();
-                if (!/^GG[0-9]{5,}$/.test(gn)) continue;
+                if (!/^GG[0-9]{{5,}}$/.test(gn)) continue;
                 let title = '', year = '', status = '';
-                tr.querySelectorAll('td').forEach(td => {
+                el.querySelectorAll('td').forEach(td => {{
                     const badge = td.querySelector('[data-slot="badge"]');
-                    if (badge) { status = badge.textContent.trim(); return; }
+                    if (badge) {{ status = badge.textContent.trim(); return; }}
                     const hdr = td.querySelector('.rwc-table__mobile-header');
                     const text = hdr ? td.textContent.replace(hdr.textContent, '').trim() : td.textContent.trim();
-                    const dm = text.match(/^[0-9]{2}\\/[0-9]{2}\\/([0-9]{4})$/);
-                    if (dm && !year) { year = dm[1]; return; }
-                    if (/^(GG|DG)[0-9]{5,}$/.test(text)) return;
+                    const dm = text.match(new RegExp('^[0-9]{{2}}/[0-9]{{2}}/([0-9]{{4}})$'));
+                    if (dm && !year) {{ year = dm[1]; return; }}
+                    if (/^(GG|DG)[0-9]{{5,}}$/.test(text)) return;
                     if (text.length > 8 && !title) title = text.substring(0, 80);
-                });
-                results.push({ gn, title, year, status });
-            }
+                }});
+                results.push({{ gn, title, year, status }});
+            }}
             return results;
-        }""")
-
+        }}""")
+        added = 0
         for r in rows:
             gn = r['gn']
             if gn in all_grants or gn in EXCLUDE_GRANTS:
                 continue
-            all_grants[gn] = (r['title'], r['year'], r.get('status') or '')
-            log(f"    + {gn} ({r['year']}) [{r.get('status') or 'Active'}]: {r['title'][:50]}")
+            badge_st = r.get('status') or ''
+            if re.search(r'Cancel', badge_st, re.I):
+                continue
+            sec_label = f"{section_name}" + (f" / {badge_st}" if badge_st and badge_st.lower() != section_name.lower() else "")
+            all_grants[gn] = (r['title'], r['year'], sec_label)
+            log(f"    + {gn} ({r['year']}) [{sec_label}]: {r['title'][:50]}")
+            added += 1
+        return added
 
-        selects = await page.query_selector_all("select.pagination-select")
-        advanced = False
-        for sel in selects:
-            try:
-                opts = [await o.get_attribute("value") for o in await sel.query_selector_all("option")]
-                cur = await sel.evaluate("el => el.value")
-                idx = opts.index(cur) if cur in opts else -1
-                if idx >= 0 and idx + 1 < len(opts):
-                    await sel.select_option(value=opts[idx + 1])
-                    await page.wait_for_timeout(2000)
-                    advanced = True
+    for section_name in SECTIONS:
+        _current_section["name"] = section_name
+        found = await scroll_to_section(section_name)
+        if not found:
+            continue
+
+        opts = await get_page_opts(section_name)
+        if not opts:
+            if section_name in KEEP:
+                await scrape_section_rows(section_name)
+            continue
+
+        if section_name not in KEEP:
+            continue
+
+        await scroll_to_section(section_name)
+        await set_page(1, section_name)
+        await scroll_to_section(section_name)
+
+        page_num = 1
+        consecutive_empty = 0
+        while True:
+            added = await scrape_section_rows(section_name)
+            if added == 0:
+                consecutive_empty += 1
+                if consecutive_empty >= 2:
                     break
-            except Exception:
-                pass
-        if not advanced:
-            break
+            else:
+                consecutive_empty = 0
+            next_num = page_num + 1
+            await scroll_to_section(section_name)
+            opts = await get_page_opts(section_name)
+            if str(next_num) not in opts:
+                break
+            page_num = next_num
+            await set_page(page_num, section_name)
+            await scroll_to_section(section_name)
+            await page.wait_for_timeout(500)
 
+    log(f"  Discovery complete: {len(all_grants)} Global Grants")
     return [(gn, t, y, s) for gn, (t, y, s) in all_grants.items()]
 
 async def find_and_click_grant(page, context, gn: str):
-    for attempt in range(120):
+    visited = set()
+    for attempt in range(200):
         spans = await page.query_selector_all("span[class*='rwc-button']")
         for span in spans:
             try:
@@ -862,12 +1019,22 @@ async def find_and_click_grant(page, context, gn: str):
         for sel in selects:
             try:
                 opts = [await o.get_attribute("value") for o in await sel.query_selector_all("option")]
-                cur = await sel.evaluate("el => el.value")
-                idx = opts.index(cur) if cur in opts else -1
-                if idx >= 0 and idx + 1 < len(opts):
-                    await sel.select_option(value=opts[idx + 1])
-                    await page.wait_for_timeout(2000)
-                    advanced = True
+                current = await sel.evaluate("el => el.value")
+                bbox = await sel.bounding_box()
+                band = int(bbox['y']) // 100 if bbox else 0
+                for v in opts:
+                    key = (band, v)
+                    if key not in visited:
+                        visited.add(key)
+                        if v == current:
+                            visited.add((band, current))
+                            continue
+                        await sel.scroll_into_view_if_needed()
+                        await sel.select_option(value=v)
+                        await page.wait_for_timeout(2500)
+                        advanced = True
+                        break
+                if advanced:
                     break
             except Exception:
                 pass
@@ -978,12 +1145,12 @@ async def main():
             print(f"Matching Grants in Supabase:    {len(common_ids)}")
             print("-" * 60)
             if new_on_portal:
-                print(f"➕ NEW GRANTS ON MYROTARY (Not yet in Supabase) [{len(new_on_portal)}]:")
+                print(f"📋 MYROTARY GRANTS NOT YET IN SUPABASE [{len(new_on_portal)}]:")
                 for gid in new_on_portal:
                     g = portal_dict[gid]
-                    print(f"   • {gid} [{g['mapped_status']}] ({g['year']}): {g['title']}")
+                    print(f"   • {gid} [{g['section']} ➔ {g['mapped_status']}] ({g['year']}): {g['title']}")
             else:
-                print("✔ No unlisted grants on MyRotary.")
+                print("✔ No unlisted Global Grants on MyRotary.")
             print("-" * 60)
             if status_diffs:
                 print(f"⚠️ STATUS UPDATES DETECTED [{len(status_diffs)}]:")
