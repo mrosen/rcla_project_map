@@ -4756,11 +4756,41 @@ window.cancelActiveTask = async function () {
     cancelBtn.disabled = true;
     cancelBtn.textContent = '🛑 Cancelling…';
   }
+  var logDiv = document.getElementById('log-output');
+  var drawer = document.getElementById('log-drawer');
+  if (logDiv) {
+    var cLine = document.createElement('div');
+    cLine.className = 'log-line';
+    cLine.style.color = '#f87171';
+    cLine.textContent = '[' + new Date().toLocaleTimeString() + '] 🛑 Sending cancel request to orchestrator...';
+    logDiv.appendChild(cLine);
+    if (drawer) drawer.scrollTop = drawer.scrollHeight;
+  }
   var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
   try {
-    await fetch(bUrl + '/api/cancel', { method: 'POST' });
-    await window.fetchLogHistory();
-    pollMaintStatus();
+    var res = await fetch(bUrl + '/api/cancel', { method: 'POST' });
+    if (!res.ok) {
+      if (logDiv) {
+        var errLine = document.createElement('div');
+        errLine.className = 'log-line';
+        errLine.style.color = '#fbbf24';
+        errLine.textContent = '[' + new Date().toLocaleTimeString() + '] ⚠️ Cancel endpoint returned HTTP ' + res.status + ' (if running on Cloud Run, wait ~2 min for the new deployment to finish, or use http://localhost:8000).';
+        logDiv.appendChild(errLine);
+        if (drawer) drawer.scrollTop = drawer.scrollHeight;
+      }
+    } else {
+      if (logPollInterval) {
+        clearInterval(logPollInterval);
+        logPollInterval = null;
+      }
+      var badge = document.getElementById('sync-status-badge');
+      if (badge) {
+        badge.textContent = 'Status: CANCELLED';
+        badge.style.background = '#64748b';
+      }
+      await window.fetchLogHistory();
+      pollMaintStatus();
+    }
   } catch (e) {
     alert('Failed to cancel task: ' + e.message);
   } finally {

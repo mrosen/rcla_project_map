@@ -22,6 +22,7 @@ from collections import deque
 import json
 import mimetypes
 import signal
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, List, Optional
@@ -105,30 +106,56 @@ async def emit_log(message: str):
         except Exception:
             pass
 
+CANCEL_FLAG_PATH = Path("/tmp/rotary_cancel.flag")
+
+def clear_cancel_flag():
+    global CANCEL_REQUESTED
+    CANCEL_REQUESTED = False
+    try:
+        if CANCEL_FLAG_PATH.exists():
+            CANCEL_FLAG_PATH.unlink()
+    except Exception:
+        pass
+
+def is_cancelled() -> bool:
+    return CANCEL_REQUESTED or CANCEL_FLAG_PATH.exists()
+
+def kill_worker_tree(proc: Optional[asyncio.subprocess.Process] = None):
+    """Force-kills the worker process group and any child Playwright/Chromium processes."""
+    if proc is not None and proc.returncode is None:
+        try:
+            if hasattr(os, "killpg"):
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except Exception:
+            pass
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    if sys.platform != "win32":
+        for pat in ("download_grant_center.py", "migrate_to_spc.py", "rotary_grant_downloader.py", "headless_shell"):
+            try:
+                subprocess.run(["pkill", "-9", "-f", pat], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+            except Exception:
+                pass
+
 @app.post("/api/cancel")
 @app.post("/api/tasks/cancel")
 async def cancel_active_task():
     """Terminates any currently running background worker process (Grant Sync, SPC Export, or Fetch RI Files)."""
     global ACTIVE_PROCESS, CANCEL_REQUESTED
-    if STATE["status"] != "running" and ACTIVE_PROCESS is None:
-        return {"success": True, "message": "No active task is currently running."}
-
     CANCEL_REQUESTED = True
+    try:
+        CANCEL_FLAG_PATH.write_text("cancel", encoding="utf-8")
+    except Exception:
+        pass
+
     task_name = STATE.get("task") or "active task"
-    await emit_log(f"🛑 Cancellation requested for '{task_name}' — terminating worker process...")
+    await emit_log(f"🛑 Cancellation requested for '{task_name}' — terminating worker & browser processes...")
 
     proc = ACTIVE_PROCESS
-    if proc is not None and proc.returncode is None:
-        try:
-            if hasattr(os, "killpg"):
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            else:
-                proc.terminate()
-        except Exception:
-            try:
-                proc.kill()
-            except Exception:
-                pass
+    ACTIVE_PROCESS = None
+    kill_worker_tree(proc)
 
     STATE["status"] = "idle"
     STATE["task"] = None
@@ -393,8 +420,8 @@ class GrantCenterSyncPayload(BaseModel):
     club_id: Optional[str] = None
 
 async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
-    global ACTIVE_PROCESS, CANCEL_REQUESTED
-    CANCEL_REQUESTED = False
+    global ACTIVE_PROCESS
+    clear_cancel_flag()
     STATE["status"] = "running"
     STATE["task"] = "grantcenter_sync"
     STATE["last_run"] = datetime.now().isoformat()
@@ -456,11 +483,19 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
         )
         ACTIVE_PROCESS = proc
         while True:
-            line = await proc.stdout.readline()
+            if is_cancelled():
+                kill_worker_tree(proc)
+                break
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if proc.returncode is not None:
+                    break
+                continue
             if not line:
                 break
             text = line.decode("utf-8", errors="replace").rstrip()
-            if text:
+            if text and not is_cancelled():
                 await emit_log(text)
                 if "[NEW_GRANT_IMPORTED]" in text:
                     parts = text.split("[NEW_GRANT_IMPORTED]", 1)
@@ -468,10 +503,13 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
                         imp_id = parts[1].strip()
                         if imp_id not in newly_imported_grants:
                             newly_imported_grants.append(imp_id)
-        await proc.wait()
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=2.0)
+        except Exception:
+            kill_worker_tree(proc)
         ACTIVE_PROCESS = None
 
-        if CANCEL_REQUESTED:
+        if is_cancelled():
             await emit_log("🛑 Grant Center sync cancelled by user.")
             STATE["status"] = "idle"
             STATE["task"] = None
@@ -483,7 +521,7 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
             raise RuntimeError(f"download_grant_center.py returned exit code {proc.returncode}")
 
         # Auto-synthesize any newly imported grants from their downloaded Application PDF
-        if not dry_run and newly_imported_grants and not CANCEL_REQUESTED:
+        if not dry_run and newly_imported_grants and not is_cancelled():
             key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
             headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
             for ng in newly_imported_grants:
@@ -596,8 +634,8 @@ class SPCExportPayload(BaseModel):
     club_id: Optional[str] = None
 
 async def run_spc_export(payload: SPCExportPayload):
-    global ACTIVE_PROCESS, CANCEL_REQUESTED
-    CANCEL_REQUESTED = False
+    global ACTIVE_PROCESS
+    clear_cancel_flag()
     STATE["status"] = "running"
     STATE["task"] = "spc_export"
     STATE["last_run"] = datetime.now().isoformat()
@@ -642,17 +680,28 @@ async def run_spc_export(payload: SPCExportPayload):
         ACTIVE_PROCESS = proc
 
         while True:
-            line = await proc.stdout.readline()
+            if is_cancelled():
+                kill_worker_tree(proc)
+                break
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if proc.returncode is not None:
+                    break
+                continue
             if not line:
                 break
             text = line.decode("utf-8", errors="replace").rstrip()
-            if text:
+            if text and not is_cancelled():
                 await emit_log(text)
 
-        await proc.wait()
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=2.0)
+        except Exception:
+            kill_worker_tree(proc)
         ACTIVE_PROCESS = None
 
-        if CANCEL_REQUESTED:
+        if is_cancelled():
             await emit_log("🛑 SPC export task cancelled by user.")
             STATE["status"] = "idle"
             STATE["task"] = None
@@ -1138,8 +1187,8 @@ class SingleProjectRotaryPayload(BaseModel):
     dry_run: Optional[bool] = True
 
 async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRotaryPayload] = None):
-    global ACTIVE_PROCESS, CANCEL_REQUESTED
-    CANCEL_REQUESTED = False
+    global ACTIVE_PROCESS
+    clear_cancel_flag()
     STATE["status"] = "running"
     STATE["task"] = f"fetch_ri_files_{project_id}"
     STATE["last_run"] = datetime.now().isoformat()
@@ -1193,15 +1242,26 @@ async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRot
             )
             ACTIVE_PROCESS = proc
             while True:
-                line = await proc.stdout.readline()
+                if is_cancelled():
+                    kill_worker_tree(proc)
+                    break
+                try:
+                    line = await asyncio.wait_for(proc.stdout.readline(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if proc.returncode is not None:
+                        break
+                    continue
                 if not line:
                     break
                 text = line.decode("utf-8", errors="replace").rstrip()
-                if text:
+                if text and not is_cancelled():
                     await emit_log(text)
-            await proc.wait()
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=2.0)
+            except Exception:
+                kill_worker_tree(proc)
             ACTIVE_PROCESS = None
-            if CANCEL_REQUESTED:
+            if is_cancelled():
                 await emit_log(f"🛑 Grant Center fetch for {project_id} cancelled by user.")
                 STATE["status"] = "idle"
                 STATE["task"] = None

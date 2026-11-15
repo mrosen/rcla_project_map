@@ -1073,6 +1073,9 @@ async def get_all_grants(page):
         return raw_count
 
     for section_name in SECTIONS:
+        if Path("/tmp/rotary_cancel.flag").exists():
+            log("  🛑 Cancellation flag detected — aborting discovery.")
+            break
         _current_section["name"] = section_name
         found = await scroll_to_section(section_name)
         if not found:
@@ -1095,6 +1098,9 @@ async def get_all_grants(page):
 
         page_num = 1
         while True:
+            if Path("/tmp/rotary_cancel.flag").exists():
+                log("  🛑 Cancellation flag detected — aborting pagination.")
+                break
             await scrape_section_rows(section_name)
             next_num = page_num + 1
             await scroll_to_section(section_name)
@@ -1317,6 +1323,9 @@ async def main():
         log(f"Grants to evaluate: {len(to_process)}")
 
         for idx, (gn, title, year) in enumerate(to_process, 1):
+            if Path("/tmp/rotary_cancel.flag").exists():
+                log("🛑 Cancellation flag detected — stopping grant evaluation.")
+                break
             log(f"\n[{idx}/{len(to_process)}] Evaluating {gn} ({year})...")
             try:
                 await load_mygrants(page)
