@@ -2029,6 +2029,12 @@ window.triggerProjectRiFetch = async function (projectId) {
   ensureRotaryCredentials(async function (creds) {
     if (!confirm('Fetch files and reconcile attachments from Rotary Grant Center for ' + projectId + '?')) return;
     mfaPromptShownForRun = false;
+    var cancelBtn = document.getElementById('btn-cancel-task');
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '🛑 Cancel Task';
+    }
     if (window.toggleLogConsole) window.toggleLogConsole(true);
     if (window.startLogPolling) window.startLogPolling();
     try {
@@ -2084,6 +2090,12 @@ window.triggerProjectSpcExport = async function (projectId, dryRun) {
     }
 
     mfaPromptShownForRun = false;
+    var cancelBtn = document.getElementById('btn-cancel-task');
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '🛑 Cancel Task';
+    }
 
     // Immediately open the log console and print an instant status line
     if (window.toggleLogConsole) window.toggleLogConsole(true);
@@ -4248,6 +4260,14 @@ function pollMaintStatus() {
         badge.textContent = 'Status: ' + label;
         badge.style.background = data.status === 'running' ? '#d97706' : data.status === 'error' ? '#dc2626' : '#059669';
       }
+      var cancelBtn = document.getElementById('btn-cancel-task');
+      if (cancelBtn) {
+        cancelBtn.style.display = data.status === 'running' ? 'inline-block' : 'none';
+        if (data.status !== 'running') {
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = '🛑 Cancel Task';
+        }
+      }
 
       if (data.waiting_for_mfa && !mfaPromptShownForRun) {
         mfaPromptShownForRun = true;
@@ -4649,6 +4669,12 @@ window.triggerSync = function (dryRun) {
       }
     }
     mfaPromptShownForRun = false;
+    var cancelBtn = document.getElementById('btn-cancel-task');
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '🛑 Cancel Task';
+    }
     window.toggleLogConsole(true);
     window.startLogPolling();
     fetch((currentBackend || BACKEND_URL) + '/api/grantcenter/sync?dry_run=' + dryRun, {
@@ -4689,6 +4715,12 @@ window.triggerSpcExport = function (dryRun) {
       }
     }
     mfaPromptShownForRun = false;
+    var cancelBtn = document.getElementById('btn-cancel-task');
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '🛑 Cancel Task';
+    }
     window.toggleLogConsole(true);
     window.startLogPolling();
     fetch((currentBackend || BACKEND_URL) + '/api/spc/export?dry_run=' + dryRun, {
@@ -4716,6 +4748,27 @@ window.triggerSpcExport = function (dryRun) {
         }
       });
   });
+};
+
+window.cancelActiveTask = async function () {
+  var cancelBtn = document.getElementById('btn-cancel-task');
+  if (cancelBtn) {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = '🛑 Cancelling…';
+  }
+  var bUrl = getEffectiveBackendUrl() || BACKEND_URL;
+  try {
+    await fetch(bUrl + '/api/cancel', { method: 'POST' });
+    await window.fetchLogHistory();
+    pollMaintStatus();
+  } catch (e) {
+    alert('Failed to cancel task: ' + e.message);
+  } finally {
+    if (cancelBtn) {
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '🛑 Cancel Task';
+    }
+  }
 };
 
 window.toggleLogConsole = function (forceOpen) {

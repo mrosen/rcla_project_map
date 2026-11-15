@@ -21,6 +21,7 @@ import asyncio
 from collections import deque
 import json
 import mimetypes
+import signal
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, List, Optional
@@ -80,6 +81,8 @@ GRANTCENTER_DIR = Path(os.getenv("GRANTCENTER_DIR", str(Path.home() / "grantcent
 # Global state, log buffer & subscribers
 LOG_BUFFER: deque = deque(maxlen=500)
 SUBSCRIBERS: set[asyncio.Queue] = set()
+ACTIVE_PROCESS: Optional[asyncio.subprocess.Process] = None
+CANCEL_REQUESTED: bool = False
 STATE = {
     "status": "idle",       # "idle", "running", "error"
     "task": None,           # "grantcenter_sync", "spc_export"
@@ -101,6 +104,37 @@ async def emit_log(message: str):
             await q.put(formatted)
         except Exception:
             pass
+
+@app.post("/api/cancel")
+@app.post("/api/tasks/cancel")
+async def cancel_active_task():
+    """Terminates any currently running background worker process (Grant Sync, SPC Export, or Fetch RI Files)."""
+    global ACTIVE_PROCESS, CANCEL_REQUESTED
+    if STATE["status"] != "running" and ACTIVE_PROCESS is None:
+        return {"success": True, "message": "No active task is currently running."}
+
+    CANCEL_REQUESTED = True
+    task_name = STATE.get("task") or "active task"
+    await emit_log(f"🛑 Cancellation requested for '{task_name}' — terminating worker process...")
+
+    proc = ACTIVE_PROCESS
+    if proc is not None and proc.returncode is None:
+        try:
+            if hasattr(os, "killpg"):
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            else:
+                proc.terminate()
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    STATE["status"] = "idle"
+    STATE["task"] = None
+    STATE["current_step"] = "Cancelled"
+    STATE["waiting_for_mfa"] = False
+    return {"success": True, "message": f"Cancelled {task_name}"}
 
 class MfaCodePayload(BaseModel):
     code: str
@@ -359,6 +393,8 @@ class GrantCenterSyncPayload(BaseModel):
     club_id: Optional[str] = None
 
 async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
+    global ACTIVE_PROCESS, CANCEL_REQUESTED
+    CANCEL_REQUESTED = False
     STATE["status"] = "running"
     STATE["task"] = "grantcenter_sync"
     STATE["last_run"] = datetime.now().isoformat()
@@ -415,8 +451,10 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
             cwd=str(Path(__file__).resolve().parent),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
-            env=env
+            env=env,
+            start_new_session=(sys.platform != "win32")
         )
+        ACTIVE_PROCESS = proc
         while True:
             line = await proc.stdout.readline()
             if not line:
@@ -431,11 +469,21 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
                         if imp_id not in newly_imported_grants:
                             newly_imported_grants.append(imp_id)
         await proc.wait()
+        ACTIVE_PROCESS = None
+
+        if CANCEL_REQUESTED:
+            await emit_log("🛑 Grant Center sync cancelled by user.")
+            STATE["status"] = "idle"
+            STATE["task"] = None
+            STATE["current_step"] = "Cancelled"
+            STATE["waiting_for_mfa"] = False
+            return
+
         if proc.returncode != 0:
             raise RuntimeError(f"download_grant_center.py returned exit code {proc.returncode}")
 
         # Auto-synthesize any newly imported grants from their downloaded Application PDF
-        if not dry_run and newly_imported_grants:
+        if not dry_run and newly_imported_grants and not CANCEL_REQUESTED:
             key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
             headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
             for ng in newly_imported_grants:
@@ -504,6 +552,13 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
         STATE["current_step"] = "Complete"
         STATE["waiting_for_mfa"] = False
     except Exception as e:
+        ACTIVE_PROCESS = None
+        if CANCEL_REQUESTED:
+            STATE["status"] = "idle"
+            STATE["task"] = None
+            STATE["current_step"] = "Cancelled"
+            STATE["waiting_for_mfa"] = False
+            return
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
         STATE["waiting_for_mfa"] = False
@@ -541,6 +596,8 @@ class SPCExportPayload(BaseModel):
     club_id: Optional[str] = None
 
 async def run_spc_export(payload: SPCExportPayload):
+    global ACTIVE_PROCESS, CANCEL_REQUESTED
+    CANCEL_REQUESTED = False
     STATE["status"] = "running"
     STATE["task"] = "spc_export"
     STATE["last_run"] = datetime.now().isoformat()
@@ -579,8 +636,10 @@ async def run_spc_export(payload: SPCExportPayload):
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
-            env=env
+            env=env,
+            start_new_session=(sys.platform != "win32")
         )
+        ACTIVE_PROCESS = proc
 
         while True:
             line = await proc.stdout.readline()
@@ -591,6 +650,16 @@ async def run_spc_export(payload: SPCExportPayload):
                 await emit_log(text)
 
         await proc.wait()
+        ACTIVE_PROCESS = None
+
+        if CANCEL_REQUESTED:
+            await emit_log("🛑 SPC export task cancelled by user.")
+            STATE["status"] = "idle"
+            STATE["task"] = None
+            STATE["current_step"] = "Cancelled"
+            STATE["waiting_for_mfa"] = False
+            return
+
         if proc.returncode != 0:
             raise RuntimeError(f"SPC migration script exited with code {proc.returncode}")
 
@@ -600,6 +669,13 @@ async def run_spc_export(payload: SPCExportPayload):
         STATE["current_step"] = "Complete"
         STATE["waiting_for_mfa"] = False
     except Exception as e:
+        ACTIVE_PROCESS = None
+        if CANCEL_REQUESTED:
+            STATE["status"] = "idle"
+            STATE["task"] = None
+            STATE["current_step"] = "Cancelled"
+            STATE["waiting_for_mfa"] = False
+            return
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
         STATE["waiting_for_mfa"] = False
@@ -1062,6 +1138,8 @@ class SingleProjectRotaryPayload(BaseModel):
     dry_run: Optional[bool] = True
 
 async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRotaryPayload] = None):
+    global ACTIVE_PROCESS, CANCEL_REQUESTED
+    CANCEL_REQUESTED = False
     STATE["status"] = "running"
     STATE["task"] = f"fetch_ri_files_{project_id}"
     STATE["last_run"] = datetime.now().isoformat()
@@ -1110,8 +1188,10 @@ async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRot
                 cwd=str(run_cwd),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
-                env=env
+                env=env,
+                start_new_session=(sys.platform != "win32")
             )
+            ACTIVE_PROCESS = proc
             while True:
                 line = await proc.stdout.readline()
                 if not line:
@@ -1120,6 +1200,14 @@ async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRot
                 if text:
                     await emit_log(text)
             await proc.wait()
+            ACTIVE_PROCESS = None
+            if CANCEL_REQUESTED:
+                await emit_log(f"🛑 Grant Center fetch for {project_id} cancelled by user.")
+                STATE["status"] = "idle"
+                STATE["task"] = None
+                STATE["current_step"] = "Cancelled"
+                STATE["waiting_for_mfa"] = False
+                return
             if proc.returncode != 0:
                 await emit_log(f"Grant Center downloader exited with status {proc.returncode}")
         elif not is_ri_grant:
@@ -1205,6 +1293,13 @@ async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRot
         STATE["current_step"] = "Complete"
         STATE["waiting_for_mfa"] = False
     except Exception as e:
+        ACTIVE_PROCESS = None
+        if CANCEL_REQUESTED:
+            STATE["status"] = "idle"
+            STATE["task"] = None
+            STATE["current_step"] = "Cancelled"
+            STATE["waiting_for_mfa"] = False
+            return
         STATE["status"] = "error"
         STATE["current_step"] = f"Failed: {str(e)}"
         STATE["waiting_for_mfa"] = False
