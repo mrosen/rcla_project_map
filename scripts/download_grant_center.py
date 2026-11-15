@@ -807,7 +807,7 @@ async def get_all_grants(page):
         'Approved',
         'Past Applications',
     ]
-    KEEP = {'Authorization Required', 'Submitted', 'Approved', 'Past Applications'}
+    KEEP = {'Drafts', 'Authorization Required', 'Submitted', 'Approved', 'Past Applications'}
 
     async def scroll_to_section(name):
         found = await page.evaluate(f"""() => {{
@@ -826,8 +826,12 @@ async def get_all_grants(page):
 
     async def get_section_paginator(section_name):
         return await page.evaluate_handle(f"""() => {{
+            const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
             const name = '{section_name.lower()}';
-            const headings = [...document.querySelectorAll('h1,h2,h3,h4')];
+            const headings = [...document.querySelectorAll('h1,h2,h3,h4')].filter(h => {{
+                const t = h.textContent.trim().toLowerCase();
+                return sectionTitles.some(s => t.includes(s));
+            }});
             const sectionHeading = headings.find(h => h.textContent.trim().toLowerCase().includes(name));
             if (!sectionHeading) return null;
             const idx = headings.indexOf(sectionHeading);
@@ -861,8 +865,13 @@ async def get_all_grants(page):
         handle = await get_section_paginator(section_name)
         if not handle or await handle.evaluate("el => !el"):
             return
+        cur_val = await handle.evaluate("el => el.value")
+        if str(cur_val) == str(n):
+            await handle.dispose()
+            return
         await handle.evaluate("el => el.scrollIntoView()")
         prev_gns = await page.evaluate(f"""() => {{
+            const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
             const target = '{section_name.lower()}';
             const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
             let inSection = false;
@@ -870,6 +879,7 @@ async def get_all_grants(page):
             for (const el of els) {{
                 if (el.tagName.match(/^H[1-4]$/i)) {{
                     const t = el.textContent.trim().toLowerCase();
+                    if (!sectionTitles.some(s => t.includes(s))) continue;
                     if (t.includes(target)) {{ inSection = true; continue; }}
                     if (inSection) break;
                     continue;
@@ -880,11 +890,19 @@ async def get_all_grants(page):
             }}
             return gns;
         }}""")
-        await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
+        try:
+            el_handle = handle.as_element()
+            if el_handle:
+                await el_handle.select_option(value=str(n))
+            else:
+                await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
+        except Exception:
+            await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
         await handle.dispose()
         for _ in range(16):
             await page.wait_for_timeout(500)
             cur_gns = await page.evaluate(f"""() => {{
+                const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
                 const target = '{section_name.lower()}';
                 const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
                 let inSection = false;
@@ -892,6 +910,7 @@ async def get_all_grants(page):
                 for (const el of els) {{
                     if (el.tagName.match(/^H[1-4]$/i)) {{
                         const t = el.textContent.trim().toLowerCase();
+                        if (!sectionTitles.some(s => t.includes(s))) continue;
                         if (t.includes(target)) {{ inSection = true; continue; }}
                         if (inSection) break;
                         continue;
@@ -908,6 +927,7 @@ async def get_all_grants(page):
 
     async def scrape_section_rows(section_name):
         rows = await page.evaluate(f"""() => {{
+            const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
             const results = [];
             const target = '{section_name.lower()}';
             const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
@@ -915,6 +935,7 @@ async def get_all_grants(page):
             for (const el of els) {{
                 if (el.tagName.match(/^H[1-4]$/i)) {{
                     const t = el.textContent.trim().toLowerCase();
+                    if (!sectionTitles.some(s => t.includes(s))) continue;
                     if (t.includes(target)) {{ inSection = true; continue; }}
                     if (inSection) break;
                     continue;
@@ -923,7 +944,7 @@ async def get_all_grants(page):
                 const span = el.querySelector('span[class*="rwc-button"]');
                 if (!span) continue;
                 const gn = span.textContent.trim().toUpperCase();
-                if (!/^GG[0-9]{{5,}}$/.test(gn)) continue;
+                if (!/^(GG|DG)[0-9]{{5,}}$/.test(gn)) continue;
                 let title = '', year = '', status = '';
                 el.querySelectorAll('td').forEach(td => {{
                     const badge = td.querySelector('[data-slot="badge"]');
@@ -939,19 +960,21 @@ async def get_all_grants(page):
             }}
             return results;
         }}""")
-        added = 0
+        raw_count = len(rows)
         for r in rows:
             gn = r['gn']
+            badge_st = r.get('status') or ''
+            if gn.startswith("DG"):
+                continue
             if gn in all_grants or gn in EXCLUDE_GRANTS:
                 continue
-            badge_st = r.get('status') or ''
-            if re.search(r'Cancel', badge_st, re.I):
+            if re.search(r'Cancel|Withdrawn|Not Approved|Denied|Expired', badge_st, re.I):
+                log(f"    - Skipping {gn} [{section_name} / {badge_st}]: {r['title'][:45]}")
                 continue
             sec_label = f"{section_name}" + (f" / {badge_st}" if badge_st and badge_st.lower() != section_name.lower() else "")
             all_grants[gn] = (r['title'], r['year'], sec_label)
             log(f"    + {gn} ({r['year']}) [{sec_label}]: {r['title'][:50]}")
-            added += 1
-        return added
+        return raw_count
 
     for section_name in SECTIONS:
         _current_section["name"] = section_name
@@ -962,26 +985,21 @@ async def get_all_grants(page):
         opts = await get_page_opts(section_name)
         if not opts:
             if section_name in KEEP:
+                log(f"  Scanning section '{section_name}' (single page)...")
                 await scrape_section_rows(section_name)
             continue
 
         if section_name not in KEEP:
             continue
 
+        log(f"  Scanning section '{section_name}' ({len(opts)} page(s): {', '.join(opts)})...")
         await scroll_to_section(section_name)
         await set_page(1, section_name)
         await scroll_to_section(section_name)
 
         page_num = 1
-        consecutive_empty = 0
         while True:
-            added = await scrape_section_rows(section_name)
-            if added == 0:
-                consecutive_empty += 1
-                if consecutive_empty >= 2:
-                    break
-            else:
-                consecutive_empty = 0
+            await scrape_section_rows(section_name)
             next_num = page_num + 1
             await scroll_to_section(section_name)
             opts = await get_page_opts(section_name)
