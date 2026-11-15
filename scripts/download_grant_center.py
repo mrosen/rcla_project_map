@@ -881,6 +881,118 @@ async def load_mygrants(page):
     await page.wait_for_timeout(2000)
     await dismiss_cookies(page)
 
+GRANT_LOCATIONS = {}
+
+async def scroll_to_section(page, name: str):
+    found = await page.evaluate(f"""() => {{
+        for (const h of document.querySelectorAll('h1,h2,h3,h4')) {{
+            if (h.textContent.trim().toLowerCase().includes('{name.lower()}')) {{
+                h.scrollIntoView({{block: 'start'}});
+                return true;
+            }}
+        }}
+        return false;
+    }}""")
+    await page.wait_for_timeout(1500)
+    return found
+
+async def get_section_paginator(page, section_name: str):
+    return await page.evaluate_handle(f"""() => {{
+        const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
+        const name = '{section_name.lower()}';
+        const headings = [...document.querySelectorAll('h1,h2,h3,h4')].filter(h => {{
+            const t = h.textContent.trim().toLowerCase();
+            return sectionTitles.some(s => t.includes(s));
+        }});
+        const sectionHeading = headings.find(h => h.textContent.trim().toLowerCase().includes(name));
+        if (!sectionHeading) return null;
+        const idx = headings.indexOf(sectionHeading);
+        const nextHeading = headings[idx + 1] || null;
+        const paginators = [...document.querySelectorAll('select.pagination-select')];
+        for (const sel of paginators) {{
+            const pos = sectionHeading.compareDocumentPosition(sel);
+            if (!(pos & 4)) continue;
+            if (nextHeading) {{
+                const pos2 = nextHeading.compareDocumentPosition(sel);
+                if (!(pos2 & 2)) continue;
+            }}
+            return sel;
+        }}
+        return null;
+    }}""")
+
+async def get_page_opts(page, section_name: str):
+    handle = await get_section_paginator(page, section_name)
+    if not handle or await handle.evaluate("el => !el"):
+        return []
+    opts = await handle.evaluate("el => [...el.options].map(o => o.value)")
+    await handle.dispose()
+    return opts
+
+async def set_page(page, n, section_name: str):
+    handle = await get_section_paginator(page, section_name)
+    if not handle or await handle.evaluate("el => !el"):
+        return
+    cur_val = await handle.evaluate("el => el.value")
+    if str(cur_val) == str(n):
+        await handle.dispose()
+        return
+    await handle.evaluate("el => el.scrollIntoView({block: 'center'})")
+    prev_gns = await page.evaluate(f"""() => {{
+        const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
+        const target = '{section_name.lower()}';
+        const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
+        let inSection = false;
+        const gns = [];
+        for (const el of els) {{
+            if (el.tagName.match(/^H[1-4]$/i)) {{
+                const t = el.textContent.trim().toLowerCase();
+                if (!sectionTitles.some(s => t.includes(s))) continue;
+                if (t.includes(target)) {{ inSection = true; continue; }}
+                if (inSection) break;
+                continue;
+            }}
+            if (!inSection) continue;
+            const span = el.querySelector('span[class*="rwc-button"]');
+            if (span) gns.push(span.textContent.trim());
+        }}
+        return gns;
+    }}""")
+    try:
+        el_handle = handle.as_element()
+        if el_handle:
+            await el_handle.select_option(value=str(n))
+        else:
+            await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
+    except Exception:
+        await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
+    await handle.dispose()
+    for _ in range(16):
+        await page.wait_for_timeout(500)
+        cur_gns = await page.evaluate(f"""() => {{
+            const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
+            const target = '{section_name.lower()}';
+            const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
+            let inSection = false;
+            const gns = [];
+            for (const el of els) {{
+                if (el.tagName.match(/^H[1-4]$/i)) {{
+                    const t = el.textContent.trim().toLowerCase();
+                    if (!sectionTitles.some(s => t.includes(s))) continue;
+                    if (t.includes(target)) {{ inSection = true; continue; }}
+                    if (inSection) break;
+                    continue;
+                }}
+                if (!inSection) continue;
+                const span = el.querySelector('span[class*="rwc-button"]');
+                if (span) gns.push(span.textContent.trim());
+            }}
+            return gns;
+        }}""")
+        if cur_gns != prev_gns:
+            break
+    await page.wait_for_timeout(500)
+
 async def get_all_grants(page):
     """
     The mygrants page has multiple sections ('My Actions', 'Drafts',
@@ -903,123 +1015,7 @@ async def get_all_grants(page):
     # Only include Approved and Past Applications (Closed) — skip Proposed (Drafts, Authorization Required, Submitted)
     KEEP = {'Approved', 'Past Applications'}
 
-    async def scroll_to_section(name):
-        found = await page.evaluate(f"""() => {{
-            for (const h of document.querySelectorAll('h1,h2,h3,h4')) {{
-                if (h.textContent.trim().toLowerCase().includes('{name.lower()}')) {{
-                    h.scrollIntoView({{block: 'start'}});
-                    return true;
-                }}
-            }}
-            return false;
-        }}""")
-        await page.wait_for_timeout(2000)
-        return found
-
-    _current_section = {"name": ""}
-
-    async def get_section_paginator(section_name):
-        return await page.evaluate_handle(f"""() => {{
-            const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
-            const name = '{section_name.lower()}';
-            const headings = [...document.querySelectorAll('h1,h2,h3,h4')].filter(h => {{
-                const t = h.textContent.trim().toLowerCase();
-                return sectionTitles.some(s => t.includes(s));
-            }});
-            const sectionHeading = headings.find(h => h.textContent.trim().toLowerCase().includes(name));
-            if (!sectionHeading) return null;
-            const idx = headings.indexOf(sectionHeading);
-            const nextHeading = headings[idx + 1] || null;
-            const paginators = [...document.querySelectorAll('select.pagination-select')];
-            for (const sel of paginators) {{
-                const pos = sectionHeading.compareDocumentPosition(sel);
-                if (!(pos & 4)) continue;
-                if (nextHeading) {{
-                    const pos2 = nextHeading.compareDocumentPosition(sel);
-                    if (!(pos2 & 2)) continue;
-                }}
-                return sel;
-            }}
-            return null;
-        }}""")
-
-    async def get_page_opts(section_name=""):
-        if not section_name:
-            section_name = _current_section["name"]
-        handle = await get_section_paginator(section_name)
-        if not handle or await handle.evaluate("el => !el"):
-            return []
-        opts = await handle.evaluate("el => [...el.options].map(o => o.value)")
-        await handle.dispose()
-        return opts
-
-    async def set_page(n, section_name=""):
-        if not section_name:
-            section_name = _current_section["name"]
-        handle = await get_section_paginator(section_name)
-        if not handle or await handle.evaluate("el => !el"):
-            return
-        cur_val = await handle.evaluate("el => el.value")
-        if str(cur_val) == str(n):
-            await handle.dispose()
-            return
-        await handle.evaluate("el => el.scrollIntoView()")
-        prev_gns = await page.evaluate(f"""() => {{
-            const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
-            const target = '{section_name.lower()}';
-            const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
-            let inSection = false;
-            const gns = [];
-            for (const el of els) {{
-                if (el.tagName.match(/^H[1-4]$/i)) {{
-                    const t = el.textContent.trim().toLowerCase();
-                    if (!sectionTitles.some(s => t.includes(s))) continue;
-                    if (t.includes(target)) {{ inSection = true; continue; }}
-                    if (inSection) break;
-                    continue;
-                }}
-                if (!inSection) continue;
-                const span = el.querySelector('span[class*="rwc-button"]');
-                if (span) gns.push(span.textContent.trim());
-            }}
-            return gns;
-        }}""")
-        try:
-            el_handle = handle.as_element()
-            if el_handle:
-                await el_handle.select_option(value=str(n))
-            else:
-                await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
-        except Exception:
-            await handle.evaluate(f"el => {{ el.value = '{n}'; el.dispatchEvent(new Event('change', {{bubbles:true}})); }}")
-        await handle.dispose()
-        for _ in range(16):
-            await page.wait_for_timeout(500)
-            cur_gns = await page.evaluate(f"""() => {{
-                const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
-                const target = '{section_name.lower()}';
-                const els = document.querySelectorAll('h1,h2,h3,h4,tr.rwc-table__default');
-                let inSection = false;
-                const gns = [];
-                for (const el of els) {{
-                    if (el.tagName.match(/^H[1-4]$/i)) {{
-                        const t = el.textContent.trim().toLowerCase();
-                        if (!sectionTitles.some(s => t.includes(s))) continue;
-                        if (t.includes(target)) {{ inSection = true; continue; }}
-                        if (inSection) break;
-                        continue;
-                    }}
-                    if (!inSection) continue;
-                    const span = el.querySelector('span[class*="rwc-button"]');
-                    if (span) gns.push(span.textContent.trim());
-                }}
-                return gns;
-            }}""")
-            if cur_gns != prev_gns:
-                break
-        await page.wait_for_timeout(500)
-
-    async def scrape_section_rows(section_name):
+    async def scrape_section_rows(section_name, current_page_num=1):
         rows = await page.evaluate(f"""() => {{
             const sectionTitles = ['my actions', 'drafts', 'authorization required', 'submitted', 'approved', 'past applications'];
             const results = [];
@@ -1069,6 +1065,7 @@ async def get_all_grants(page):
             if normalize_portal_status(section_name, badge_st) == "proposed":
                 continue
             all_grants[gn] = (r['title'], r['year'], sec_label)
+            GRANT_LOCATIONS[gn] = (section_name, current_page_num)
             log(f"    + {gn} ({r['year']}) [{sec_label}]: {r['title'][:50]}")
         return raw_count
 
@@ -1076,90 +1073,129 @@ async def get_all_grants(page):
         if Path("/tmp/rotary_cancel.flag").exists():
             log("  🛑 Cancellation flag detected — aborting discovery.")
             break
-        _current_section["name"] = section_name
-        found = await scroll_to_section(section_name)
+        found = await scroll_to_section(page, section_name)
         if not found:
             continue
 
-        opts = await get_page_opts(section_name)
+        opts = await get_page_opts(page, section_name)
         if not opts:
             if section_name in KEEP:
                 log(f"  Scanning section '{section_name}' (single page)...")
-                await scrape_section_rows(section_name)
+                await scrape_section_rows(section_name, 1)
             continue
 
         if section_name not in KEEP:
             continue
 
         log(f"  Scanning section '{section_name}' ({len(opts)} page(s): {', '.join(opts)})...")
-        await scroll_to_section(section_name)
-        await set_page(1, section_name)
-        await scroll_to_section(section_name)
+        await scroll_to_section(page, section_name)
+        await set_page(page, 1, section_name)
+        await scroll_to_section(page, section_name)
 
         page_num = 1
         while True:
             if Path("/tmp/rotary_cancel.flag").exists():
                 log("  🛑 Cancellation flag detected — aborting pagination.")
                 break
-            await scrape_section_rows(section_name)
+            await scrape_section_rows(section_name, page_num)
             next_num = page_num + 1
-            await scroll_to_section(section_name)
-            opts = await get_page_opts(section_name)
+            await scroll_to_section(page, section_name)
+            opts = await get_page_opts(page, section_name)
             if str(next_num) not in opts:
                 break
             page_num = next_num
-            await set_page(page_num, section_name)
-            await scroll_to_section(section_name)
+            await set_page(page, page_num, section_name)
+            await scroll_to_section(page, section_name)
             await page.wait_for_timeout(500)
 
     log(f"  Discovery complete: {len(all_grants)} Global Grants")
     return [(gn, t, y, s) for gn, (t, y, s) in all_grants.items()]
 
-async def find_and_click_grant(page, context, gn: str):
-    visited = set()
-    for attempt in range(200):
-        spans = await page.query_selector_all("span[class*='rwc-button']")
-        for span in spans:
-            try:
-                text = (await span.inner_text()).strip().upper()
-                if text == gn:
-                    await span.scroll_into_view_if_needed()
-                    await page.wait_for_timeout(300)
-                    await dismiss_cookies(page)
-                    async with context.expect_page() as new_page_info:
-                        await span.click()
-                    grant_tab = await new_page_info.value
-                    await grant_tab.wait_for_load_state("domcontentloaded")
-                    return grant_tab
-            except Exception:
-                pass
+async def click_grant_span_and_wait_tab(page, context, gn: str):
+    """Find a visible span matching gn on the current page view, click it, and return the opened grants.rotary.org tab."""
+    spans = await page.query_selector_all("span[class*='rwc-button']")
+    for span in spans:
+        try:
+            text = (await span.inner_text()).strip().upper()
+            if text != gn:
+                continue
 
-        selects = await page.query_selector_all("select.pagination-select")
-        advanced = False
-        for sel in selects:
+            await span.evaluate("el => el.scrollIntoView({block: 'center'})")
+            await page.wait_for_timeout(500)
+            await dismiss_cookies(page)
+
+            existing_pages = set(context.pages)
+            log(f"  Clicking {gn} on MyGrants table...")
             try:
-                opts = [await o.get_attribute("value") for o in await sel.query_selector_all("option")]
-                current = await sel.evaluate("el => el.value")
-                bbox = await sel.bounding_box()
-                band = int(bbox['y']) // 100 if bbox else 0
-                for v in opts:
-                    key = (band, v)
-                    if key not in visited:
-                        visited.add(key)
-                        if v == current:
-                            visited.add((band, current))
-                            continue
-                        await sel.scroll_into_view_if_needed()
-                        await sel.select_option(value=v)
-                        await page.wait_for_timeout(2500)
-                        advanced = True
-                        break
-                if advanced:
-                    break
-            except Exception:
-                pass
-        if not advanced:
-            break
+                await span.click(timeout=5000)
+            except Exception as ce:
+                log(f"  Standard click notice ({ce}) — using JS click fallback...")
+                await span.evaluate("el => el.click()")
+
+            for tick in range(50):  # Wait up to 25s for new tab to open & redirect to grants.rotary.org
+                await asyncio.sleep(0.5)
+                for pg in context.pages:
+                    if pg not in existing_pages or ("grants.rotary.org" in pg.url and pg != page):
+                        # Wait up to 15s for the new tab to finish redirecting to grants.rotary.org
+                        for _ in range(30):
+                            if "grants.rotary.org/s_" in pg.url or "codedid=" in pg.url:
+                                break
+                            await asyncio.sleep(0.5)
+                        try:
+                            await pg.wait_for_load_state("domcontentloaded", timeout=15000)
+                        except Exception:
+                            pass
+                        log(f"  ✓ Opened grant tab: {pg.url[:80]}")
+                        return pg
+                if tick == 10:
+                    # After 5s if no tab opened yet, trigger JS click as backup
+                    try:
+                        await span.evaluate("el => el.click()")
+                    except Exception:
+                        pass
+        except Exception as e:
+            log(f"  Span click attempt error for {gn}: {e}")
+    return None
+
+async def find_and_click_grant(page, context, gn: str):
+    # 1. Fast path: if we already recorded the exact section & page number during discovery, jump right to it!
+    if gn in GRANT_LOCATIONS:
+        sec_name, pg_num = GRANT_LOCATIONS[gn]
+        log(f"  Jumping directly to '{sec_name}' page {pg_num} for {gn}...")
+        await scroll_to_section(page, sec_name)
+        await set_page(page, pg_num, sec_name)
+        await scroll_to_section(page, sec_name)
+        tab = await click_grant_span_and_wait_tab(page, context, gn)
+        if tab:
+            return tab
+
+    # 2. Check current view first before paging
+    tab = await click_grant_span_and_wait_tab(page, context, gn)
+    if tab:
+        return tab
+
+    # 3. Section-aware search across Approved and Past Applications
+    for sec_name in ['Approved', 'Past Applications']:
+        if Path("/tmp/rotary_cancel.flag").exists():
+            return None
+        found = await scroll_to_section(page, sec_name)
+        if not found:
+            continue
+        opts = await get_page_opts(page, sec_name)
+        if not opts:
+            tab = await click_grant_span_and_wait_tab(page, context, gn)
+            if tab:
+                return tab
+            continue
+        for p_val in opts:
+            if Path("/tmp/rotary_cancel.flag").exists():
+                return None
+            await scroll_to_section(page, sec_name)
+            await set_page(page, p_val, sec_name)
+            await scroll_to_section(page, sec_name)
+            tab = await click_grant_span_and_wait_tab(page, context, gn)
+            if tab:
+                return tab
 
     return None
 
@@ -1328,8 +1364,13 @@ async def main():
                 break
             log(f"\n[{idx}/{len(to_process)}] Evaluating {gn} ({year})...")
             try:
-                await load_mygrants(page)
+                if "spc.rotary.org/mygrants" not in page.url.lower():
+                    await load_mygrants(page)
                 grant_tab = await find_and_click_grant(page, context, gn)
+                if not grant_tab:
+                    log(f"  Reloading mygrants for retry on {gn}...")
+                    await load_mygrants(page)
+                    grant_tab = await find_and_click_grant(page, context, gn)
                 if not grant_tab:
                     log(f"  Could not open tab for {gn} — skipping")
                     continue
