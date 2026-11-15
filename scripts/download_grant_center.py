@@ -175,7 +175,7 @@ async def wait_for_pdfwriter_popup(context, timeout_s=30):
     return None
 
 async def save_grant_pdf(context, grant_page, path: Path, print_url_override: str = "") -> bool:
-    """Open print URL, intercept form submission to pdfWriter, replay with requests."""
+    """Open print URL, intercept form submission to pdfWriter (or direct headless download), and save PDF."""
     if print_url_override:
         full_print_url = print_url_override
     else:
@@ -189,144 +189,235 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
     log(f"  Opening print URL: {full_print_url[:80]}")
 
     tab = await context.new_page()
-    popup = None
+    popup_pages = []
     post_body = None
+    direct_pdf_body = None
+    download_saved = False
 
     try:
-        async def handle_new_page(new_page):
-            nonlocal post_body
+        async def attach_cdp_and_listeners(target_page):
+            nonlocal post_body, direct_pdf_body, download_saved
             try:
-                cdp2 = await context.new_cdp_session(new_page)
-                await cdp2.send("Network.enable")
+                cdp = await context.new_cdp_session(target_page)
+                await cdp.send("Network.enable")
 
                 def on_request(params):
                     nonlocal post_body
-                    url = params.get("request", {}).get("url", "")
-                    method = params.get("request", {}).get("method", "")
+                    req = params.get("request", {})
+                    url = req.get("url", "")
+                    method = req.get("method", "")
                     if "pdfWriter" in url and method == "POST":
-                        post_body = params.get("request", {}).get("postData", "")
+                        pd = req.get("postData", "")
+                        if pd and len(pd) > len(post_body or ""):
+                            post_body = pd
 
-                cdp2.on("Network.requestWillBeSent", on_request)
+                cdp.on("Network.requestWillBeSent", on_request)
             except Exception as e:
-                log(f"  handle_new_page error: {e}")
+                log(f"  CDP attach notice: {e}")
+
+            async def on_response(response):
+                nonlocal direct_pdf_body
+                try:
+                    ct = response.headers.get("content-type", "").lower()
+                    if "pdf" in ct and response.status == 200:
+                        body = await response.body()
+                        if body and body[:4] == b"%PDF":
+                            direct_pdf_body = body
+                            log(f"  Direct PDF response: {len(direct_pdf_body)} bytes from {response.url[:80]}")
+                except Exception:
+                    pass
+
+            async def on_download(download):
+                nonlocal download_saved
+                try:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    await download.save_as(str(path))
+                    if path.exists() and path.stat().st_size > 500 and path.read_bytes()[:4] == b"%PDF":
+                        download_saved = True
+                        log(f"  ✓ Downloaded {path.name} ({path.stat().st_size:,} bytes) [browser download]")
+                except Exception as de:
+                    log(f"  Download listener notice: {de}")
+
+            target_page.on("response", on_response)
+            target_page.on("download", on_download)
+
+        async def handle_new_page(new_page):
+            popup_pages.append(new_page)
+            await attach_cdp_and_listeners(new_page)
 
         context.on("page", handle_new_page)
+        await attach_cdp_and_listeners(tab)
 
-        # Inject interceptor script in all frames
+        # Inject interceptor script in all frames before navigation
         interceptor_js = """
             (function() {
                 var _origSubmit = HTMLFormElement.prototype.submit;
                 HTMLFormElement.prototype.submit = function() {
-                    var action = this.action || '';
-                    if (action.indexOf('pdfWriter') !== -1) {
-                        try {
+                    try {
+                        var action = (this.action || '').toLowerCase();
+                        if (action.indexOf('pdfwriter') !== -1 || this.name === 'frmtext') {
                             var data = new URLSearchParams(new FormData(this)).toString();
-                            window.top._pdfFormData = data;
-                            window._pdfFormData = data;
-                        } catch(e) {}
-                    }
+                            if (data && data.length > 50) {
+                                try { window.top._pdfFormData = data; } catch(e) {}
+                                window._pdfFormData = data;
+                            }
+                        }
+                    } catch(e) {}
                     return _origSubmit.apply(this, arguments);
                 };
                 var _origOpen = window.open;
                 window.open = function(url, name, features) {
-                    if (url && url.indexOf('pdfWriter') !== -1) {
-                        var forms = document.querySelectorAll('form');
-                        for (var i = 0; i < forms.length; i++) {
-                            try {
-                                var data = new URLSearchParams(new FormData(forms[i])).toString();
-                                if (data.length > 100) {
-                                    window.top._pdfFormData = data;
-                                    window._pdfFormData = data;
-                                    break;
-                                }
-                            } catch(e) {}
+                    try {
+                        if (url && url.toLowerCase().indexOf('pdfwriter') !== -1) {
+                            var forms = document.querySelectorAll('form');
+                            for (var i = 0; i < forms.length; i++) {
+                                try {
+                                    var data = new URLSearchParams(new FormData(forms[i])).toString();
+                                    if (data.length > 100) {
+                                        try { window.top._pdfFormData = data; } catch(e) {}
+                                        window._pdfFormData = data;
+                                        break;
+                                    }
+                                } catch(e) {}
+                            }
                         }
-                    }
+                    } catch(e) {}
                     return _origOpen.apply(this, arguments);
                 };
             })();
         """
         await context.add_init_script(interceptor_js)
+        await tab.add_init_script(interceptor_js)
 
-        direct_pdf_body = None
-        async def on_response(response):
-            nonlocal direct_pdf_body
-            try:
-                ct = response.headers.get("content-type", "")
-                if "pdf" in ct and response.status == 200:
-                    direct_pdf_body = await response.body()
-                    log(f"  Direct PDF response: {len(direct_pdf_body)} bytes from {response.url[:80]}")
-            except Exception:
-                pass
-        tab.on("response", on_response)
+        await tab.goto(full_print_url, wait_until="domcontentloaded", timeout=45000)
 
-        await tab.goto(full_print_url, wait_until="domcontentloaded")
-        await tab.wait_for_timeout(3000)
+        extract_form_js = """
+            (allowTrigger) => {
+                if (window._pdfFormData && window._pdfFormData.length > 50) {
+                    return window._pdfFormData;
+                }
+                if (allowTrigger) {
+                    try {
+                        if (typeof getexportcontent === 'function' && document.frmtext && document.frmtext.txt) {
+                            document.frmtext.txt.value = getexportcontent();
+                        }
+                    } catch(e) {}
+                    try {
+                        if (typeof pdfwrite === 'function') {
+                            pdfwrite();
+                            if (window._pdfFormData && window._pdfFormData.length > 50) {
+                                return window._pdfFormData;
+                            }
+                        }
+                    } catch(e) {}
+                }
+                var forms = Array.from(document.querySelectorAll('form'));
+                for (var i = 0; i < forms.length; i++) {
+                    var f = forms[i];
+                    var act = (f.getAttribute('action') || '').toLowerCase();
+                    if (act.indexOf('pdfwriter') !== -1 || f.name === 'frmtext') {
+                        try {
+                            var d = new URLSearchParams(new FormData(f)).toString();
+                            if (d && d.length > 100) return d;
+                        } catch(e) {}
+                    }
+                }
+                for (var j = 0; j < forms.length; j++) {
+                    try {
+                        var d2 = new URLSearchParams(new FormData(forms[j])).toString();
+                        if (d2 && d2.length > 300) return d2;
+                    } catch(e) {}
+                }
+                return '';
+            }
+        """
 
-        if direct_pdf_body and direct_pdf_body[:4] == b'%PDF':
+        # Poll up to 12 seconds for direct PDF, download event, CDP post_body, or form data on tab/frames
+        log("  Capturing PDF payload from print view...")
+        for tick in range(24):
+            await asyncio.sleep(0.5)
+
+            if download_saved:
+                return True
+
+            if direct_pdf_body and direct_pdf_body[:4] == b"%PDF":
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(direct_pdf_body)
+                log(f"  ✓ Downloaded {path.name} ({len(direct_pdf_body):,} bytes) [direct]")
+                return True
+
+            if post_body and len(post_body) > 100:
+                break
+
+            # Check tab, its frames, and any popup pages for _pdfFormData or form elements
+            allow_trigger = (tick >= 6)  # After 3s, allow calling getexportcontent() / pdfwrite()
+            all_targets = [tab] + list(tab.frames) + popup_pages
+            for tgt in all_targets:
+                try:
+                    data = await tgt.evaluate(extract_form_js, allow_trigger)
+                    if data and len(data) > 100:
+                        post_body = data
+                        break
+                except Exception:
+                    pass
+
+            if post_body and len(post_body) > 100:
+                break
+
+        if download_saved:
+            return True
+
+        if direct_pdf_body and direct_pdf_body[:4] == b"%PDF":
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(direct_pdf_body)
             log(f"  ✓ Downloaded {path.name} ({len(direct_pdf_body):,} bytes) [direct]")
             return True
 
-        log("  Waiting for pdfWriter popup...")
-        popup = await wait_for_pdfwriter_popup(context, timeout_s=30)
-        if not popup:
-            if "pdfWriter" in tab.url.lower():
-                popup = tab
-            else:
-                log(f"  No popup appeared — tab url: {tab.url[:80]}")
-                return False
+        if post_body and len(post_body) > 100:
+            log(f"  Captured form data ({len(post_body):,} chars) — requesting PDF from /pdfWriter...")
+            cookies = {c["name"]: c["value"] for c in await context.cookies(["https://grants.rotary.org"])}
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": full_print_url,
+                "Origin": "https://grants.rotary.org",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+            }
+            resp = requests.post(
+                "https://grants.rotary.org/pdfWriter",
+                data=post_body,
+                cookies=cookies,
+                headers=headers,
+                timeout=60
+            )
+            ct = resp.headers.get("content-type", "?")
+            log(f"  Response: {resp.status_code} {ct} ({len(resp.content):,} bytes)")
 
-        log(f"  Got popup: {popup.url[:80]}")
-        await popup.wait_for_timeout(2000)
+            if resp.content[:4] == b"%PDF":
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(resp.content)
+                log(f"  ✓ Downloaded {path.name} ({len(resp.content):,} bytes)")
+                return True
 
-        if not post_body:
-            post_body = await tab.evaluate("() => window._pdfFormData || ''")
-            if not post_body:
-                for frame in tab.frames:
-                    try:
-                        data = await frame.evaluate("() => window._pdfFormData || ''")
-                        if data:
-                            post_body = data
-                            break
-                    except Exception:
-                        pass
-            log(f"  Intercepted form data: {len(post_body or '')} chars")
-
-        if not post_body:
-            log("  No POST body captured — skipping")
-            return False
-
-        cookies = {c["name"]: c["value"] for c in await context.cookies(["https://grants.rotary.org"])}
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": full_print_url,
-            "Origin": "https://grants.rotary.org",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-        }
-        log(f"  Replaying POST ({len(post_body)} chars)...")
-        resp = requests.post(
-            "https://grants.rotary.org/pdfWriter",
-            data=post_body,
-            cookies=cookies,
-            headers=headers,
-            timeout=60
-        )
-        ct = resp.headers.get("content-type", "?")
-        log(f"  Response: {resp.status_code} {ct} {len(resp.content)} bytes")
-
-        if resp.content[:4] == b'%PDF':
+        # Final headless fallback: render the print tab directly to PDF via Chromium
+        log("  Falling back to headless Chromium PDF rendering...")
+        try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(resp.content)
-            log(f"  ✓ Downloaded {path.name} ({len(resp.content):,} bytes)")
-            return True
+            await tab.pdf(path=str(path), format="A4", print_background=True, margin=PDF_MARGIN)
+            if path.exists() and path.stat().st_size > 1000 and path.read_bytes()[:4] == b"%PDF":
+                log(f"  ✓ Rendered {path.name} ({path.stat().st_size:,} bytes) [chromium-pdf]")
+                return True
+        except Exception as pdf_err:
+            log(f"  Fallback PDF render error: {pdf_err}")
 
-        log("  Response is not a valid PDF")
+        log("  Could not generate valid PDF")
         return False
     finally:
-        if popup:
-            try: await popup.close()
+        try:
+            context.remove_listener("page", handle_new_page)
+        except Exception:
+            pass
+        for pg in popup_pages:
+            try: await pg.close()
             except Exception: pass
         try: await tab.close()
         except Exception: pass
@@ -538,7 +629,9 @@ async def process_grant_page(grant_page, context, gn: str, force: bool = False, 
         if downloaded_files and sb_url and sb_key:
             log(f"  Uploading {len(downloaded_files)} newly retrieved file(s) to Supabase Storage & project_assets...")
             for df in downloaded_files:
-                sync_file_to_supabase(gn, df, sb_url, sb_key)
+                if sync_file_to_supabase(gn, df, sb_url, sb_key):
+                    if df.name.lower() == f"{gn}_application.pdf".lower() and df.name not in existing_assets:
+                        log(f"[NEW_GRANT_IMPORTED] {gn}")
 
                 # Optional local copy if explicitly requested
                 if local_save_dir:
@@ -1206,11 +1299,12 @@ async def main():
                     to_process.append((gn, t, y))
                 else:
                     existing_files = get_existing_supabase_assets(gn, supabase_url, supabase_key)
-                    mapped_st = portal_dict[gn]["mapped_status"]
-                    if f"{gn}_Application.pdf" not in existing_files or mapped_st != "closed":
+                    has_app_pdf = any("application" in f.lower() and f.lower().endswith(".pdf") for f in existing_files)
+                    if not has_app_pdf:
+                        log(f"  • {gn} is in Supabase but missing its Application PDF ({len(existing_files)} file(s)) — queueing for download & synthesis.")
                         to_process.append((gn, t, y))
                     else:
-                        log(f"  ✓ {gn} (closed) already has {len(existing_files)} file(s) in Supabase — skipping tab download.")
+                        log(f"  ✓ {gn} already has {len(existing_files)} file(s) (including Application PDF) in Supabase — skipping tab download.")
         elif target_grant:
             clean_tg = target_grant.replace("-", "").replace(" ", "")
             log(f"Targeting single grant: {clean_tg}")

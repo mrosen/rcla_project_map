@@ -427,7 +427,9 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
                 if "[NEW_GRANT_IMPORTED]" in text:
                     parts = text.split("[NEW_GRANT_IMPORTED]", 1)
                     if len(parts) > 1 and parts[1].strip():
-                        newly_imported_grants.append(parts[1].strip())
+                        imp_id = parts[1].strip()
+                        if imp_id not in newly_imported_grants:
+                            newly_imported_grants.append(imp_id)
         await proc.wait()
         if proc.returncode != 0:
             raise RuntimeError(f"download_grant_center.py returned exit code {proc.returncode}")
