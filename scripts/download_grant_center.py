@@ -807,7 +807,8 @@ async def get_all_grants(page):
         'Approved',
         'Past Applications',
     ]
-    KEEP = {'Drafts', 'Authorization Required', 'Submitted', 'Approved', 'Past Applications'}
+    # Only include Approved and Past Applications (Closed) — skip Proposed (Drafts, Authorization Required, Submitted)
+    KEEP = {'Approved', 'Past Applications'}
 
     async def scroll_to_section(name):
         found = await page.evaluate(f"""() => {{
@@ -968,10 +969,12 @@ async def get_all_grants(page):
                 continue
             if gn in all_grants or gn in EXCLUDE_GRANTS:
                 continue
-            if re.search(r'Cancel|Withdrawn|Not Approved|Denied|Expired', badge_st, re.I):
+            if re.search(r'Cancel|Withdrawn|Not Approved|Denied|Expired|Draft', badge_st, re.I):
                 log(f"    - Skipping {gn} [{section_name} / {badge_st}]: {r['title'][:45]}")
                 continue
             sec_label = f"{section_name}" + (f" / {badge_st}" if badge_st and badge_st.lower() != section_name.lower() else "")
+            if normalize_portal_status(section_name, badge_st) == "proposed":
+                continue
             all_grants[gn] = (r['title'], r['year'], sec_label)
             log(f"    + {gn} ({r['year']}) [{sec_label}]: {r['title'][:50]}")
         return raw_count
