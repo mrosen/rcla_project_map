@@ -21,6 +21,7 @@ import asyncio
 from collections import deque
 import json
 import mimetypes
+import re
 import signal
 import subprocess
 from datetime import datetime
@@ -533,7 +534,7 @@ async def run_grantcenter_sync(payload: GrantCenterSyncPayload):
                         det = draft.get("details") or {}
                         resolved_club_id = active_club if active_club != "all" else "lake-atitlan"
                         try:
-                            clubs_reg = load_clubs_registry()
+                            clubs_reg = await fetch_clubs_registry_internal()
                             grant_club_blobs = " | ".join([
                                 str(det.get("host_club") or ""),
                                 str(det.get("international_club") or ""),
@@ -986,6 +987,12 @@ async def synthesize_project_data(project_id: str, payload: SynthesizePayload):
                 detail=f"Application PDF not found for {pid}. Please use 'AI Draft from Notes' or fetch the PDF first."
             )
 
+        if pdf_path.stat().st_size < 5000:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Application PDF for {pid} is incomplete/blank ({pdf_path.stat().st_size} bytes). Please re-fetch RI files first."
+            )
+
         try:
             doc = fitz.open(str(pdf_path))
             if len(doc) > 6:
@@ -1008,6 +1015,12 @@ async def synthesize_project_data(project_id: str, payload: SynthesizePayload):
                 text_content = "\n".join(pages_text)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed reading PDF: {str(e)}")
+
+        if len(re.sub(r"---\s*Page\s*\d+[^-]*---", "", text_content).strip()) < 50:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Application PDF for {pid} contains no extractable text."
+            )
 
     elif payload.source == "notes":
         text_content = (payload.notes_text or "").strip()
@@ -1346,7 +1359,16 @@ async def run_fetch_ri_files(project_id: str, payload: Optional[SingleProjectRot
 
             await emit_log(f"✓ Successfully synced {uploaded_count} Grant Center files into Supabase Storage.")
         else:
-            await emit_log(f"Notice: No files retrieved for {project_id}.")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                chk_assets = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/project_assets?project_id=eq.{clean_pid}&select=filename",
+                    headers=headers
+                )
+                sb_files = chk_assets.json() if (chk_assets.status_code == 200 and isinstance(chk_assets.json(), list)) else []
+            if sb_files:
+                await emit_log(f"✓ {len(sb_files)} Grant Center file(s) synced in Supabase Storage for {project_id}.")
+            else:
+                await emit_log(f"Notice: No files retrieved for {project_id}.")
 
         STATE["status"] = "idle"
         STATE["task"] = None

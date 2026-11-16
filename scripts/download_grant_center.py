@@ -73,8 +73,8 @@ async def dismiss_cookies(page):
         except Exception:
             pass
 
-def get_existing_supabase_assets(project_id: str, supabase_url: str, supabase_key: str) -> set:
-    """Queries Supabase project_assets for filenames that already exist for this project."""
+def get_existing_supabase_assets(project_id: str, supabase_url: str, supabase_key: str, verify_pdf_size: bool = True, app_only_size_check: bool = False) -> set:
+    """Queries Supabase project_assets for filenames that already exist for this project (excluding blank/tiny PDFs < 5KB)."""
     if not supabase_url or not supabase_key:
         return set()
 
@@ -83,14 +83,36 @@ def get_existing_supabase_assets(project_id: str, supabase_url: str, supabase_ke
         "apikey": supabase_key,
         "Authorization": f"Bearer {supabase_key}"
     }
-    url = f"{supabase_url}/rest/v1/project_assets?project_id=eq.{clean_pid}&select=filename"
+    url = f"{supabase_url}/rest/v1/project_assets?project_id=eq.{clean_pid}&select=filename,public_url,storage_path"
+    valid_files = set()
     try:
         r = requests.get(url, headers=headers, timeout=15)
         if r.status_code == 200 and isinstance(r.json(), list):
-            return {row.get("filename", "").strip() for row in r.json() if row.get("filename")}
+            for row in r.json():
+                fn = (row.get("filename") or "").strip()
+                if not fn:
+                    continue
+                should_check_size = verify_pdf_size and fn.lower().endswith(".pdf") and (
+                    not app_only_size_check or "application" in fn.lower()
+                )
+                if should_check_size:
+                    pub_url = row.get("public_url") or (
+                        f"{supabase_url}/storage/v1/object/public/project-media/{row.get('storage_path')}"
+                        if row.get("storage_path") else ""
+                    )
+                    if pub_url:
+                        try:
+                            hr = requests.head(pub_url, timeout=8, allow_redirects=True)
+                            cl = int(hr.headers.get("content-length") or 0)
+                            if 0 < cl < 5000:
+                                log(f"  • Ignoring blank/tiny PDF in Supabase ({fn}: {cl:,} bytes) — will re-download.")
+                                continue
+                        except Exception:
+                            pass
+                valid_files.add(fn)
     except Exception as e:
         log(f"  Warning querying Supabase assets for {clean_pid}: {e}")
-    return set()
+    return valid_files
 
 def sync_file_to_supabase(project_id: str, file_path: Path, supabase_url: str, supabase_key: str):
     """Uploads file to Supabase Storage bucket 'project-media' and upserts into project_assets table."""
@@ -221,9 +243,9 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
                     ct = response.headers.get("content-type", "").lower()
                     if "pdf" in ct and response.status == 200:
                         body = await response.body()
-                        if body and body[:4] == b"%PDF":
+                        if body and body[:4] == b"%PDF" and len(body) > 5000:
                             direct_pdf_body = body
-                            log(f"  Direct PDF response: {len(direct_pdf_body)} bytes from {response.url[:80]}")
+                            log(f"  Direct PDF response: {len(direct_pdf_body):,} bytes from {response.url[:80]}")
                 except Exception:
                     pass
 
@@ -232,7 +254,7 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
                 try:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     await download.save_as(str(path))
-                    if path.exists() and path.stat().st_size > 500 and path.read_bytes()[:4] == b"%PDF":
+                    if path.exists() and path.stat().st_size > 5000 and path.read_bytes()[:4] == b"%PDF":
                         download_saved = True
                         log(f"  ✓ Downloaded {path.name} ({path.stat().st_size:,} bytes) [browser download]")
                 except Exception as de:
@@ -248,16 +270,18 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
         context.on("page", handle_new_page)
         await attach_cdp_and_listeners(tab)
 
-        # Inject interceptor script in all frames before navigation
+        # Inject interceptor script in all frames before navigation.
+        # IMPORTANT: Only capture form data when the form action targets pdfWriter
+        # (never scrape document.frmtext prematurely while its action is still /s_savetextfile.jsp).
         interceptor_js = """
             (function() {
                 var _origSubmit = HTMLFormElement.prototype.submit;
                 HTMLFormElement.prototype.submit = function() {
                     try {
-                        var action = (this.action || '').toLowerCase();
-                        if (action.indexOf('pdfwriter') !== -1 || this.name === 'frmtext') {
+                        var action = (this.action || '');
+                        if (action.indexOf('pdfWriter') !== -1 || action.toLowerCase().indexOf('pdfwriter') !== -1) {
                             var data = new URLSearchParams(new FormData(this)).toString();
-                            if (data && data.length > 50) {
+                            if (data && data.length > 100) {
                                 try { window.top._pdfFormData = data; } catch(e) {}
                                 window._pdfFormData = data;
                             }
@@ -268,17 +292,20 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
                 var _origOpen = window.open;
                 window.open = function(url, name, features) {
                     try {
-                        if (url && url.toLowerCase().indexOf('pdfwriter') !== -1) {
+                        if (url && (url.indexOf('pdfWriter') !== -1 || url.toLowerCase().indexOf('pdfwriter') !== -1)) {
                             var forms = document.querySelectorAll('form');
                             for (var i = 0; i < forms.length; i++) {
-                                try {
-                                    var data = new URLSearchParams(new FormData(forms[i])).toString();
-                                    if (data.length > 100) {
-                                        try { window.top._pdfFormData = data; } catch(e) {}
-                                        window._pdfFormData = data;
-                                        break;
-                                    }
-                                } catch(e) {}
+                                var act = (forms[i].action || '');
+                                if (act.indexOf('pdfWriter') !== -1 || act.toLowerCase().indexOf('pdfwriter') !== -1) {
+                                    try {
+                                        var data = new URLSearchParams(new FormData(forms[i])).toString();
+                                        if (data.length > 100) {
+                                            try { window.top._pdfFormData = data; } catch(e) {}
+                                            window._pdfFormData = data;
+                                            break;
+                                        }
+                                    } catch(e) {}
+                                }
                             }
                         }
                     } catch(e) {}
@@ -293,54 +320,32 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
 
         extract_form_js = """
             (allowTrigger) => {
-                if (window._pdfFormData && window._pdfFormData.length > 50) {
+                if (window._pdfFormData && window._pdfFormData.length > 100) {
                     return window._pdfFormData;
                 }
                 if (allowTrigger) {
                     try {
-                        if (typeof getexportcontent === 'function' && document.frmtext && document.frmtext.txt) {
-                            document.frmtext.txt.value = getexportcontent();
-                        }
-                    } catch(e) {}
-                    try {
                         if (typeof pdfwrite === 'function') {
                             pdfwrite();
-                            if (window._pdfFormData && window._pdfFormData.length > 50) {
+                            if (window._pdfFormData && window._pdfFormData.length > 100) {
                                 return window._pdfFormData;
                             }
                         }
-                    } catch(e) {}
-                }
-                var forms = Array.from(document.querySelectorAll('form'));
-                for (var i = 0; i < forms.length; i++) {
-                    var f = forms[i];
-                    var act = (f.getAttribute('action') || '').toLowerCase();
-                    if (act.indexOf('pdfwriter') !== -1 || f.name === 'frmtext') {
-                        try {
-                            var d = new URLSearchParams(new FormData(f)).toString();
-                            if (d && d.length > 100) return d;
-                        } catch(e) {}
-                    }
-                }
-                for (var j = 0; j < forms.length; j++) {
-                    try {
-                        var d2 = new URLSearchParams(new FormData(forms[j])).toString();
-                        if (d2 && d2.length > 300) return d2;
                     } catch(e) {}
                 }
                 return '';
             }
         """
 
-        # Poll up to 12 seconds for direct PDF, download event, CDP post_body, or form data on tab/frames
-        log("  Capturing PDF payload from print view...")
-        for tick in range(24):
+        # Poll up to 25 seconds for the print view's JS to finish building the printable HTML and submit to /pdfWriter
+        log("  Waiting for print view to assemble and submit PDF payload...")
+        for tick in range(50):
             await asyncio.sleep(0.5)
 
             if download_saved:
                 return True
 
-            if direct_pdf_body and direct_pdf_body[:4] == b"%PDF":
+            if direct_pdf_body and direct_pdf_body[:4] == b"%PDF" and len(direct_pdf_body) > 5000:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(direct_pdf_body)
                 log(f"  ✓ Downloaded {path.name} ({len(direct_pdf_body):,} bytes) [direct]")
@@ -349,8 +354,8 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
             if post_body and len(post_body) > 100:
                 break
 
-            # Check tab, its frames, and any popup pages for _pdfFormData or form elements
-            allow_trigger = (tick >= 6)  # After 3s, allow calling getexportcontent() / pdfwrite()
+            # Only manually trigger pdfwrite() if 14 seconds (28 ticks) have elapsed without auto-submission
+            allow_trigger = (tick == 28)
             all_targets = [tab] + list(tab.frames) + popup_pages
             for tgt in all_targets:
                 try:
@@ -364,17 +369,24 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
             if post_body and len(post_body) > 100:
                 break
 
+        # Give browser download / direct response up to 15 seconds to finish after form submission
+        if post_body and not download_saved and not direct_pdf_body:
+            for _ in range(30):
+                await asyncio.sleep(0.5)
+                if download_saved or (direct_pdf_body and direct_pdf_body[:4] == b"%PDF" and len(direct_pdf_body) > 5000):
+                    break
+
         if download_saved:
             return True
 
-        if direct_pdf_body and direct_pdf_body[:4] == b"%PDF":
+        if direct_pdf_body and direct_pdf_body[:4] == b"%PDF" and len(direct_pdf_body) > 5000:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(direct_pdf_body)
             log(f"  ✓ Downloaded {path.name} ({len(direct_pdf_body):,} bytes) [direct]")
             return True
 
         if post_body and len(post_body) > 100:
-            log(f"  Captured form data ({len(post_body):,} chars) — requesting PDF from /pdfWriter...")
+            log(f"  Captured pdfWriter form data ({len(post_body):,} chars) — requesting PDF from /pdfWriter...")
             cookies = {c["name"]: c["value"] for c in await context.cookies(["https://grants.rotary.org"])}
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -392,22 +404,55 @@ async def save_grant_pdf(context, grant_page, path: Path, print_url_override: st
             ct = resp.headers.get("content-type", "?")
             log(f"  Response: {resp.status_code} {ct} ({len(resp.content):,} bytes)")
 
-            if resp.content[:4] == b"%PDF":
+            if resp.content[:4] == b"%PDF" and len(resp.content) > 5000:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(resp.content)
                 log(f"  ✓ Downloaded {path.name} ({len(resp.content):,} bytes)")
                 return True
+            elif resp.content[:4] == b"%PDF":
+                log(f"  Warning: /pdfWriter returned an empty PDF shell ({len(resp.content)} bytes) — falling back to iframe HTML rendering...")
 
-        # Final headless fallback: render the print tab directly to PDF via Chromium
-        log("  Falling back to headless Chromium PDF rendering...")
+        # Final headless fallback: extract the rendered document from the #page_win iframe and render multi-page PDF via Chromium
+        log("  Falling back to headless Chromium PDF rendering of print frame...")
+        render_tab = None
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            await tab.pdf(path=str(path), format="A4", print_background=True, margin=PDF_MARGIN)
-            if path.exists() and path.stat().st_size > 1000 and path.read_bytes()[:4] == b"%PDF":
+            iframe_html = await tab.evaluate("""() => {
+                try {
+                    if (window.frames['page_win'] && window.frames['page_win'].document && window.frames['page_win'].document.body) {
+                        var bodyHtml = window.frames['page_win'].document.documentElement.outerHTML;
+                        if (bodyHtml && bodyHtml.length > 500) return bodyHtml;
+                    }
+                } catch(e) {}
+                try {
+                    if (document.frmtext && document.frmtext.txt && document.frmtext.txt.value) {
+                        return document.frmtext.txt.value;
+                    }
+                } catch(e) {}
+                return '';
+            }""")
+            if iframe_html and len(iframe_html) > 500:
+                render_tab = await context.new_page()
+                if "<base" not in iframe_html.lower():
+                    iframe_html = f'<base href="{GRANTS_BASE}/">' + iframe_html
+                iframe_html += "<style>html, body { height: auto !important; overflow: visible !important; }</style>"
+                await render_tab.set_content(iframe_html, wait_until="networkidle", timeout=30000)
+                await render_tab.wait_for_timeout(2000)
+                await render_tab.emulate_media(media="print")
+                await render_tab.pdf(path=str(path), format="A4", print_background=True, margin=PDF_MARGIN)
+            else:
+                await tab.emulate_media(media="print")
+                await tab.pdf(path=str(path), format="A4", print_background=True, margin=PDF_MARGIN)
+
+            if path.exists() and path.stat().st_size > 5000 and path.read_bytes()[:4] == b"%PDF":
                 log(f"  ✓ Rendered {path.name} ({path.stat().st_size:,} bytes) [chromium-pdf]")
                 return True
         except Exception as pdf_err:
             log(f"  Fallback PDF render error: {pdf_err}")
+        finally:
+            if render_tab:
+                try: await render_tab.close()
+                except Exception: pass
 
         log("  Could not generate valid PDF")
         return False
@@ -586,6 +631,45 @@ async def save_dg_excel(context, grant_page, out_path: Path) -> bool:
         log(f"  Excel fetch error: {e}")
         return False
 
+def update_project_sync_status(project_id: str, sb_url: str, sb_key: str):
+    """Updates projects.sync_status.grant_center in Supabase based on current valid assets in project_assets."""
+    if not sb_url or not sb_key:
+        return
+    clean_pid = project_id.upper().replace("-", "").replace(" ", "")
+    headers = {
+        "apikey": sb_key,
+        "Authorization": f"Bearer {sb_key}",
+        "Content-Type": "application/json"
+    }
+    try:
+        assets = get_existing_supabase_assets(clean_pid, sb_url, sb_key, verify_pdf_size=True)
+        app_pdf = next((f for f in sorted(assets) if "application" in f.lower() and f.lower().endswith(".pdf")), None)
+        reports = sorted([f for f in assets if "report" in f.lower() and f.lower().endswith(".pdf")])
+
+        pr = requests.get(f"{sb_url}/rest/v1/projects?id=eq.{clean_pid}&select=sync_status", headers=headers, timeout=15)
+        cur_ss = {}
+        if pr.status_code == 200 and isinstance(pr.json(), list) and pr.json():
+            cur_ss = pr.json()[0].get("sync_status") or {}
+        if not isinstance(cur_ss, dict):
+            cur_ss = {}
+
+        cur_ss["grant_center"] = {
+            "has_application_pdf": bool(app_pdf),
+            "application_pdf_name": app_pdf,
+            "report_count": len(reports),
+            "report_names": reports,
+            "total_assets": len(assets),
+            "last_synced": datetime.now().isoformat()
+        }
+        requests.patch(
+            f"{sb_url}/rest/v1/projects?id=eq.{clean_pid}",
+            headers=headers,
+            json={"sync_status": cur_ss},
+            timeout=15
+        )
+    except Exception as e:
+        log(f"  Warning updating sync_status for {clean_pid}: {e}")
+
 async def process_grant_page(grant_page, context, gn: str, force: bool = False, sb_url: str = "", sb_key: str = "", local_save_dir: Path = None):
     """Processes open grant tab: checks Supabase, downloads missing files to temp, and uploads straight to Supabase."""
     log(f"\nProcessing grant {gn}...")
@@ -638,8 +722,11 @@ async def process_grant_page(grant_page, context, gn: str, force: bool = False, 
                     dest = local_save_dir / gn / df.name
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(df, dest)
+            update_project_sync_status(gn, sb_url, sb_key)
         elif not downloaded_files:
             log(f"  All files for {gn} are already up-to-date in Supabase.")
+            if sb_url and sb_key:
+                update_project_sync_status(gn, sb_url, sb_key)
 
     finally:
         # Clean up temporary scratch directory
@@ -1116,10 +1203,13 @@ async def click_grant_span_and_wait_tab(page, context, gn: str):
     spans = await page.query_selector_all("span[class*='rwc-button']")
     for span in spans:
         try:
-            text = (await span.inner_text()).strip().upper()
-            if text != gn:
-                continue
+            text = (await span.evaluate("el => (el.textContent || '').trim().toUpperCase()"))
+        except Exception:
+            continue
+        if text != gn:
+            continue
 
+        try:
             await span.evaluate("el => el.scrollIntoView({block: 'center'})")
             await page.wait_for_timeout(500)
             await dismiss_cookies(page)
@@ -1132,7 +1222,7 @@ async def click_grant_span_and_wait_tab(page, context, gn: str):
                 log(f"  Standard click notice ({ce}) — using JS click fallback...")
                 await span.evaluate("el => el.click()")
 
-            for tick in range(50):  # Wait up to 25s for new tab to open & redirect to grants.rotary.org
+            for tick in range(30):  # Wait up to 15s for new tab to open & redirect to grants.rotary.org
                 await asyncio.sleep(0.5)
                 for pg in context.pages:
                     if pg not in existing_pages or ("grants.rotary.org" in pg.url and pg != page):
@@ -1153,12 +1243,19 @@ async def click_grant_span_and_wait_tab(page, context, gn: str):
                         await span.evaluate("el => el.click()")
                     except Exception:
                         pass
+            return None
         except Exception as e:
             log(f"  Span click attempt error for {gn}: {e}")
+            return None
     return None
 
 async def find_and_click_grant(page, context, gn: str):
-    # 1. Fast path: if we already recorded the exact section & page number during discovery, jump right to it!
+    # 1. Check current view first (e.g. if discovery ended on the exact section/page containing gn)
+    tab = await click_grant_span_and_wait_tab(page, context, gn)
+    if tab:
+        return tab
+
+    # 2. Fast path: if we already recorded the exact section & page number during discovery, jump right to it!
     if gn in GRANT_LOCATIONS:
         sec_name, pg_num = GRANT_LOCATIONS[gn]
         log(f"  Jumping directly to '{sec_name}' page {pg_num} for {gn}...")
@@ -1168,11 +1265,6 @@ async def find_and_click_grant(page, context, gn: str):
         tab = await click_grant_span_and_wait_tab(page, context, gn)
         if tab:
             return tab
-
-    # 2. Check current view first before paging
-    tab = await click_grant_span_and_wait_tab(page, context, gn)
-    if tab:
-        return tab
 
     # 3. Section-aware search across Approved and Past Applications
     for sec_name in ['Approved', 'Past Applications']:
@@ -1190,6 +1282,7 @@ async def find_and_click_grant(page, context, gn: str):
         for p_val in opts:
             if Path("/tmp/rotary_cancel.flag").exists():
                 return None
+            log(f"  Searching '{sec_name}' page {p_val} for {gn}...")
             await scroll_to_section(page, sec_name)
             await set_page(page, p_val, sec_name)
             await scroll_to_section(page, sec_name)
@@ -1340,12 +1433,15 @@ async def main():
                 if gn in new_on_portal or args.force:
                     to_process.append((gn, t, y))
                 else:
-                    existing_files = get_existing_supabase_assets(gn, supabase_url, supabase_key)
+                    existing_files = get_existing_supabase_assets(gn, supabase_url, supabase_key, verify_pdf_size=True, app_only_size_check=True)
                     has_app_pdf = any("application" in f.lower() and f.lower().endswith(".pdf") for f in existing_files)
                     if not has_app_pdf:
                         log(f"  • {gn} is in Supabase but missing its Application PDF ({len(existing_files)} file(s)) — queueing for download & synthesis.")
                         to_process.append((gn, t, y))
                     else:
+                        cur_gc = ((sb_projects.get(gn) or {}).get("sync_status") or {}).get("grant_center") or {}
+                        if not cur_gc.get("has_application_pdf"):
+                            update_project_sync_status(gn, supabase_url, supabase_key)
                         log(f"  ✓ {gn} already has {len(existing_files)} file(s) (including Application PDF) in Supabase — skipping tab download.")
         elif target_grant:
             clean_tg = target_grant.replace("-", "").replace(" ", "")

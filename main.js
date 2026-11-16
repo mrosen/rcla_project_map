@@ -499,8 +499,10 @@ function renderProjectSyncBadge(p) {
   var spcUrl = getProjectSpcUrl(p);
   var isSpc = Boolean((p.sync_status && p.sync_status.spc && p.sync_status.spc.exported) || spcUrl);
   var gc = (p.sync_status && p.sync_status.grant_center) || {};
-  var hasApp = Boolean(gc.has_application_pdf);
-  var reportCount = gc.report_count || 0;
+  var assets = Array.isArray(p.project_assets) ? p.project_assets : [];
+  var hasApp = Boolean(gc.has_application_pdf) || assets.some(function (a) { return /application.*\.pdf$/i.test(a.filename || ''); });
+  var assetRepCount = assets.filter(function (a) { return /report.*\.pdf$/i.test(a.filename || ''); }).length;
+  var reportCount = Math.max(gc.report_count || 0, assetRepCount);
 
   if (isSpc) {
     if (spcUrl) {
@@ -1132,7 +1134,9 @@ function sortProjects(list, column, direction) {
         var getSyncRank = function (p) {
           if ((p.sync_status && p.sync_status.spc && p.sync_status.spc.exported) || getProjectSpcUrl(p)) return 2;
           var gc = (p.sync_status && p.sync_status.grant_center) || {};
-          if (gc.has_application_pdf || (gc.report_count || 0) > 0) return 1;
+          var assets = Array.isArray(p.project_assets) ? p.project_assets : [];
+          var hasAssets = assets.some(function (a) { return /(?:application|report).*\.pdf$/i.test(a.filename || ''); });
+          if (gc.has_application_pdf || (gc.report_count || 0) > 0 || hasAssets) return 1;
           return 0;
         };
         var rankA = getSyncRank(a);
@@ -1733,11 +1737,23 @@ window.updateCompleteCharCounter = function () {
 function renderSyncChips(projectId, gc, spc) {
   var badgesEl = document.getElementById('edit-sync-badges');
   if (!badgesEl) return;
-  gc = gc || {};
+  gc = Object.assign({}, gc || {});
   spc = spc || {};
   var p = allProjects.find(function (item) {
     return String(item.id || item.grant_id || '').trim().toLowerCase() === projectId.toLowerCase();
   });
+
+  if (p && Array.isArray(p.project_assets) && p.project_assets.length > 0) {
+    var appAsset = p.project_assets.find(function (a) { return /application.*\.pdf$/i.test(a.filename || ''); });
+    var repCount = p.project_assets.filter(function (a) { return /report.*\.pdf$/i.test(a.filename || ''); }).length;
+    if (appAsset) {
+      gc.has_application_pdf = true;
+      if (!gc.application_pdf_name) gc.application_pdf_name = appAsset.filename;
+    }
+    if (repCount > (gc.report_count || 0)) {
+      gc.report_count = repCount;
+    }
+  }
 
   var isGG = projectId.toUpperCase().startsWith('GG');
   var isDG = projectId.toUpperCase().startsWith('DG');
@@ -4302,9 +4318,7 @@ function pollMaintStatus() {
               } else if (currentView === 'list') {
                 renderListRows();
               } else if (currentView === 'detail' && allProjects[currentIndex]) {
-                var dBadge = document.getElementById('detail-spc-badge');
-                if (dBadge) dBadge.innerHTML = renderDetailSpcBadgeHtml(allProjects[currentIndex]);
-                updateDetailHeaderSpcBadge(allProjects[currentIndex]);
+                showDetail(currentIndex);
               }
               if (activeEditIdx !== null && activeEditIdx >= 0 && allProjects[activeEditIdx]) {
                 var curP = allProjects[activeEditIdx];
@@ -4313,6 +4327,12 @@ function pollMaintStatus() {
                 var spc = (curP.sync_status && curP.sync_status.spc) || {};
                 renderSyncChips(curGid, gc, spc);
                 renderSyncActions(curGid, spc);
+                if (typeof loadEditFiles === 'function') {
+                  loadEditFiles(curGid);
+                }
+                if (typeof window.loadProjectSyncStatus === 'function') {
+                  window.loadProjectSyncStatus(curGid);
+                }
               }
             }
           }).catch(function () {});
